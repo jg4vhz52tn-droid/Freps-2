@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projektmanagement (Koch) – Kurs-Prototyp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2A41; --accent:#2D7D6F; --accent-soft:#E4F1EE; --amber:#E8B44F;
+  --paper:#FAFAF7; --card:#FFFFFF; --line:#E3E1DA; --muted:#6B7280;
+  --danger:#C0442E; --danger-soft:#F9E9E5; --ok-soft:#EAF3DE; --warn-soft:#FAF0DA;
+  --radius:10px;
+}
+*{box-sizing:border-box; margin:0;}
+body{font-family:'Inter',sans-serif; background:var(--paper); color:var(--ink); font-size:15px; line-height:1.6;}
+h1,h2,h3{font-family:'Sora',sans-serif; line-height:1.25;}
+h1{font-size:24px; font-weight:700;}
+h2{font-size:18px; font-weight:600;}
+h3{font-size:15px; font-weight:600;}
+a{color:var(--accent);}
+.layout{display:grid; grid-template-columns:240px 1fr; min-height:100vh;}
+.sidebar{background:var(--ink); color:#E9EDF2; padding:28px 20px; position:sticky; top:0; height:100vh; overflow-y:auto;}
+.brand{font-family:'Sora',sans-serif; font-weight:700; font-size:17px; margin-bottom:4px;}
+.brand span{color:var(--amber);}
+.brand-sub{font-size:12px; color:#9AA7B5; margin-bottom:28px;}
+.nav-label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8494A6; margin:18px 0 8px;}
+.nav-btn{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:none; color:#D7DEE6; font:inherit; font-size:14px; padding:9px 12px; border-radius:8px; cursor:pointer;}
+.nav-btn:hover{background:rgba(255,255,255,.08);}
+.nav-btn.active{background:var(--accent); color:#fff; font-weight:600;}
+.nav-btn .dot{width:7px; height:7px; border-radius:50%; background:#5A6B7E; flex-shrink:0;}
+.nav-btn.active .dot{background:var(--amber);}
+.side-progress{margin-top:28px; padding-top:18px; border-top:1px solid rgba(255,255,255,.14);}
+.side-progress p{font-size:12px; color:#9AA7B5; margin-bottom:6px;}
+.bar{height:6px; background:rgba(255,255,255,.14); border-radius:3px; overflow:hidden;}
+.bar i{display:block; height:100%; background:var(--amber); border-radius:3px;}
+.main{padding:36px 44px; max-width:960px;}
+.page{display:none;}
+.page.active{display:block; animation:fade .25s ease;}
+@keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+@media (prefers-reduced-motion: reduce){ .page.active{animation:none;} }
+.page-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px;}
+.crumb{font-size:12px; color:var(--muted); margin-bottom:6px;}
+.cta{background:var(--accent); color:#fff; border:none; font:inherit; font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+.cta:hover{background:#256A5E;}
+.lede{color:var(--muted); font-size:14px; margin-bottom:26px; max-width:620px;}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-bottom:30px;}
+.tile{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px; cursor:pointer; transition:border-color .15s;}
+.tile:hover{border-color:var(--accent);}
+.tile h3{margin:6px 0 3px;}
+.tile p{font-size:13px; color:var(--muted);}
+.tile .tag{display:inline-block; font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--accent); padding:2px 9px; border-radius:20px;}
+.block{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:8px;}
+.block.def{border-left:4px solid var(--accent); border-radius:0 var(--radius) var(--radius) 0;}
+.block.merke{background:#FDF8EE; border-left:4px solid var(--amber); border-radius:0 var(--radius) var(--radius) 0;}
+.block .kicker{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:6px;}
+.block.merke .kicker{color:#A97B1E;}
+.ampel{display:flex; gap:6px; justify-content:flex-end; margin:6px 0 22px;}
+.ampel button{border:1px solid var(--line); background:var(--card); font:inherit; font-size:12px; padding:5px 12px; border-radius:20px; cursor:pointer; color:var(--muted);}
+.ampel button.sel-ok{background:var(--ok-soft); border-color:#97C459; color:#3B6D11;}
+.ampel button.sel-mid{background:var(--warn-soft); border-color:var(--amber); color:#854F0B;}
+.ampel button.sel-bad{background:var(--danger-soft); border-color:var(--danger); color:var(--danger);}
+.chapter-nav{display:flex; flex-direction:column; gap:2px; margin-bottom:26px;}
+.chapter-nav button{text-align:left; width:100%; background:none; border:none; font:inherit; font-size:13px; padding:7px 10px; border-radius:7px; cursor:pointer; color:var(--muted);}
+.chapter-nav button.cur{background:var(--accent-soft); color:var(--accent); font-weight:600;}
+.nav-group{margin-bottom:1px;}
+.sub-list{display:none; flex-direction:column; gap:1px; margin:2px 0 4px 14px; border-left:2px solid var(--line); padding-left:8px;}
+.nav-group.open .sub-list{display:flex;}
+.sub-list button{font-size:12px; padding:5px 8px; color:var(--muted);}
+.sub-list button.cur-sub{background:var(--accent-soft); color:var(--accent); font-weight:600;}
+.two-col{display:grid; grid-template-columns:220px 1fr; gap:32px; align-items:start;}
+.checklist{display:flex; flex-direction:column; gap:8px; margin-bottom:24px;}
+.check-row{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
+.check-row input{width:17px; height:17px; accent-color:var(--accent); flex-shrink:0;}
+.check-row .day{font-size:12px; font-weight:600; color:var(--muted); min-width:30px;}
+.check-row .task{flex:1; font-size:14px;}
+.check-row .task a{color:inherit; text-decoration:none;}
+.check-row .task a:hover{color:var(--accent); text-decoration:underline;}
+.check-row .dur{font-size:12px; color:var(--muted); white-space:nowrap;}
+.check-row.done .task{text-decoration:line-through; color:var(--muted);}
+.plan-week{margin-bottom:8px;}
+.week-head{display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:24px 0 10px; padding:6px 10px; border-radius:8px;}
+.week-head:hover{background:var(--surface-1, var(--paper));}
+.week-head h2{margin:0; font-size:16px;}
+.week-status{font-size:12px; color:var(--muted); background:var(--paper); border:1px solid var(--line); padding:3px 10px; border-radius:20px; white-space:nowrap;}
+.week-range{font-size:12px; color:var(--muted); margin-left:auto; margin-right:12px; white-space:nowrap;}
+.toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; font-size:13px; padding:10px 18px; border-radius:8px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50;}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.plan-week.done .week-head h2{color:#3B6D11;}
+.plan-week.done .week-status{background:var(--ok-soft); color:#3B6D11; border-color:#97C459; font-weight:600;}
+.plan-week.collapsed .checklist{display:none;}
+.week-head h2::before{content:"▾ "; font-size:11px; color:var(--muted);}
+.plan-week.collapsed .week-head h2::before{content:"▸ ";}
+.ask-panel{display:none; margin-top:10px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px;}
+.ask-panel.open{display:block;}
+.ask-panel textarea{width:100%; min-height:70px; font:inherit; font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; resize:vertical; background:var(--paper);}
+.ask-panel button{margin-top:8px; background:var(--accent); color:#fff; border:none; font:inherit; font-size:13px; font-weight:600; padding:8px 16px; border-radius:8px; cursor:pointer;}
+.ask-panel button:hover{background:#256A5E;}
+.ask-panel .sent-msg{font-size:12px; color:var(--accent); margin-top:8px; display:none;}
+.date-label{font-size:11px; color:var(--muted); min-width:44px;}
+.cal-btn{background:none; border:1px solid var(--line); border-radius:6px; width:26px; height:26px; font-size:13px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; padding:0;}
+.cal-btn:hover{border-color:var(--accent);}
+.flashcard{background:var(--card); border:1px solid var(--line); border-radius:14px; min-height:180px; display:flex; align-items:center; justify-content:center; text-align:center; padding:34px; cursor:pointer; font-size:17px; font-weight:500; margin-bottom:10px; user-select:none;}
+.flashcard.back{background:var(--accent-soft); border-color:var(--accent); font-weight:400; font-size:15px;}
+.srs{display:none; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px;}
+.srs button{border:none; font:inherit; font-size:13px; font-weight:600; padding:11px 0; border-radius:8px; cursor:pointer;}
+.srs .r-bad{background:var(--danger-soft); color:var(--danger);}
+.srs .r-mid{background:var(--warn-soft); color:#854F0B;}
+.srs .r-ok{background:var(--ok-soft); color:#3B6D11;}
+.hint{text-align:center; font-size:12px; color:var(--muted); margin-bottom:18px;}
+.mind-node{margin-left:0;}
+.mind-node .node-row{display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; cursor:pointer; border:1px solid transparent;}
+.mind-node .node-row:hover{background:var(--accent-soft);}
+.mind-node .node-row .tog{font-family:'Sora',sans-serif; font-weight:700; width:18px; height:18px; border-radius:5px; background:var(--accent); color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.mind-node.leaf .node-row .tog{background:var(--line); color:var(--muted);}
+.mind-node .node-title{font-weight:500; font-size:14px;}
+.mind-node .node-count{font-size:11px; color:var(--muted);}
+.mind-children{margin-left:26px; border-left:2px solid var(--line); padding-left:10px; display:none;}
+.mind-node.open > .mind-children{display:block;}
+.mind-node.open > .node-row .tog{background:var(--ink);}
+.filter-col p{font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:600; margin:16px 0 6px;}
+.chip{display:block; width:100%; text-align:left; background:none; border:none; font:inherit; font-size:13px; padding:7px 10px; border-radius:7px; cursor:pointer; color:var(--muted);}
+.chip.on{background:var(--accent-soft); color:var(--accent); font-weight:600;}
+.exam-row{display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin-bottom:8px;}
+.exam-row .info{flex:1;}
+.exam-row h3{margin-bottom:2px;}
+.exam-row p{font-size:12px; color:var(--muted);}
+.exam-row .status{font-size:12px; background:var(--paper); border:1px solid var(--line); padding:4px 12px; border-radius:20px; color:var(--muted); white-space:nowrap;}
+.notice{background:var(--accent-soft); border-radius:var(--radius); padding:12px 16px; font-size:13px; color:var(--accent); margin-top:18px;}
+.support-bar{display:flex; gap:20px; margin-top:28px; padding-top:18px; border-top:1px solid var(--line); font-size:13px;}
+.support-bar a{text-decoration:none; font-weight:500;}
+.footer-nav{display:flex; justify-content:flex-end; margin-top:20px;}
+.ghost{background:var(--card); border:1px solid var(--line); font:inherit; font-size:13px; padding:9px 16px; border-radius:8px; cursor:pointer;}
+.ghost:hover{border-color:var(--accent); color:var(--accent);}
+.progress-line{display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;}
+.progress-line span:last-child{color:var(--muted);}
+.view{display:none;}
+.view.active{display:block;}
+.portal{max-width:920px; margin:0 auto; padding:64px 24px;}
+.portal-brand{font-family:'Sora',sans-serif; font-weight:700; font-size:19px; margin-bottom:6px;}
+.portal-brand span{color:var(--accent);}
+.portal h1{font-size:30px; margin-bottom:8px;}
+.portal .lede{margin-bottom:36px;}
+.uni-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;}
+.uni-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; cursor:pointer;}
+.uni-card:hover{border-color:var(--accent);}
+.uni-card .badge{font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--accent); padding:2px 9px; border-radius:20px;}
+.uni-card.soon{opacity:.55; cursor:default;}
+.uni-card h3{margin:8px 0 3px;}
+.uni-card p{font-size:13px; color:var(--muted);}
+.back-link{background:none; border:none; font:inherit; font-size:13px; color:var(--muted); cursor:pointer; margin-bottom:18px; padding:0;}
+.back-link:hover{color:var(--accent);}
+.search-row{margin-bottom:22px;}
+.search-row input{width:100%; font:inherit; font-size:15px; padding:12px 16px; border:1px solid var(--line); border-radius:10px; background:var(--card);}
+.filter-chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px;}
+.filter-chips button{font:inherit; font-size:13px; border:1px solid var(--line); background:var(--card); color:var(--muted); padding:6px 14px; border-radius:20px; cursor:pointer;}
+.filter-chips button.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;}
+.subject-row{display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin-bottom:8px; cursor:pointer;}
+.subject-row:hover{border-color:var(--accent);}
+.subject-row .info{flex:1;}
+.subject-row h3{margin-bottom:2px;}
+.subject-row p{font-size:12px; color:var(--muted);}
+.subject-row .meta{font-size:11px; color:var(--muted); background:var(--paper); border:1px solid var(--line); padding:3px 10px; border-radius:20px; white-space:nowrap;}
+.no-results{font-size:13px; color:var(--muted); padding:14px 0;}
+.ch-content{display:none;}
+.ch-content.active{display:block;}
+h4{font-family:'Sora',sans-serif; font-size:14px; font-weight:600; margin:20px 0 8px;}
+table.data{width:100%; border-collapse:collapse; font-size:13px; margin-bottom:16px;}
+table.data th,table.data td{text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
+table.data th{color:var(--muted); font-weight:600; font-size:12px;}
+ul.plain{margin:0 0 14px 20px; font-size:14px;}
+ul.plain li{margin-bottom:5px;}
+.block p{margin-bottom:8px;}
+.block p:last-child{margin-bottom:0;}
+.block.case{border-left:4px solid var(--danger); border-radius:0 var(--radius) var(--radius) 0; background:#FCF3F1;}
+.block.case .kicker{color:var(--danger);}
+.segbar{height:7px; background:var(--line); border-radius:4px; overflow:hidden; display:flex;}
+.segbar span{height:100%; flex-shrink:0; transition:width .2s;}
+.segbar .seg-ok{background:#639922;}
+.segbar .seg-mid{background:var(--amber);}
+.segbar .seg-bad{background:var(--danger);}
+.status.rate{cursor:pointer; user-select:none; border:1px solid var(--line);}
+.status.rate.st-ok{background:var(--ok-soft); color:#3B6D11; border-color:#97C459;}
+.status.rate.st-mid{background:var(--warn-soft); color:#854F0B; border-color:var(--amber);}
+.status.rate.st-bad{background:var(--danger-soft); color:var(--danger); border-color:var(--danger);}
+.fach-progress{margin-top:8px;}
+.fach-progress .bar{height:5px;}
+@media (max-width:760px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar{position:static; height:auto;}
+  .two-col{grid-template-columns:1fr;}
+  .main{padding:24px 18px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ANSICHT: HOCHSCHULAUSWAHL -->
+<div class="view active" id="view-landing">
+  <div class="portal">
+    <div class="portal-brand">Klausur<span>fuchs</span></div>
+    <h1>Für welche Hochschule lernst du?</h1>
+    <p class="lede">Wähle deine Hochschule, um alle verfügbaren Fach-Kurse zu sehen – erstellt von Studierenden, die die jeweilige Klausur mit Bestnote bestanden haben.</p>
+    <div class="uni-grid">
+      <div class="uni-card" data-goto-view="view-subjects"><span class="badge">18 Fächer</span><h3>HWG Ludwigshafen</h3><p>Hochschule für Wirtschaft und Gesellschaft</p></div>
+      <div class="uni-card soon"><span class="badge">Bald</span><h3>FH Frankfurt</h3><p>Frankfurt University of Applied Sciences</p></div>
+      <div class="uni-card soon"><span class="badge">Bald</span><h3>Hochschule Mainz</h3><p>Hochschule Mainz</p></div>
+      <div class="uni-card soon"><span class="badge">Bald</span><h3>Deine Hochschule?</h3><p>Werde selbst Creator und starte den ersten Kurs.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANSICHT: FÄCHERLISTE HWG -->
+<div class="view" id="view-subjects">
+  <div class="portal">
+    <button class="back-link" data-goto-view="view-landing">‹ Andere Hochschule wählen</button>
+    <div class="portal-brand">Klausur<span>fuchs</span></div>
+    <h1>HWG Ludwigshafen</h1>
+    <p class="lede">Alle verfügbaren Fach-Kurse. Nach Name, Professor oder Studiengang suchen.</p>
+    <div class="search-row"><input type="text" id="subjectSearch" placeholder="Fach oder Professor suchen, z. B. „Koch" oder „Statistik"…"></div>
+    <div class="filter-chips" id="studiengangChips">
+      <button class="on" data-sg="alle">Alle Studiengänge</button>
+      <button data-sg="biw">Betriebswirtschaft</button>
+      <button data-sg="wi">Wirtschaftsinformatik</button>
+      <button data-sg="wing">Wirtschaftsingenieurwesen</button>
+    </div>
+    <div id="subjectList">
+      <div class="subject-row" data-goto-view="view-course" data-sg="biw wi wing" data-name="projektmanagement koch">
+        <div class="info">
+          <h3>Projektmanagement — Prof. Koch</h3><p>Netzplantechnik, Scrum, Risiko, Kalkulation</p>
+          <div class="fach-progress"><div class="bar" style="background:var(--line)"><i id="fachBarPM" style="width:0%"></i></div></div>
+          <p style="font-size:11px; color:var(--muted); margin-top:4px" id="fachPctPM">0 % bearbeitet</p>
+        </div>
+        <span class="meta">3. Semester</span>
+      </div>
+      <div class="subject-row" data-sg="biw wi" data-name="mathematik statistik weber">
+        <div class="info"><h3>Mathematik mit Statistik A — Prof. Weber</h3><p>Analysis, Wahrscheinlichkeitstheorie</p></div>
+        <span class="meta">1. Semester</span>
+      </div>
+      <div class="subject-row" data-sg="wi wing" data-name="ifrs schmidt buchführung">
+        <div class="info"><h3>IFRS / Bilanzierung — Prof. Schmidt</h3><p>Internationale Rechnungslegung</p></div>
+        <span class="meta">4. Semester</span>
+      </div>
+      <div class="subject-row" data-sg="wi" data-name="datenbanken wagner">
+        <div class="info"><h3>Datenbanken — Prof. Wagner</h3><p>SQL, Normalisierung, ER-Modelle</p></div>
+        <span class="meta">3. Semester</span>
+      </div>
+      <div class="subject-row" data-sg="wing" data-name="mechanik technische hartung">
+        <div class="info"><h3>Technische Mechanik — Prof. Hartung</h3><p>Statik, Festigkeitslehre</p></div>
+        <span class="meta">2. Semester</span>
+      </div>
+    </div>
+    <p class="no-results" id="noResults" style="display:none">Kein Fach gefunden. Sei der Erste und werde Creator für dieses Fach.</p>
+  </div>
+</div>
+
+<!-- ANSICHT: KURS -->
+<div class="view" id="view-course">
+<div class="layout">
+<aside class="sidebar">
+  <button class="back-link" data-goto-view="view-subjects" style="color:#9AA7B5; margin-bottom:14px">‹ Alle Fächer HWG</button>
+  <div class="brand">Klausur<span>fuchs</span></div>
+  <div class="brand-sub">Projektmanagement · Prof. Koch<br>HWG Ludwigshafen</div>
+  <div class="nav-label">Kursbereiche</div>
+  <button class="nav-btn active" data-page="uebersicht"><span class="dot"></span>Kursübersicht</button>
+  <button class="nav-btn" data-page="zusammenfassung"><span class="dot"></span>Zusammenfassung</button>
+  <button class="nav-btn" data-page="tutorien"><span class="dot"></span>Tutorien</button>
+  <button class="nav-btn" data-page="uebungen"><span class="dot"></span>Übungsaufgaben</button>
+  <button class="nav-btn" data-page="altklausuren"><span class="dot"></span>Altklausuren</button>
+  <button class="nav-btn" data-page="mindmap"><span class="dot"></span>Übersicht / Mindmap</button>
+  <button class="nav-btn" data-page="quiz"><span class="dot"></span>Karteikarten-Quiz</button>
+  <button class="nav-btn" data-page="lernplan"><span class="dot"></span>Lernpläne</button>
+  <div class="side-progress">
+    <p>Mein Gesamtfortschritt</p>
+    <div class="bar"><i id="overallBar" style="width:0%"></i></div>
+    <p id="overallPct" style="margin:6px 0 0; font-size:12px; color:#C7CFD8">0 % bearbeitet</p>
+  </div>
+</aside>
+<main class="main">
+<!-- SEITE: KURSÜBERSICHT -->
+<section class="page active" id="page-uebersicht">
+  <div class="page-head">
+    <div>
+      <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+      <h1>Kursübersicht</h1>
+    </div>
+    <button class="cta">Kurs buchen – 49 €</button>
+  </div>
+  <p class="lede">Der komplette Klausurstoff für Projektmanagement bei Prof. Koch – erstellt von Studierenden, die die Klausur mit 1,0 bestanden haben. Zugeschnitten auf genau diese Vorlesung, nicht auf ein Lehrbuch.</p>
+  <div class="grid">
+    <div class="tile" data-goto="zusammenfassung"><span class="tag">10 Kapitel</span><h3>Zusammenfassung</h3><p>Der gesamte Stoff, kompakt und klausurorientiert aufbereitet.</p></div>
+    <div class="tile" data-goto="tutorien"><span class="tag">Schritt für Schritt</span><h3>Tutorien</h3><p>Lösungswege zu allen Tutoriumsaufgaben – handschriftlich nachvollziehbar.</p></div>
+    <div class="tile" data-goto="uebungen"><span class="tag">38 Aufgaben</span><h3>Übungsaufgaben</h3><p>Nach Thema sortiert, mit Muster­lösung und Erklärvideo.</p></div>
+    <div class="tile" data-goto="altklausuren"><span class="tag">14 Klausuren</span><h3>Altklausuren</h3><p>Filterbar nach Termin und Thema – nur eigene Lösungswege.</p></div>
+    <div class="tile" data-goto="mindmap"><span class="tag">Neu</span><h3>Übersicht / Mindmap</h3><p>Alle Zusammenhänge auf einen Blick, Knoten aufklappbar.</p></div>
+    <div class="tile" data-goto="quiz"><span class="tag">48 Karten</span><h3>Karteikarten-Quiz</h3><p>Begriffe aktiv abfragen, mit Anki-Export.</p></div>
+    <div class="tile" data-goto="lernplan"><span class="tag">Planbar</span><h3>Lernpläne</h3><p>4-Wochen- oder Crash-Plan, gekoppelt an deinen Klausurtermin.</p></div>
+  </div>
+  <h2 style="margin-bottom:12px">Fortschritt nach Bereich</h2>
+  <div style="margin-bottom:16px">
+    <div class="progress-line"><span>Zusammenfassung</span><span id="pct-zusammenfassung">Bearbeitet 0 %</span></div>
+    <div class="segbar" id="bar-zusammenfassung"><span class="seg-ok" style="width:0%"></span><span class="seg-mid" style="width:0%"></span><span class="seg-bad" style="width:0%"></span></div>
+  </div>
+  <div style="margin-bottom:16px">
+    <div class="progress-line"><span>Übungsaufgaben</span><span id="pct-uebungen">Bearbeitet 0 %</span></div>
+    <div class="segbar" id="bar-uebungen"><span class="seg-ok" style="width:0%"></span><span class="seg-mid" style="width:0%"></span><span class="seg-bad" style="width:0%"></span></div>
+  </div>
+  <div style="margin-bottom:16px">
+    <div class="progress-line"><span>Altklausuren</span><span id="pct-altklausuren">Bearbeitet 0 %</span></div>
+    <div class="segbar" id="bar-altklausuren"><span class="seg-ok" style="width:0%"></span><span class="seg-mid" style="width:0%"></span><span class="seg-bad" style="width:0%"></span></div>
+  </div>
+  <div style="margin-bottom:16px">
+    <div class="progress-line"><span>Karteikarten</span><span id="pct-karteikarten">Bearbeitet 0 %</span></div>
+    <div class="segbar" id="bar-karteikarten"><span class="seg-ok" style="width:0%"></span><span class="seg-mid" style="width:0%"></span><span class="seg-bad" style="width:0%"></span></div>
+  </div>
+  <p style="font-size:12px; color:var(--muted); margin-bottom:20px;"><span style="color:#3B6D11">●</span> gut verstanden &nbsp; <span style="color:#854F0B">●</span> geht so &nbsp; <span style="color:var(--danger)">●</span> nicht verstanden</p>
+  <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+</section>
+
+<!-- SEITE: ZUSAMMENFASSUNG -->
+<section class="page" id="page-zusammenfassung">
+  <div class="two-col">
+    <div class="chapter-nav" id="chNav">
+      <div class="nav-group">
+        <button class="cur" data-ch="ch0">Eingrenzung &amp; Koch-Typologie</button>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch1">1 Grundlagen</button>
+        <div class="sub-list">
+          <button data-ch="ch1" data-anchor="sub-1-1">1.1 Projektmerkmale</button>
+          <button data-ch="ch1" data-anchor="sub-1-2">1.2 Projektarten</button>
+          <button data-ch="ch1" data-anchor="sub-1-3">1.3 Magisches Dreieck</button>
+          <button data-ch="ch1" data-anchor="sub-1-4">1.4 Klassisch vs. agil vs. hybrid</button>
+          <button data-ch="ch1" data-anchor="sub-1-5">1.5 PM-Kompetenzen</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch2">2 Projektorganisation</button>
+        <div class="sub-list">
+          <button data-ch="ch2" data-anchor="sub-2-1">2.1 Die drei Aufbauformen</button>
+          <button data-ch="ch2" data-anchor="sub-2-2">2.2 Wichtige Rollen</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch3">3 Projektphasen</button>
+        <div class="sub-list">
+          <button data-ch="ch3" data-anchor="sub-3-0">3.0 Makro-/Mikro-Phasen</button>
+          <button data-ch="ch3" data-anchor="sub-3-1">3.1 Vorselektion</button>
+          <button data-ch="ch3" data-anchor="sub-3-2">3.2 Projektstart</button>
+          <button data-ch="ch3" data-anchor="sub-3-3">3.3 Zielformulierung</button>
+          <button data-ch="ch3" data-anchor="sub-3-4">3.4 Projektplanung</button>
+          <button data-ch="ch3" data-anchor="sub-3-5">3.5 Projektdurchführung</button>
+          <button data-ch="ch3" data-anchor="sub-3-6">3.6 Projektcontrolling</button>
+          <button data-ch="ch3" data-anchor="sub-3-7">3.7 Projektabschluss</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch45">4–5 Digitalisierung / Nachhaltigkeit</button>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch6">6 Risikomanagement</button>
+        <div class="sub-list">
+          <button data-ch="ch6" data-anchor="sub-6-1">6.1 Definitionen</button>
+          <button data-ch="ch6" data-anchor="sub-6-2">6.2 Risikoarten</button>
+          <button data-ch="ch6" data-anchor="sub-6-3">6.3 RM-Prozess (4 Phasen)</button>
+          <button data-ch="ch6" data-anchor="sub-6-4">6.4 Risikostrategien</button>
+          <button data-ch="ch6" data-anchor="sub-6-5">6.5 Planung ↔ Umsetzung</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch7">7 Projekterfolg</button>
+        <div class="sub-list">
+          <button data-ch="ch7" data-anchor="sub-7-1">7.1 Erfolgsfaktoren</button>
+          <button data-ch="ch7" data-anchor="sub-7-2">7.2 Best Practice</button>
+          <button data-ch="ch7" data-anchor="sub-7-3">7.3 AG vs. Kunde</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch8">8 PM bei Großprojekten</button>
+        <div class="sub-list">
+          <button data-ch="ch8" data-anchor="sub-8-1">8.1 Merkmale</button>
+          <button data-ch="ch8" data-anchor="sub-8-2">8.2 Vorgehensweise</button>
+          <button data-ch="ch8" data-anchor="sub-8-3">8.3 Baumanagement-Handbuch</button>
+          <button data-ch="ch8" data-anchor="sub-8-4">8.4 Praxisbeispiele</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch9">9 Internationales PM</button>
+        <div class="sub-list">
+          <button data-ch="ch9" data-anchor="sub-9-1">9.1 Globalisierung</button>
+          <button data-ch="ch9" data-anchor="sub-9-2">9.2 Chancen vs. Risiken</button>
+          <button data-ch="ch9" data-anchor="sub-9-3">9.3 Erfolgsfaktoren</button>
+          <button data-ch="ch9" data-anchor="sub-9-4">9.4 Arten internat. Projekte</button>
+          <button data-ch="ch9" data-anchor="sub-9-5">9.5 BOT / BOOT / PPP</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch1011">10–11 PM 2025 &amp; Zusatzfragen</button>
+        <div class="sub-list">
+          <button data-ch="ch1011" data-anchor="sub-10-1">10.1 Warum PM bedeutender?</button>
+          <button data-ch="ch1011" data-anchor="sub-10-2">10.2 Zukunft des Projektgeschäfts</button>
+          <button data-ch="ch1011" data-anchor="sub-10-3">10.3 Geopolitische Risiken</button>
+        </div>
+      </div>
+      <div class="nav-group">
+        <button data-ch="ch12">Checkliste „Blind beherrschen"</button>
+        <div class="sub-list">
+          <button data-ch="ch12" data-anchor="sub-12-def">Definitionen</button>
+          <button data-ch="ch12" data-anchor="sub-12-list">Listen</button>
+          <button data-ch="ch12" data-anchor="sub-12-arg">Argumentationsketten</button>
+          <button data-ch="ch12" data-anchor="sub-12-skip">Was vernachlässigen</button>
+          <button data-ch="ch12" data-anchor="sub-12-tips">Klausur-Tipps</button>
+        </div>
+      </div>
+    </div>
+    <div>
+
+      <!-- KAPITEL 0: EINGRENZUNG -->
+      <div class="ch-content active" id="ch0">
+        <div class="crumb">Zusammenfassung / Eingrenzung</div>
+        <h1 style="margin-bottom:20px">Eingrenzung laut Vorlesung</h1>
+        <div class="block">
+          <table class="data">
+            <tr><th>Status</th><th>Kapitel</th><th>Hinweis</th></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 1: Grundlagen</td><td>Definitiv dran</td></tr>
+            <tr><td>Oberflächlich</td><td>Kapitel 2: Projektorganisation</td><td>Nicht vertiefen</td></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 3.1–3.5: Projektphasen</td><td>Kern der Klausur</td></tr>
+            <tr><td>Nicht relevant</td><td>Kapitel 3.6–3.7: Controlling + Abschluss</td><td>Auslassen</td></tr>
+            <tr><td>Nicht relevant</td><td>Kapitel 4–5: Digitalisierung/Nachhaltigkeit</td><td>Auslassen</td></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 6: Risikomanagement</td><td>Vertiefen</td></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 7: Projekterfolg</td><td>Vertiefen</td></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 8: Großprojekte</td><td>Vertiefen</td></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 9: Internationales PM</td><td>Vertiefen</td></tr>
+            <tr><td>Sehr wichtig</td><td>Kapitel 10–11: Praxis &amp; Übungen</td><td>Anwendung üben</td></tr>
+            <tr><td>Spotlight</td><td>Umfeldanalyse</td><td>Besonders wichtig!</td></tr>
+          </table>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Koch-Typologie – so denkt dein Dozent</div>
+          <ul class="plain">
+            <li><strong>Der „Phasen-Erklärer"</strong> – du musst exakte Abläufe von Phasen erklären (was passiert, womit, welches Ergebnis?)</li>
+            <li><strong>Der „Trend-Analyst"</strong> – Digitalisierung, Nachhaltigkeit, Geopolitik müssen verknüpft werden</li>
+            <li><strong>Der „Praxis-Transfer"</strong> – 15-Punkte-Fallstudien (Hochstraße, Werk in USA, Abfall in Albanien …)</li>
+            <li><strong>Der „Problemlöser"</strong> – Konsequenzen ziehen, Steuerungsmaßnahmen formulieren</li>
+          </ul>
+          <p>Klausurformat: ausschließlich Freitext- und Fallaufgaben. Aufgaben mit 10 oder 15 Punkten. Jede Hauptaufgabe in mehrere Teilfragen untergliedert. Argumentationsketten sind Pflicht!</p>
+        </div>
+        <div class="ampel" data-key="ch0-a1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch1">Nächstes Kapitel ›</button></div>
+      </div>
+
+      <!-- KAPITEL 1: GRUNDLAGEN -->
+      <div class="ch-content" id="ch1">
+        <div class="crumb">Zusammenfassung / Kapitel 1</div>
+        <h1 style="margin-bottom:20px">Kapitel 1: Grundlagen <span style="font-size:13px; font-weight:400; color:var(--danger)">— definitiv in der Klausur</span></h1>
+
+        <h4 id="sub-1-1">1.1 Projekt-Merkmale (DIN 69901)</h4>
+        <div class="block def">
+          <div class="kicker">Definition</div>
+          <p>Ein Projekt ist ein Vorhaben, das im Wesentlichen durch die Einmaligkeit der Bedingungen in ihrer Gesamtheit gekennzeichnet ist. Faustregel: mindestens 4 von 5 Merkmalen müssen passen → Projekt. Maximal 3 Merkmale → Routine.</p>
+          <ul class="plain">
+            <li>Zielvorgabe (inhaltlich z. B. Brückenbau, oder quantitativ z. B. 10 % CO₂-Reduktion)</li>
+            <li>Zeitliche Begrenzung (temporär, Anfang und Ende)</li>
+            <li>Einmaligkeit / Neuartigkeit (wird so zum ersten Mal gemacht)</li>
+            <li>Größe (Mitarbeiterzahl, Budget, Relation zum Unternehmen)</li>
+            <li>Komplexität (viele Teilaufgaben, Verknüpfungen, Entscheidungsträger)</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="1-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-1-2">1.2 Projektarten (Klassifizierung)</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Kriterium</th><th>Ausprägungen</th></tr>
+            <tr><td>Projektinhalt</td><td>Entwicklungs-, Forschungs-, Infrastrukturprojekt</td></tr>
+            <tr><td>AG/AN-Verhältnis</td><td>öffentlich vs. privat | intern vs. extern | national vs. international</td></tr>
+            <tr><td>Aufgabe</td><td>operativ (kurzfristig, detailliert, Effizienz) vs. strategisch (langfristig, Effektivität)</td></tr>
+            <tr><td>International</td><td>Transfer- | Expansions- | Gemeinschaftsprojekte (z. B. Airbus)</td></tr>
+          </table>
+        </div>
+        <div class="ampel" data-key="1-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-1-3">1.3 Magisches Dreieck des PM</h4>
+        <div class="block">
+          <p>Die vier Stellschrauben, an denen ein Projektleiter drehen kann: Zeit (Termin), Inhalt (Ergebnis), Kosten (Aufwand) und Qualität. Zielkonflikte sind typisch:</p>
+          <ul class="plain">
+            <li>Mehr Tempo nötig? → Kosten erhöhen (mehr Mitarbeiter) ODER mehr Zeit zugestehen ODER Qualität senken</li>
+            <li>Budget fix? → Inhalt reduzieren oder Termin verschieben</li>
+            <li>Qualität fix? → Kosten oder Zeit anpassen</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="1-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-1-4">1.4 Klassisches vs. agiles vs. hybrides PM</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Merkmal</th><th>Klassisch</th><th>Agil</th></tr>
+            <tr><td>Vorgehen</td><td>Sequenziell (Wasserfall)</td><td>Iterativ (Sprints)</td></tr>
+            <tr><td>Planung</td><td>Vom Groben ins Detail</td><td>Richtung vor, Details im Sprint</td></tr>
+            <tr><td>Fixgrößen</td><td>Scope (Inhalt) meist fix</td><td>Zeit und Budget sind fix</td></tr>
+            <tr><td>Führung</td><td>Hierarchisch, PM entscheidet</td><td>Selbstorganisierende Teams</td></tr>
+            <tr><td>Rollen</td><td>Projektleiter &amp; Team</td><td>Product Owner, Scrum Master, Team</td></tr>
+            <tr><td>Anwendung</td><td>Strukturierte Projekte</td><td>Komplex/unsicher, kreativ</td></tr>
+          </table>
+          <p>Hybrid: Mischform. Oft agil zu Projektbeginn (kreativ, unsicher), dann klassisch für die Umsetzung. Wichtig: andere Organisations- und Führungsformen nötig!</p>
+        </div>
+        <div class="ampel" data-key="1-4"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-1-5">1.5 PM-Kompetenzen (Reihenfolge merken!)</h4>
+        <div class="block merke">
+          <div class="kicker">Merke – Klausur Koch</div>
+          <p>Koch betont: <strong>Sozialkompetenz &gt; Fachkompetenz &gt; Methodenkompetenz</strong>. Diese Reihenfolge ist klausurrelevant!</p>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Koch-Fokus – typische Frage</div>
+          <p>„Warum werden Projekte/Projektmanagement immer bedeutender?" (meist 10 Punkte, 4 Gründe nennen + beschreiben). Antwort: Globalisierung, Digitalisierung, Nachhaltigkeit, steigende Komplexität, Risiken, kapitalintensiver, Innovationen, Spezialisierung statt Routine, Größe der Vorhaben, öffentliche Meinung.</p>
+        </div>
+        <div class="ampel" data-key="1-5"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch2">Nächstes Kapitel ›</button></div>
+      </div>
+
+      <!-- KAPITEL 2: PROJEKTORGANISATION -->
+      <div class="ch-content" id="ch2">
+        <div class="crumb">Zusammenfassung / Kapitel 2</div>
+        <h1 style="margin-bottom:20px">Kapitel 2: Projektorganisation <span style="font-size:13px; font-weight:400; color:var(--muted)">— nur oberflächlich kennen, nicht vertiefen</span></h1>
+
+        <h4 id="sub-2-1">2.1 Die drei Aufbauformen</h4>
+        <div class="block">
+          <p><strong>Stabs-Projektorganisation (Einfluss-PO)</strong><br>Projektleiter steht „neben" der Linie als Stabsstelle. Keine Weisungsbefugnis. Mitarbeiter bleiben zu 100 % in ihren Abteilungen.</p>
+          <p><strong>Vorteile:</strong> kostengünstig · Organisation bleibt zusammen · Know-how bleibt in Abteilungen<br><strong>Nachteile:</strong> geringe Identifikation/Verantwortung · PL muss „betteln" · Wissen geht mit PL</p>
+        </div>
+        <div class="block">
+          <p><strong>Matrix-Projektorganisation (häufigste Form)</strong><br>Doppelte Unterstellung: PL entscheidet Was/Wann, Abteilungsleiter Wie/Wer.</p>
+          <p><strong>Vorteile:</strong> hohe Identifikation · effiziente Auslastung · Know-how bleibt in Linie · parallele Projekte möglich<br><strong>Nachteile:</strong> Konfliktpotenzial (2 Chefs) · langsame Entscheidungen · unklare Zuständigkeit</p>
+        </div>
+        <div class="block">
+          <p><strong>Reine Projektorganisation (Autonom)</strong><br>Eigenständige Abteilung auf Zeit. PL hat volle Weisungsbefugnis. Mitarbeiter zu 100 % freigestellt.</p>
+          <p><strong>Vorteile:</strong> klare Verantwortlichkeiten · schnelle Kommunikation · „Wir-Gefühl"<br><strong>Nachteile:</strong> sehr teuer · PL kann zu stark werden · Existenzangst nach Projektende</p>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Koch-Fokus</div>
+          <p>Bei Praxis-Fällen musst du die passende Organisationsform begründet wählen:</p>
+          <ul class="plain">
+            <li>Kleines Projekt → Stabs-PO</li>
+            <li>Mittelgroß, mehrere parallel → Matrix-PO</li>
+            <li>Großprojekt, risikoreich, zeitkritisch → Reine PO</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="2-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-2-2">2.2 Wichtige Rollen</h4>
+        <div class="block">
+          <ul class="plain">
+            <li><strong>Projektauftraggeber:</strong> erstellt Lastenheft (Anforderungen), zahlt, bestimmt PL</li>
+            <li><strong>Projektauftragnehmer:</strong> erstellt Pflichtenheft (Lösung), führt aus</li>
+            <li><strong>Projektleiter:</strong> Schnittstellenmanager, steuert Ressourcen, entscheidet projektbezogen</li>
+            <li><strong>Projektteam:</strong> gleiches Leistungsniveau, Fach- und Methodenkompetenz</li>
+            <li><strong>Projektcontroller:</strong> Soll-Ist-Vergleiche, Abweichungsanalysen, Trends</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="2-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch3">Nächstes Kapitel ›</button></div>
+      </div>
+      <!-- KAPITEL 3: PROJEKTPHASEN -->
+      <div class="ch-content" id="ch3">
+        <div class="crumb">Zusammenfassung / Kapitel 3</div>
+        <h1 style="margin-bottom:20px">Kapitel 3: Projektphasen <span style="font-size:13px; font-weight:400; color:var(--danger)">— Kern der Klausur, sehr wichtig!</span></h1>
+        <div class="block merke">
+          <div class="kicker">Koch-Fokus</div>
+          <p>So denkt Koch: Lerne Phasen nicht isoliert, sondern als Prozess – Was passiert? Womit (Instrumente)? Was ist das Ergebnis? Du musst das Zusammenspiel von PSP, Meilensteinen und kritischem Pfad innerhalb der Phasen erklären können!</p>
+        </div>
+
+        <h4 id="sub-3-0">3.0 Makro-Phasen → Mikro-Phasen (Überblick)</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Übergeordnete Phase (Makro)</th><th>Zugehörige detaillierte Phasen (Mikro)</th></tr>
+            <tr><td>I. Projekt-Initiierung</td><td>1. Vorselektion von Projekten | 2. Projektstart (Initiierung)</td></tr>
+            <tr><td>II. Projekt-Planung</td><td>3. Projektzielformulierung/-präzisierung | 4. Projektplanung</td></tr>
+            <tr><td>III. Projekt-Realisierung</td><td>5. Projektdurchführung (Realisierung)</td></tr>
+            <tr><td>IV. Projekt-Abschluss</td><td>7. Projektabschluss (inkl. evtl. Nachbesprechung)</td></tr>
+            <tr><td>Übergreifend (begleitend)</td><td>6. Projektcontrolling – schneidet Phasen II, III und IV</td></tr>
+          </table>
+          <p>Das Projekt entwickelt sich systematisch „vom Groben ins Detail". Ein Phasenübergang erfolgt erst, wenn die Meilensteine der Vorphase erfüllt sind.</p>
+        </div>
+        <div class="ampel" data-key="3-0"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-1">3.1 Vorselektion von Projekten</h4>
+        <div class="block">
+          <p><strong>Warum?</strong> Ressourcen sind knapp. Es können nur Projekte gemacht werden, die (a) zur Erreichung der Unternehmensziele beitragen und (b) durchführbar sind.</p>
+          <p><strong>Werkzeug: Machbarkeitsstudie (Feasibility Study)</strong> – Untersuchung in Teilstudien, ob eine Projektalternative unter folgenden Gesichtspunkten umsetzbar ist:</p>
+          <ul class="plain">
+            <li>Wirtschaftlich – verdient man etwas? (Erfolgsrechnung, Absatzmarkt, Kapazität)</li>
+            <li>Technisch – Know-how, Maschinen, Patente, Lizenzen vorhanden?</li>
+            <li>Rechtlich/Legal – Bau-, Patent-, Arbeitsrecht, Datenschutz geprüft?</li>
+            <li>Ökologisch – Naturschutzgesetze, Umweltauflagen eingehalten?</li>
+            <li>Sozial – passt das Projekt ins soziale Umfeld? (z. B. Schweinezucht neben einer Moschee → funktioniert nicht)</li>
+            <li>Risikobezogen – ist das Risiko zu hoch → Projekt nicht durchführbar?</li>
+          </ul>
+          <p><strong>Methode &amp; Ergebnis:</strong> Nutzwertanalyse – Bewertung, welches Projekt den höchsten Nutzen bringt (gewichtet nach Standort, Kosten, Gewinnpotenzialen). Bei Erfolg: Übergang zum Projektstart → Aufsetzen von Projektvertrag und Pflichtenheft.</p>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Koch-Fokus</div>
+          <p>Koch fragt gerne: „Wie beeinflusst die aktuelle geopolitische/wirtschaftspolitische Lage die Vorselektion?"</p>
+          <ul class="plain">
+            <li>Zölle (Trump) machen Auslandsprojekte teurer → Machbarkeit ökonomisch fraglich</li>
+            <li>Krieg/Sanktionen erhöhen rechtliche &amp; politische Risiken</li>
+            <li>Energiekrise verändert technische Machbarkeit (energieintensive Werke)</li>
+            <li>Fachkräftemangel beeinträchtigt Personalressourcen</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="3-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-2">3.2 Projektstart (Initiierung)</h4>
+        <div class="block">
+          <p><strong>Ziel:</strong> verbindliche Abstimmung zwischen Auftraggeber und Auftragnehmer → mündet in Projektvertrag (PV) und Projektauftrag (PA).</p>
+          <p><strong>Bestandteile der Vorbereitung:</strong></p>
+          <ul class="plain">
+            <li>Projektvertrag (PV) – Abstimmung AG/AN inkl. Kosten, Zahlungsbedingungen</li>
+            <li>Projektauftrag (PA) – verbindliche interne Anweisung für Ausführende</li>
+            <li>Geplanter Projektbeginn / Projektende</li>
+            <li>Globalziel definieren</li>
+            <li>Projektressourcen / Projektbudget kalkulieren</li>
+            <li>Projektumfeldanalyse (siehe Spotlight unten!)</li>
+            <li>Planung des PM-Systems (Aufbauorganisation, Hierarchie, Kommunikation, Meetings)</li>
+            <li>Kick-off-Meeting</li>
+          </ul>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Spotlight – Projektumfeldanalyse (laut Vorlesung besonders wichtig!)</div>
+          <p>Die Umfeldanalyse identifiziert alle Akteure und Einflüsse rund um das Projekt – nach engerem und weiterem Umfeld:</p>
+          <table class="data">
+            <tr><th>Engeres Umfeld</th><th>Weiteres Umfeld</th></tr>
+            <tr><td>Auftraggeber</td><td>Gesellschaft</td></tr>
+            <tr><td>Projektmanager</td><td>Politische Instanzen</td></tr>
+            <tr><td>Projektmitarbeiter</td><td>Behörden</td></tr>
+            <tr><td>Gesamtunternehmen</td><td>Natur</td></tr>
+            <tr><td>Lieferanten</td><td>Technologische Entwicklung, Finanzmarkt, Gesamtwirtschaftliche Entwicklung</td></tr>
+          </table>
+          <p><strong>Warum so wichtig?</strong> Identifikation aller Stakeholder und ihres direkten Einflusses · frühzeitige Erkennung von Risiken UND Chancen von außen · realistische, zielgerichtete Steuerung des Projekts möglich · Basis für Risikomanagement, Marketing, Kommunikation.</p>
+          <p><strong>Tagesordnungspunkte Kick-off-Meeting:</strong> Vorstellungsrunde (PL und Mitarbeiter) · Projektvorstellung (Globalziel, Hintergrund) · Zieldefinition · Aufgabenzuteilung &amp; organisatorische Bedingungen · Teambuilding-Maßnahmen.</p>
+        </div>
+        <div class="ampel" data-key="3-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-3">3.3 Projektzielformulierung / -präzisierung</h4>
+        <div class="block">
+          <p><strong>Aufgabe:</strong> grobes Globalziel in spezifische Unterziele herunterbrechen.</p>
+          <p><strong>SMART-Regel (zwingend erforderlich!):</strong></p>
+          <table class="data">
+            <tr><th>Buchstabe</th><th>Begriff</th><th>Bedeutung</th></tr>
+            <tr><td>S</td><td>Spezifisch</td><td>Eindeutig definiert</td></tr>
+            <tr><td>M</td><td>Messbar</td><td>Kriterien zur Überprüfung vorhanden</td></tr>
+            <tr><td>A</td><td>Ausführbar / Attraktiv</td><td>Vom Team akzeptiert</td></tr>
+            <tr><td>R</td><td>Realistisch</td><td>Machbar mit den vorhandenen Ressourcen</td></tr>
+            <tr><td>T</td><td>Terminbezogen</td><td>Klares Zeitfenster definiert</td></tr>
+          </table>
+          <p><strong>Funktionen klarer Ziele:</strong> Erfolgskontrolle und Orientierung · Führungsentscheidungshilfen · Delegation (wer macht was) · Informationsvermittlung und Koordination · Motivation des Teams.</p>
+          <p><strong>Folgen mangelhafter Zieldefinition:</strong> Ressourcen können nicht richtig geplant werden · Ärger mit Auftraggeber · Demotivation im Team · Projekt scheitert.</p>
+          <p><strong>Zielfindungsbaum – Kategorisierung der Ziele:</strong> Globalziel (z. B. „Verbesserung der Transportverhältnisse in der Innenstadt") gliedert sich in:</p>
+          <table class="data">
+            <tr><th>Zielklasse</th><th>Beispiele</th></tr>
+            <tr><td>Finanz- und Kostenziele</td><td>Betriebskosten, Projektkosten (minimal / Σ Tsd. €)</td></tr>
+            <tr><td>Funktionsziele</td><td>Transportleistung, Sicherheit, Komfort, Service</td></tr>
+            <tr><td>Soziale Ziele</td><td>Lärmverminderung, Personalbelastung</td></tr>
+          </table>
+        </div>
+        <div class="ampel" data-key="3-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-4">3.4 Projektplanung</h4>
+        <div class="block">
+          <p><strong>Inhalte der Projektplanung:</strong> Aufgabenplanung (Zerlegung in Arbeitspakete) · Personalplanung (wer macht was?) · Terminplanung (wann passiert was?) · Sachmittelplanung (Materialien/Ressourcen) · Kostenplanung · Dokumentationsplanung · Qualitätsplanung · Berichtsplanung.</p>
+          <p><strong>Die „Mutter aller Pläne" – Stufen der Projektplanung:</strong></p>
+          <table class="data">
+            <tr><th>Stufe</th><th>Inhalt</th><th>Frage</th></tr>
+            <tr><td>1. Projektdefinition</td><td>Grundlage</td><td>Warum? Wofür?</td></tr>
+            <tr><td>2. Projektstrukturplan (PSP)</td><td>Zerlegung in Arbeitspakete</td><td>Was?</td></tr>
+            <tr><td>3. Projektablaufplan</td><td>Reihenfolge der Pakete</td><td>Was? Wann?</td></tr>
+            <tr><td>4. Projektterminplan</td><td>Zeitangaben pro Schritt</td><td>Wann? Wer?</td></tr>
+            <tr><td>5. Ressourcenplan</td><td>Personen/Mittel zuweisen</td><td>Wer? Wieviel?</td></tr>
+            <tr><td>6. Kostenplan</td><td>Aufwand kalkulieren</td><td>Wieviel?</td></tr>
+          </table>
+          <p>Quer dazu: Risikoplanung („Wie sicher?") und Qualitätsplanung („Wie gut?"). Methoden &amp; Werkzeuge: Balkendiagramme (Gantt-Charts) oder Netzplantechnik – MS Project ist der Excel-Lösung vorzuziehen.</p>
+          <p><strong>Netzplan &amp; kritischer Pfad</strong> – Elemente des Netzplans: Vorgänge | Ereignisse | Anordnungsbeziehungen.</p>
+          <ul class="plain">
+            <li>Längster Pfad durch das Netzwerk = Mindestprojektdauer</li>
+            <li>Aufgaben auf dem kritischen Pfad haben keine Pufferzeit (rote Balken im Diagramm)</li>
+            <li>Verzögerung einer Aufgabe → Endzeitpunkt verschiebt sich nach hinten</li>
+            <li>Pufferzeiten anderer Aufgaben können genutzt werden, um kritische Aufgaben zu entlasten</li>
+            <li>Der Fokus des Projektleiters liegt immer auf dem kritischen Pfad</li>
+          </ul>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Klausur-Insider – Dilemma der Projektkostenplanung</div>
+          <p>Am Anfang ist die Kostenbeeinflussbarkeit hoch, aber die Kostenkenntnis gering (Zukunft unbekannt). Mit jedem Projekttag steigt die Kenntnis, während die Beeinflussbarkeit sinkt – die Kurven laufen gegeneinander. → Aufgabe: Kurven möglichst nah zusammenführen!</p>
+          <p><strong>Gegenmaßnahmen:</strong> Informationen aus alten Projekten heranziehen · Verträge fixieren (Termingeschäfte, z. B. Materialpreise mit Lieferanten vorab festlegen).</p>
+        </div>
+        <div class="block">
+          <p><strong>Ressourcenplanung – Kapazitätsausgleich</strong> (Ziel: Kapazitätsbestand = Kapazitätsbedarf):</p>
+          <table class="data">
+            <tr><th>Situation</th><th>Problem</th><th>Maßnahmen</th></tr>
+            <tr><td>Überdeckung</td><td>Zu viele Mitarbeiter → Ineffizienz / Kosten durch Leerlauf</td><td>Arbeit vorziehen · Mitarbeiter anders einsetzen · in andere Projekte versetzen</td></tr>
+            <tr><td>Unterdeckung</td><td>Zu wenig Mitarbeiter</td><td>Neue Mitarbeiter einstellen · Leiharbeiter (AÜG) · Aufgaben verschieben/strecken · Urlaubsplanung steuern</td></tr>
+          </table>
+        </div>
+        <div class="ampel" data-key="3-4"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-5">3.5 Projektdurchführung (Realisierung)</h4>
+        <div class="block">
+          <p>Merksatz: Die Durchführung ist die einfachste Phase – sofern alles richtig geplant wurde. Hier zeigt sich die Qualität der vorherigen Phasen.</p>
+          <table class="data">
+            <tr><th>Rolle</th><th>Aufgaben</th></tr>
+            <tr><td>Projektleiter</td><td>Mitarbeiterführung, Projektsteuerung, Projektkontrolle</td></tr>
+            <tr><td>PL + Projektteam</td><td>Projektinformationsmanagement, Vertrags- und Nachtragsmanagement</td></tr>
+            <tr><td>Projektteam</td><td>Zuarbeit PL, Aufarbeitung Projektläufe, Umsetzung Arbeitspakete</td></tr>
+          </table>
+          <p><strong>Erfolgsfaktor:</strong> regelmäßige Kommunikation durch Meetings – Projekt-Kick-off-Sitzung (zu Beginn) · Projektcontrolling-Sitzung (sehr häufig, regelmäßig) · Projektauftraggeber-Sitzung (Bericht/Abstimmung) · Projektabschluss-Sitzung (am Ende). Wichtig: Meetings funktionieren nur mit eingehaltenen Kommunikations-Spielregeln!</p>
+        </div>
+        <div class="block case">
+          <div class="kicker">Praxis-Case (15 Punkte) – Deutsches Startup plant Werk in den USA</div>
+          <p>Ein deutsches Startup im Bereich Elektroautos möchte angesichts der neuen US-Zollpolitik (Trump-Zölle von 25 %) eine Produktionsstätte in den USA aufbauen. Investitionsvolumen: 350 Mio. €, geplante Laufzeit: 3 Jahre. Sie sind als Projektleiter beauftragt.</p>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Definieren Sie das Vorhaben als Projekt. Welche Projektmerkmale liegen vor und um welche Projektart handelt es sich (klassifizieren Sie ausführlich)?</li>
+            <li>Welche Projektorganisationsform würden Sie wählen und warum? Begründen Sie Vor- und Nachteile vor dem Hintergrund von Projektgröße und internationalem Kontext.</li>
+            <li>Skizzieren Sie die Vorselektionsphase: Welche Aspekte muss die Machbarkeitsstudie konkret untersuchen? Wie beeinflusst die aktuelle geopolitische Lage Ihre Vorselektion?</li>
+          </ol>
+        </div>
+        <div class="block case">
+          <div class="kicker">Steuerungs-Szenario</div>
+          <p>Während der Projektdurchführung stellt sich heraus, dass eine Aufgabe auf dem kritischen Pfad (Genehmigung der US-Umweltbehörde EPA) sich um 6 Wochen verzögern wird. Das gefährdet das Projektendedatum.</p>
+          <p><strong>Konkrete Maßnahmen:</strong></p>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Ressourcen-Steuerung: Parallelisierung anderer Arbeitspakete vorziehen, die noch Puffer haben → Pufferzeiten nutzen, um die kritische Aufgabe zu kompensieren. Zusätzliche Leiharbeiter (AÜG) für Folgepakete einsetzen.</li>
+            <li>Magisches Dreieck – Kosten erhöhen für Zeitgewinn: externes Beratungshaus für Behördenkontakte engagieren (höhere Kosten), um den Genehmigungsprozess zu beschleunigen. Alternativ: mit dem AG den Endtermin vertraglich anpassen (Nachtragsmanagement).</li>
+          </ol>
+        </div>
+        <div class="ampel" data-key="3-5"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-6">3.6 Projektcontrolling <span style="font-weight:400; color:var(--muted)">— laut Koch nicht klausurrelevant, im Skript trotzdem enthalten</span></h4>
+        <div class="block">
+          <p><strong>Kernphilosophie:</strong> Projektcontrolling = Risikomanagement. Keine Abschlussphase – beginnt bereits beim Projektstart! Obliegt primär dem Projektleiter.</p>
+          <table class="data">
+            <tr><th>Art</th><th>Inhalt</th></tr>
+            <tr><td>Finanzcontrolling</td><td>Monetäre Überprüfung</td></tr>
+            <tr><td>Umsetzungscontrolling</td><td>Überwachung von Qualitäten, Ressourcen und Personal</td></tr>
+          </table>
+          <p><strong>Aufgaben:</strong> laufende Überwachung von Terminen/Budgets einzelner Arbeitspakete · Überprüfung des Projekterfolges (ROI, Umsatzrendite, Amortisation) · frühzeitige Problemerkennung für Umplanungen · Erstellung von Projektstatusberichten für Stakeholder.</p>
+          <p>Methode: permanenter Soll-Ist-Abgleich (z. B. „Earned Value Technik") + Abweichungsanalysen.</p>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Klausurfrage</div>
+          <p>Ist eine Nachkalkulation auch bei mehr Erfolg als geplant nötig? Ja, trotzdem! Man muss analysieren, welche einzelnen Positionen den großen Gewinn verursacht haben (oder ob z. B. günstige Zementpreise eine Rolle spielten). Nur so lassen sich fundierte Erkenntnisse für zukünftige Projekte sichern.</p>
+        </div>
+        <div class="ampel" data-key="3-6"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-3-7">3.7 Projektabschluss <span style="font-weight:400; color:var(--muted)">— laut Koch nicht klausurrelevant, im Skript trotzdem enthalten</span></h4>
+        <div class="block">
+          <p><strong>Ziel:</strong> effektiver, reibungsloser und vertragskonformer Abschluss sowie Übergabe/Abnahme. Merke: Unterschrift → Rechnungsstellung → Beginn der Gewährleistung.</p>
+          <p><strong>Aufgaben bei der Abwicklung:</strong> Erstellung von Abnahmeprotokollen und transparenter, endgültiger Schlussrechnung · reibungslose Auflösung des Projektteams/Projektoffices · Rückabwicklung/Inventarisierung der materiellen Ressourcen · Mitarbeiter- und Stakeholder-Abschlussgespräche.</p>
+          <p><strong>Dokumentation &amp; Nachbereitung:</strong> detaillierter Projektabschlussbericht + Success-Story (wichtig für Folgeaufträge!) · Archivierung aller Unterlagen · Projektabschlusspräsentation.</p>
+          <p><strong>Lessons Learned (Nachbesprechung):</strong> umfangreiches Sammeln von Erkenntnissen &amp; Erfahrungen (Nachkalkulation). Ziel: für ähnliche, zukünftige Projekte lernen.</p>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Wechselwirkungen im Projektverlauf – revolvierende/rollende Planung (sehr wichtig für die Klausur!)</div>
+          <p>Planung und Umsetzung stehen in einem ständigen Wechselspiel. Projektplanung ist kein starrer Block. Je länger ein Projekt läuft, desto schwieriger wird die ursprüngliche Planung. Sie muss ausgehend von der realen Umsetzung immer wieder rollierend/revolvierend neu geplant werden, um flexibel auf Risiken und Planabweichungen reagieren zu können.</p>
+          <p>Auch aus der Klausur-Lernzusammenfassung: je länger ein Projekt läuft, desto risikobehafteter wird es · Diskrepanz zwischen Theorie (Planung) und Praxis (Umsetzung) ist normal · Planer und Ausführende haben oft unterschiedliche Auffassungen (Architekt vs. Bauherr).</p>
+        </div>
+        <div class="ampel" data-key="3-7"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch45">Nächstes Kapitel ›</button></div>
+      </div>
+      <!-- KAPITEL 4-5: DIGITALISIERUNG / NACHHALTIGKEIT -->
+      <div class="ch-content" id="ch45">
+        <div class="crumb">Zusammenfassung / Kapitel 4–5</div>
+        <h1 style="margin-bottom:20px">Kapitel 4–5: Digitalisierung &amp; Nachhaltigkeit <span style="font-size:13px; font-weight:400; color:var(--muted)">— nicht klausurrelevant</span></h1>
+        <div class="block">
+          <p>Laut Eingrenzung nicht prüfungsrelevant: Kapitel 4 (Digitales PM – KI-Phasen/CRISP-DM, Industrie-4.0-Details) und Kapitel 5 (Nachhaltigkeit – 5-Stufen-Modell, IPMA-Standards, P5, PRiSM, 17 UN-Ziele) kommen laut Koch nicht dran.</p>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Trotzdem wichtig</div>
+          <p>Digitalisierung als Trend solltest du trotzdem auf hoher Flugebene kennen (Vor-/Nachteile) – Koch erwartet, dass du Trends wie Digitalisierung und Nachhaltigkeit in andere Antworten einfließen lässt, auch wenn diese Kapitel selbst nicht abgefragt werden.</p>
+        </div>
+        <div class="ampel" data-key="4-5"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch6">Nächstes Kapitel ›</button></div>
+      </div>
+
+      <!-- KAPITEL 6: RISIKOMANAGEMENT -->
+      <div class="ch-content" id="ch6">
+        <div class="crumb">Zusammenfassung / Kapitel 6</div>
+        <h1 style="margin-bottom:20px">Kapitel 6: Risikomanagement <span style="font-size:13px; font-weight:400; color:var(--danger)">— sehr wichtig, tief lernen!</span></h1>
+
+        <h4 id="sub-6-1">6.1 Definitionen</h4>
+        <div class="block def">
+          <div class="kicker">Definition</div>
+          <p><strong>Risiko (im PM):</strong> Maß für die Wahrscheinlichkeit und die Auswirkung, ein Projektziel nicht zu erreichen.</p>
+          <p><strong>Risikomanagement (RM):</strong> Praxis im Umgang mit Risiken. Umfasst Planung, Einschätzung (Identifikation + Bewertung), Strategieentwicklung (Bewältigung) und Überwachung. Ziel: Wahrscheinlichkeit unerwünschter Ergebnisse reduzieren bzw. Auswirkungen möglichst gering halten.</p>
+        </div>
+        <div class="ampel" data-key="6-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-6-2">6.2 Risikoarten (Klausurklassiker!)</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Kostenbezogene Risiken – Kosten falsch eingeschätzt</li>
+            <li>Terminliche Risiken – Zeitplan kippt</li>
+            <li>Technische Risiken – Technologie funktioniert nicht</li>
+            <li>Soziale Risiken – fehlende Akzeptanz Bevölkerung, Religion</li>
+            <li>Rechtliche Risiken – Baurecht, Datenschutz verletzt</li>
+            <li>Politische Risiken – Regimewechsel, Zölle, Sanktionen</li>
+          </ul>
+          <p><strong>Ursachen von Risiken:</strong> Fehleinschätzungen bei der Projektplanung · fachlicher Wandel (Produkt wird obsolet – z. B. Nokia) · emotionales Umfeld (Shitstorm) · Projektmanagement/Projektleitung kann nicht mit Risiken umgehen · sonstiges Umfeld (geopolitisch, regulatorisch).</p>
+        </div>
+        <div class="ampel" data-key="6-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-6-3">6.3 Die 4 Phasen des RM-Prozesses</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Phase</th><th>Inhalt</th></tr>
+            <tr><td>1. Risikoplanung</td><td>Detaillierte Ausformulierung eines Handlungsprogramms</td></tr>
+            <tr><td>2. Risikoanalyse</td><td>Identifikation + Bewertung (klein/mittel/groß)</td></tr>
+            <tr><td>3. Risikobehandlung</td><td>Methoden/Strategien finden + implementieren</td></tr>
+            <tr><td>4. Risikoüberwachung</td><td>Überwachung der Strategie-Effektivität</td></tr>
+          </table>
+          <p><strong>Bewertungsmethoden:</strong> objektiv (Daten, Statistiken, Abweichungsanalysen, KPIs) vs. subjektiv (Erfahrungsberichte, Befragung von Experten/Bekannten – „Bauchgefühl").</p>
+        </div>
+        <div class="ampel" data-key="6-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-6-4">6.4 Die 4 Risikostrategien – Hammer!</h4>
+        <div class="block merke">
+          <div class="kicker">Diese 4 musst du immer beherrschen</div>
+          <table class="data">
+            <tr><th>Strategie</th><th>Was bedeutet das?</th><th>Beispiel</th></tr>
+            <tr><td>1. Vermeidung</td><td>Risiko gar nicht erst eingehen</td><td>Auf riskante Technologie verzichten</td></tr>
+            <tr><td>2. Übertragung</td><td>Risiko an Dritte abgeben</td><td>Versicherung (z. B. Hermes), Outsourcing</td></tr>
+            <tr><td>3. Steuerung (Minderung)</td><td>Wahrscheinlichkeit/Schaden senken</td><td>Eskalationsstufen, Notfallpläne, Prototypen</td></tr>
+            <tr><td>4. Akzeptanz (Inkaufnahme)</td><td>Risiko bewusst tragen</td><td>Budgetpuffer einplanen, Monitoring</td></tr>
+          </table>
+          <p><strong>Koch-Fokus:</strong> typische Fragestellung: „Welche Risiken bestehen bei diesem Projekt? Welche Strategie würden Sie für jedes Risiko wählen und warum?" → Du musst Risiko → Bewertung (Wahrscheinlichkeit × Auswirkung) → Strategie + Begründung liefern.</p>
+        </div>
+        <div class="ampel" data-key="6-4"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-6-5">6.5 Wechselwirkung Planung ↔ Umsetzung</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Je länger ein Projekt läuft, desto schwieriger wird die Planung</li>
+            <li>Je länger ein Projekt läuft, desto risikobehafteter</li>
+            <li>Diskrepanz zwischen Theorie (Planung) und Praxis (Umsetzung) ist normal</li>
+            <li>Planer und Ausführende haben oft unterschiedliche Auffassungen (Architekt vs. Bauherr)</li>
+            <li>Lösung: revolvierende Planung – kontinuierliche Anpassung basierend auf Umsetzungserfahrung</li>
+          </ul>
+        </div>
+        <div class="block case">
+          <div class="kicker">Praxis-Case (15 Punkte) – Hochstraße Ludwigshafen: Risikomanagement</div>
+          <p>Die Hochstraße Nord-Süd in Ludwigshafen ist ein Infrastruktur-Großprojekt mit 865 Mio. € Budget (Stand Ende 2024). Die Hochstraße Süd wird abgerissen und neu gebaut (2021–2026), die Hochstraße Nord wird zur ebenerdigen Stadtstraße (2024–2032).</p>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Identifizieren Sie drei zentrale Risikoarten dieses Projektes und bewerten Sie diese (klein/mittel/groß).</li>
+            <li>Wählen Sie für jedes der drei Risiken eine geeignete Risikostrategie und begründen Sie Ihre Wahl.</li>
+            <li>Wie beeinflusst die aktuelle wirtschafts-/geopolitische Situation die Risikoeinschätzung (Inflation, Materialkosten, Fachkräftemangel)?</li>
+          </ol>
+        </div>
+        <div class="ampel" data-key="6-5"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch7">Nächstes Kapitel ›</button></div>
+      </div>
+
+      <!-- KAPITEL 7: PROJEKTERFOLG -->
+      <div class="ch-content" id="ch7">
+        <div class="crumb">Zusammenfassung / Kapitel 7</div>
+        <h1 style="margin-bottom:20px">Kapitel 7: Projekterfolg <span style="font-size:13px; font-weight:400; color:var(--danger)">— sehr wichtig</span></h1>
+
+        <h4 id="sub-7-1">7.1 Die 10 + X Erfolgsfaktoren</h4>
+        <div class="block">
+          <p><strong>Die klassischen 10 Erfolgsfaktoren:</strong></p>
+          <ul class="plain">
+            <li>Teambildung – Vertrauensverhältnis zwischen Teammitgliedern</li>
+            <li>Zielsetzung – einfache, klare, messbare Ziele (SMART)</li>
+            <li>Arbeitsklima – motivierendes Umfeld, Vertrauen zu Stakeholdern</li>
+            <li>Zusammenarbeit mit Auftraggeber</li>
+            <li>Einbeziehung der Privatkunden/Nutzer (Unterschied Investor ≠ Nutzer!)</li>
+            <li>Entscheidungsfreiheit und Mitbestimmung</li>
+            <li>Projektverständnis – alle wissen, worum es geht</li>
+            <li>Umgang mit Projektrisiken</li>
+            <li>Aufgabenverteilung – passend zu den Kompetenzen</li>
+            <li>Managementaufmerksamkeit – Ownership durch Top-Management</li>
+          </ul>
+          <p><strong>Weitere wichtige Erfolgsfaktoren (Slide 83):</strong> effektives und starkes Projektmanagement · klare und einfache Projektorganisation · gut qualifizierte Projektmitarbeiter · regelmäßige und kontinuierliche Projektkontrollen · ständiges Continuous Improvement der Prozessabläufe (KAIZEN/KVP) · Digitalisierung als neuer Erfolgsfaktor.</p>
+        </div>
+        <div class="ampel" data-key="7-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-7-2">7.2 Best Practice</h4>
+        <div class="block def">
+          <div class="kicker">Definition</div>
+          <p>Unverbindliche Empfehlungen, wie in einem bestimmten Fall vorzugehen ist. Best Practice ist NICHT die theoretisch bestmögliche Lösung, sondern die beste realisierbare Lösung.</p>
+          <p><strong>Wichtige Aspekte:</strong> Best Practice kann Bestandteil eines Projektvertrags sein · funktioniert nicht immer – Gegenargumente nötig (andere Gegebenheiten/Voraussetzungen, Projekte sind einzigartig, Auftraggeber will Best Practice formal, spielt aber praktisch nicht mit). Was, wenn AG etwas will, das nicht im Vertrag steht? → Vertragsnachträge!</p>
+        </div>
+        <div class="ampel" data-key="7-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-7-3">7.3 Unterschied Auftraggeber vs. Kunde</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Aspekt</th><th>Projektauftraggeber (PAG)</th><th>Projektkunde / Nutzer</th></tr>
+            <tr><td>Rolle</td><td>Investor</td><td>Nutzer</td></tr>
+            <tr><td>Aufgabe</td><td>Gibt Auftrag, setzt Rahmen</td><td>Arbeitet später mit dem Ergebnis</td></tr>
+            <tr><td>Interesse</td><td>Budget muss stimmen</td><td>Ergebnis muss im Alltag funktionieren</td></tr>
+          </table>
+        </div>
+        <div class="ampel" data-key="7-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch8">Nächstes Kapitel ›</button></div>
+      </div>
+      <!-- KAPITEL 8: GROSSPROJEKTE -->
+      <div class="ch-content" id="ch8">
+        <div class="crumb">Zusammenfassung / Kapitel 8</div>
+        <h1 style="margin-bottom:20px">Kapitel 8: PM bei Großprojekten <span style="font-size:13px; font-weight:400; color:var(--danger)">— sehr wichtig</span></h1>
+
+        <h4 id="sub-8-1">8.1 Merkmale von Großprojekten</h4>
+        <div class="block">
+          <p>Ein Vorhaben ist ein Großprojekt, wenn:</p>
+          <ul class="plain">
+            <li>Mindestens 2 Unternehmen beteiligt sind (oft: Projektgesellschaft)</li>
+            <li>Budget die Jahresumsätze der beteiligten Unternehmen übersteigt</li>
+            <li>Scheitern stellt erhebliches wirtschaftliches Risiko dar</li>
+            <li>Dauer länger als 1 Jahr</li>
+            <li>Zahl und Komplexität der Vorgänge sehr hoch (bis 100.000+, Vernetzung &gt; 1)</li>
+            <li>Vollkommen eigene Aufbauorganisation erforderlich</li>
+            <li>Der breiten Öffentlichkeit (lokal/national/international) bekannt</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="8-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-8-2">8.2 Vorgehensweise bei einem (möglichen) Großprojekt</h4>
+        <div class="block">
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Prüfen: Liegt überhaupt ein Großprojekt vor? (alle Merkmale checken)</li>
+            <li>Falls ja, dann zwingend beachten: eigene Aufbauorganisation (meist reine Projektorganisation oder Projektgesellschaft) · Risikomanagement intensivieren (hohe Stakes!) · Projektmarketing betreiben (Öffentlichkeit informieren) · Projektkommunikation strukturieren (Multi-Stakeholder).</li>
+          </ol>
+        </div>
+        <div class="ampel" data-key="8-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-8-3">8.3 Leistungen nach Baumanagement-Projekthandbuch</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Leistungen der Projektorganisation</li>
+            <li>Vertragsmanagement</li>
+            <li>Planung und Kontrolle – Termine und Abläufe</li>
+            <li>Planung und Kontrolle – Qualitäten, Quantitäten und Kosten</li>
+            <li>Abnahme und Übergabe</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="8-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-8-4">8.4 Praxisbeispiele aus dem Skript</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Projekt</th><th>Kategorie</th><th>Budget / Eckdaten</th></tr>
+            <tr><td>Hochstraße Nord-Süd Ludwigshafen</td><td>Infrastruktur</td><td>865 Mio. € (Stand 2024)</td></tr>
+            <tr><td>Flughafen Frankfurt – Terminal 3</td><td>Infrastruktur</td><td>4 Mrd. €, 2019–2026</td></tr>
+            <tr><td>Rhine Ordnance Barracks Medical Center</td><td>Gesundheit</td><td>1,5 Mrd. €, Fertigstellung 2027</td></tr>
+            <tr><td>Offshore Windpark Hollandse Kust Zuid</td><td>Energie</td><td>~4 Mrd. € (BASF/Allianz/Vattenfall)</td></tr>
+            <tr><td>Biontech Werk Kigali, Ruanda</td><td>Pharma/Transfer</td><td>150 Mio. €, Anfang 2025</td></tr>
+            <tr><td>Eli Lilly Pharmafabrik Alzey</td><td>Pharma</td><td>2,3 Mrd. €, 2027</td></tr>
+            <tr><td>NEOM (Saudi-Arabien)</td><td>Mega-City</td><td>Mega-Projekt, Übersee</td></tr>
+            <tr><td>One Belt One Road (Seidenstraße)</td><td>Geopolitik</td><td>2013–2049, VR China</td></tr>
+          </table>
+        </div>
+        <div class="block merke">
+          <div class="kicker">Koch-Fokus</div>
+          <p>Bezug zu Koch: Bei der Seidenstraße (One Belt One Road) musst du den geopolitischen Hintergrund einbringen: Einfluss Chinas auf die Weltwirtschaft, Abhängigkeiten westlicher Länder, militärische Absichten.</p>
+        </div>
+        <div class="ampel" data-key="8-4"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch9">Nächstes Kapitel ›</button></div>
+      </div>
+
+      <!-- KAPITEL 9: INTERNATIONALES PM -->
+      <div class="ch-content" id="ch9">
+        <div class="crumb">Zusammenfassung / Kapitel 9</div>
+        <h1 style="margin-bottom:20px">Kapitel 9: Internationales Projektmanagement <span style="font-size:13px; font-weight:400; color:var(--danger)">— sehr wichtig</span></h1>
+
+        <h4 id="sub-9-1">9.1 Folgen der Globalisierung</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Globale Konkurrenzsituation (Waren und Dienstleistungen)</li>
+            <li>Globale Finanzmärkte (Geld günstig im Ausland leihen)</li>
+            <li>„Global Player" – Unternehmen agieren weltweit</li>
+            <li>Globale Arbeitsmärkte (Verlagerung von Arbeitsplätzen)</li>
+          </ul>
+          <p>Internationale Projekte sind IMMER interkulturelle Projekte! Ständiger Anpassungsdruck an heterogene und fremdartige Rahmenbedingungen.</p>
+        </div>
+        <div class="ampel" data-key="9-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-9-2">9.2 Chancen vs. Risiken internationaler Projekte</h4>
+        <div class="block">
+          <p><strong>Vorteile:</strong> attraktive wirtschaftliche Perspektiven (Wachstum, Gewinne) · Risikoverlagerung (Steuern, Regulierung) · Lerneffekte auf kleinerem Markt.</p>
+          <p><strong>Nachteile:</strong> unbekannte/wechselnde Rahmenbedingungen · kulturelle Hindernisse (Religion, Einstellungen) · fehlende Akzeptanz im Inland.</p>
+        </div>
+        <div class="ampel" data-key="9-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-9-3">9.3 Erfolgsfaktoren internationaler Projekte</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Weg von der „Fallschirmstrategie" (nicht einfach reinspringen)</li>
+            <li>Gute Kommunikation zwischen Projektbeteiligten</li>
+            <li>Persönlicher Kontakt AG → PL → Team</li>
+            <li>Eindeutige Verträge (Rechtslage, Finanzen)</li>
+            <li>Kenntnisse über die Kultur der Einsatzländer</li>
+            <li>Kenntnis der Unternehmens- und Projektkultur der Partner</li>
+            <li>Vertrauen auf Gegenseitigkeit</li>
+            <li>Feste Projekt-Organisation und Ansprechpartner</li>
+            <li>Standardisierung von Kommunikation, Berichtswesen, Dokumentation</li>
+            <li>Vereinbarungen für Umgang mit Störungen, Problemen, Konflikten</li>
+            <li>Internationale Zusammensetzung des Projektteams (auch Hierarchien)</li>
+            <li>Einsatz von „Locals" (PRO = Public Regulation Officer) für Behörden- und Bevölkerungsnähe</li>
+            <li>Einbindung lokaler Zulieferer</li>
+            <li>→ Intensive Vorbereitung VOR dem Auslandseinsatz!</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="9-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-9-4">9.4 Arten internationaler Projekte</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Intern</th><th>Extern</th></tr>
+            <tr><td>Eigenes Unternehmen ist Auftraggeber</td><td>Fremder Kunde im Ausland</td></tr>
+            <tr><td>Errichtung/Unterhalt Verkaufsniederlassung</td><td>Bauprojekte (Solitaire)</td></tr>
+            <tr><td>Errichtung/Unterhalt Produktionsbetrieb</td><td>Beratungsaufträge</td></tr>
+            <tr><td>Globale Software einführen</td><td>Entwicklungsaufträge</td></tr>
+          </table>
+        </div>
+        <div class="ampel" data-key="9-4"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-9-5">9.5 BOT / BOOT / PPP – die Schlüsselmodelle!</h4>
+        <div class="block merke">
+          <div class="kicker">Merken</div>
+          <table class="data">
+            <tr><th>Modell</th><th>Bedeutung</th><th>Konzept</th></tr>
+            <tr><td>BOT</td><td>Build – Operate – Transfer</td><td>Privates Unternehmen baut, betreibt befristet (z. B. 20 Jahre), übergibt dann an den Staat. Einnahmen aus Betriebsphase.</td></tr>
+            <tr><td>BOOT</td><td>Build – Own – Operate – Transfer</td><td>Wie BOT, aber: Investor ist während der Betriebsphase auch rechtlicher Eigentümer.</td></tr>
+            <tr><td>PPP</td><td>Public-Private-Partnership</td><td>Langfristige Partnerschaft öffentliche Hand + Privatunternehmen. Risikoteilung, Effizienz.</td></tr>
+          </table>
+          <p><strong>Vorteile PPP/BOT/BOOT:</strong> Risikoteilung – Risiken landen beim Partner, der sie am besten managt · Effizienz – Private bringen Innovation und Management-Know-how · Finanzierung – Staat realisiert Projekte ohne Eigenmittel. Nachteil: Staat wird abhängig vom privaten Unternehmen.</p>
+        </div>
+        <div class="block case">
+          <div class="kicker">Praxis-Case (15 Punkte) – Abfallentsorgung in Albanien: externes Projekt</div>
+          <p>Ein deutsches Entsorgungsunternehmen erhält den Auftrag, in Albanien eine moderne Müllentsorgungsinfrastruktur (Sammlung, Recycling, Deponien) aufzubauen und für 15 Jahre zu betreiben. Auftraggeber ist die albanische Regierung.</p>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Klassifizieren Sie das Projekt (intern/extern, BOT/BOOT/PPP?) und begründen Sie. Welche Vorteile hat dieses Modell für beide Seiten?</li>
+            <li>Welche Erfolgsfaktoren für internationale Projekte sind hier besonders kritisch? Nennen Sie 4 und erläutern Sie diese am konkreten Beispiel.</li>
+            <li>Welche Risiken bestehen und welche Strategie würden Sie für die jeweils größten Risiken wählen?</li>
+          </ol>
+        </div>
+        <div class="ampel" data-key="9-5"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch1011">Nächstes Kapitel ›</button></div>
+      </div>
+      <!-- KAPITEL 10-11: PM 2025 + ZUSATZFRAGEN -->
+      <div class="ch-content" id="ch1011">
+        <div class="crumb">Zusammenfassung / Kapitel 10–11</div>
+        <h1 style="margin-bottom:20px">Kapitel 10–11: PM 2025 &amp; Zusatzfragen <span style="font-size:13px; font-weight:400; color:var(--danger)">— sehr wichtig, kam schon in Altklausuren!</span></h1>
+
+        <h4 id="sub-10-1">10.1 Warum wird PM immer bedeutender? (10 Punkte!)</h4>
+        <div class="block merke">
+          <div class="kicker">Koch-Fokus</div>
+          <p>Typische Aufgabe: „Nennen und beschreiben Sie 4 Gründe, warum Projekte bzw. Projektmanagement immer bedeutender werden." (10 Punkte) → Hier lohnt es sich, mehr als 4 zu kennen, um die besten auszuwählen!</p>
+          <ul class="plain">
+            <li>Klare Zielorientierung – Überblick, was gemacht ist / noch zu tun ist</li>
+            <li>Bessere Zusammenarbeit – direkte Kommunikation, klare Rollenverteilung</li>
+            <li>Umgang mit Zeitdruck – Aufgaben klar verteilt</li>
+            <li>Kapitalintensiver – effizienter arbeiten durch Prozesse</li>
+            <li>Größe und Komplexität steigt – Spezialisten nötig, keine Routine-Lösung</li>
+            <li>Nachhaltigkeit wird gefordert</li>
+            <li>Globalisierung – Vorhaben sind vernetzter</li>
+            <li>Innovationen erfordern Projektarbeit</li>
+            <li>Spezialisierung – keine Routine mehr möglich</li>
+            <li>Risiken steigen – Risikomanagement essentiell</li>
+            <li>Qualitätsanforderungen steigen</li>
+            <li>Öffentliche Meinung spielt eine Rolle</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="10-1"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-10-2">10.2 Zukunft des Projektgeschäfts</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Starke Digitalisierung – KI als erheblicher Bestandteil</li>
+            <li>Nachhaltigkeit + Compliance wird wichtiger</li>
+            <li>Wirtschaftliche/politische Verhältnisse ändern sich – Europa wird schwächer</li>
+            <li>Mehr individuelle Abwicklung (Home-Office, E-Mail)</li>
+            <li>Mehr Konzerne/Zusammenschlüsse – kleine Firmen verschwinden</li>
+            <li>Fokus auf wenige „Player"</li>
+            <li>Weniger Globalisierung durch nationalistisches Denken (Trump-Zölle)</li>
+            <li>Machbarkeitsstudien, Umfeldanalyse und Controlling werden komplexer</li>
+            <li>PM-Phasen verändern sich → mehr agiles PM</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="10-2"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <h4 id="sub-10-3">10.3 Geopolitische Probleme / Risiken (Koch-Lieblingsthema!)</h4>
+        <div class="block merke">
+          <div class="kicker">Koch-Lieblingsthema</div>
+          <ul class="plain">
+            <li>Naturkatastrophen – Erdbeben, Klimawandel</li>
+            <li>Konflikte zwischen Ländern – Krieg, Sanktionen</li>
+            <li>Politische Einstellungen – Regierungswechsel</li>
+            <li>Handelskonflikte – z. B. Zölle (Trump 25 % auf EU-Importe)</li>
+            <li>China-Faktor – günstig produzieren, aber schwaches Sozialsystem</li>
+            <li>Fachkräftemangel in Deutschland</li>
+            <li>Energiekrise – Verlagerung energieintensiver Werke</li>
+          </ul>
+        </div>
+        <div class="ampel" data-key="10-3"><button data-v="ok">Gut verstanden</button><button data-v="mid">Geht so</button><button data-v="bad">Nicht verstanden</button></div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+        <div class="footer-nav"><button class="ghost" data-nextch="ch12">Nächstes Kapitel ›</button></div>
+      </div>
+
+      <!-- CHECKLISTE -->
+      <div class="ch-content" id="ch12">
+        <div class="crumb">Zusammenfassung / Checkliste</div>
+        <h1 style="margin-bottom:20px">Checkliste: „Blind beherrschen"</h1>
+        <p class="lede" style="margin-bottom:16px">Was du auswendig wissen musst – ohne nachdenken zu müssen.</p>
+
+        <h4 id="sub-12-def">Definitionen, die sitzen müssen</h4>
+        <div class="block">
+          <table class="data">
+            <tr><th>Begriff</th><th>Definition (Kurzform)</th></tr>
+            <tr><td>Projekt</td><td>Mind. 4/5 Merkmale: Zielvorgabe, Zeit, Einmaligkeit, Größe, Komplexität</td></tr>
+            <tr><td>PM</td><td>Planung, Steuerung, Überwachung von Projekten über gesamte Laufzeit</td></tr>
+            <tr><td>Magisches Dreieck</td><td>Zeit – Inhalt – Kosten + Qualität in der Mitte</td></tr>
+            <tr><td>Risiko</td><td>Maß für Wahrscheinlichkeit × Auswirkung, Ziel nicht zu erreichen</td></tr>
+            <tr><td>RM</td><td>Praxis des Umgangs: Planung, Analyse, Behandlung, Überwachung</td></tr>
+            <tr><td>Best Practice</td><td>Beste realisierbare Lösung (NICHT die theoretisch bestmögliche!)</td></tr>
+            <tr><td>Lastenheft</td><td>Anforderungen des AG (das Was)</td></tr>
+            <tr><td>Pflichtenheft</td><td>Lösungskonzept des AN (das Wie)</td></tr>
+            <tr><td>Großprojekt</td><td>≥2 Unternehmen, Budget &gt; Jahresumsatz, &gt; 1 Jahr, eigene Organisation, öffentlich</td></tr>
+            <tr><td>Machbarkeitsstudie</td><td>Teilstudien: wirtschaftlich/technisch/rechtlich/ökologisch/sozial/risikobezogen</td></tr>
+          </table>
+        </div>
+
+        <h4 id="sub-12-list">Listen, die abrufbar sein müssen</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>5 Projektmerkmale: Zielvorgabe, Zeit, Einmaligkeit, Größe, Komplexität</li>
+            <li>4 Stellschrauben Magisches Dreieck: Zeit, Inhalt, Kosten, Qualität</li>
+            <li>3 Aufbauorganisationen: Stabs / Matrix / Reine PO + je 2–3 Vor- und Nachteile</li>
+            <li>3 Kompetenzen + Reihenfolge: Sozial &gt; Fach &gt; Methodik</li>
+            <li>SMART: Spezifisch, Messbar, Ausführbar, Realistisch, Terminiert</li>
+            <li>6 Stufen Projektplanung: Definition → PSP → Ablauf → Termin → Ressourcen → Kosten</li>
+            <li>6 Risikoarten: Kosten / Termine / technisch / sozial / rechtlich / politisch</li>
+            <li>4 Risikostrategien: Vermeidung / Übertragung / Steuerung / Akzeptanz</li>
+            <li>4 RM-Phasen: Planung / Analyse / Behandlung / Überwachung</li>
+            <li>10 Erfolgsfaktoren: Team / Ziele / Klima / AG / Kunden / Entscheidung / Verständnis / Risiko / Aufgaben / Management</li>
+            <li>3 BOT-Modelle: BOT / BOOT / PPP</li>
+            <li>Engeres Umfeld (5): AG, PM, Mitarbeiter, Gesamtunternehmen, Lieferanten</li>
+            <li>Weiteres Umfeld (6): Gesellschaft, Politik, Behörden, Natur, Technologie, Finanzmarkt, Gesamtwirtschaft</li>
+          </ul>
+        </div>
+
+        <h4 id="sub-12-arg">Standard-Argumentationsketten</h4>
+        <div class="block merke">
+          <div class="kicker">„Warum diese Organisationsform?"</div>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Projektmerkmale klären (Größe, Dauer, Risiko)</li>
+            <li>Anforderung ableiten (Tempo? Identifikation? Auslastung?)</li>
+            <li>Form wählen + 2 Vorteile nennen</li>
+            <li>Trade-off diskutieren (2 Nachteile)</li>
+          </ol>
+        </div>
+        <div class="block merke">
+          <div class="kicker">„Risikomanagement durchführen"</div>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Identifizieren – welche Risiken (6 Arten als Raster)?</li>
+            <li>Bewerten – Wahrscheinlichkeit × Auswirkung (groß/mittel/klein)</li>
+            <li>Strategie wählen (1 der 4) + begründen</li>
+            <li>Überwachen – revolvierende Planung</li>
+          </ol>
+        </div>
+        <div class="block merke">
+          <div class="kicker">„Geopolitischer Einfluss auf das Projekt"</div>
+          <ol style="margin-left:18px; font-size:14px;">
+            <li>Welche aktuelle Lage? (Zölle, Krieg, Sanktionen, Energiekrise)</li>
+            <li>Welche Projektphase betroffen? (Vorselektion, Standortwahl, Risiko)</li>
+            <li>Konsequenz für das Projekt</li>
+            <li>Steuerungsmaßnahme als Reaktion</li>
+          </ol>
+        </div>
+
+        <h4 id="sub-12-skip">Was du beim Auswendiglernen vernachlässigen darfst</h4>
+        <div class="block">
+          <ul class="plain">
+            <li>Kapitel 3.6 Projektcontrolling im Detail (KPIs, ROI, Earned-Value-Technik) → kommt nicht dran</li>
+            <li>Kapitel 3.7 Projektabschluss (Success-Story-Bausteine, Abnahmeprotokoll-Details) → kommt nicht dran</li>
+            <li>Kapitel 4 (Digitales PM) – KI-Phasen (CRISP-DM), Industrie-4.0-Details → nicht prüfungsrelevant</li>
+            <li>Kapitel 5 (Nachhaltigkeit) – 5-Stufen-Modell, IPMA-Standards, P5, PRiSM, 17 UN-Ziele → nicht dran</li>
+            <li>Details des Wasserfallmodells (Phasenüberlappungen, V-Modell etc.)</li>
+            <li>Details zu Scrum (Backlog-Mechanik, Sprint-Längen, Daily-Format)</li>
+            <li>Spezielle Netzplan-Berechnungen (FAZ, SAZ, FEZ, SEZ-Formeln)</li>
+            <li>Die Zielklassen im Detail (operativ/taktisch/strategisch Zeithorizonte)</li>
+          </ul>
+          <p style="margin-top:10px"><strong>Aber:</strong> Digitalisierung als Trend trotzdem auf hoher Flugebene kennen (Vor-/Nachteile).</p>
+        </div>
+
+        <h4 id="sub-12-tips">Tipps für die Klausur</h4>
+        <div class="block merke">
+          <div class="kicker">Viel Erfolg!</div>
+          <ul class="plain">
+            <li>15-Punkte-Aufgaben: immer 3 Teilfragen → plane 5 Punkte/Teilfrage und liefere strukturiert ab</li>
+            <li>10-Punkte-Aufgaben: meist Nennung + Beschreibung → liefere genau die geforderte Anzahl + Beschreibung</li>
+            <li>„Bewerten Sie …" immer mit eigener Begründung antworten – nicht nur aufzählen!</li>
+            <li>Praxis-Cases: Schritt 1 = Projekt klassifizieren, Schritt 2 = Methodik wählen, Schritt 3 = begründen</li>
+            <li>Trends einbauen: mind. 1× Geopolitik, 1× Digitalisierung in deinen Antworten erwähnen</li>
+            <li>Argumentationsketten: „Weil X, deshalb Y, mit Konsequenz Z" – nicht nur Fakten aufzählen</li>
+            <li>Beispiele bringen: Hochstraße, Trump-Zölle, Biontech Ruanda, Seidenstraße – schaffen Praxisbezug</li>
+            <li>Zeitmanagement: bei 15-Punkte-Aufgabe ~20–25 Min einplanen</li>
+          </ul>
+          <p style="margin-top:10px">Die wichtigsten Hebel: Phasen als Prozess verstehen (nicht isoliert), 4 Risikostrategien blind beherrschen, Umfeldanalyse mit engerem/weiterem Umfeld parat haben, und geopolitische/digitale Trends in jede Antwort einflechten. Koch belohnt strukturiertes Denken und Praxistransfer – nicht das Auswendiglernen von Definitionen.</p>
+        </div>
+
+        <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-tutorien">
+  <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+  <h1 style="margin-bottom:6px">Tutorien</h1>
+  <p class="lede">Alle Tutoriumsblätter des Semesters mit eigenen, handschriftlich nachvollziehbaren Lösungswegen. Die Original-Aufgabentexte sind nicht enthalten – die habt ihr aus dem Tutorium.</p>
+  <div class="exam-row"><div class="info"><h3>Tutorium 1 – Projektorganisation</h3><p>4 Aufgaben · Lösungsweg + 2 Videos</p></div><span class="status">Offen</span></div>
+  <div class="exam-row"><div class="info"><h3>Tutorium 2 – Netzplantechnik I</h3><p>5 Aufgaben · Lösungsweg + 3 Videos</p></div><span class="status">Offen</span></div>
+  <div class="exam-row"><div class="info"><h3>Tutorium 3 – Netzplantechnik II</h3><p>4 Aufgaben · Lösungsweg + 1 Video</p></div><span class="status">Offen</span></div>
+  <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+</section>
+
+<!-- SEITE: ÜBUNGSAUFGABEN (Platzhalter) -->
+<section class="page" id="page-uebungen">
+  <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+  <h1 style="margin-bottom:6px">Übungsaufgaben</h1>
+  <p class="lede">38 Aufgaben nach Thema sortiert. Jede Aufgabe öffnet exakt den passenden Lösungsweg – ohne Scrollen durch lange PDFs.</p>
+  <div class="exam-row"><div class="info"><h3>Netzplantechnik – Aufgabe N1</h3><p>Vorwärts-/Rückwärtsrechnung · mittel</p></div><span class="status rate" data-cat="uebungen" data-key="n1">Offen</span></div>
+  <div class="exam-row"><div class="info"><h3>Netzplantechnik – Aufgabe N2</h3><p>Kritischer Pfad · schwer</p></div><span class="status rate" data-cat="uebungen" data-key="n2">Offen</span></div>
+  <div class="exam-row"><div class="info"><h3>Scrum – Aufgabe S1</h3><p>Rollen zuordnen · leicht</p></div><span class="status rate" data-cat="uebungen" data-key="s1">Offen</span></div>
+  <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+</section>
+<!-- SEITE: ALTKLAUSUREN -->
+<section class="page" id="page-altklausuren">
+  <div class="two-col">
+    <div class="filter-col">
+      <p>Thema</p>
+      <button class="chip on" data-thema="alle">Alle Themen</button>
+      <button class="chip" data-thema="netzplan">Netzplantechnik</button>
+      <button class="chip" data-thema="scrum">Scrum</button>
+      <button class="chip" data-thema="risiko">Risiko</button>
+      <button class="chip" data-thema="kalkulation">Kalkulation</button>
+      <p>Termin</p>
+      <button class="chip on" data-termin="alle">Alle Termine</button>
+      <button class="chip" data-termin="ss24">SS 2024</button>
+      <button class="chip" data-termin="ws23">WS 2023/24</button>
+      <button class="chip" data-termin="ss23">SS 2023</button>
+    </div>
+    <div>
+      <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+      <h1 style="margin-bottom:6px">Altklausuren</h1>
+      <p class="lede">Eigene Lösungswege zu 14 Klausuren – klick auf eine Klausur, um die Aufgaben einzeln zu öffnen.</p>
+      <div id="exam-list">
+        <div class="exam-row" data-termin="ss24" data-themen="netzplan scrum kalkulation"><div class="info"><h3>SS 2024 – Klausur Koch</h3><p>5 Aufgaben · Netzplantechnik, Scrum, Kalkulation</p></div><span class="status rate" data-cat="altklausuren" data-key="ss24">Offen</span></div>
+        <div class="exam-row" data-termin="ws23" data-themen="risiko"><div class="info"><h3>WS 2023/24 – Klausur Koch</h3><p>4 Aufgaben · Grundlagen, Risiko</p></div><span class="status rate" data-cat="altklausuren" data-key="ws23">Offen</span></div>
+        <div class="exam-row" data-termin="ss23" data-themen="netzplan kalkulation"><div class="info"><h3>SS 2023 – Klausur Koch</h3><p>5 Aufgaben · Netzplantechnik, Kalkulation</p></div><span class="status rate" data-cat="altklausuren" data-key="ss23">Offen</span></div>
+      </div>
+      <div class="notice">ⓘ Gezeigt werden ausschließlich selbst erstellte Lösungswege der Kursautoren – keine Original-Aufgabenblätter.</div>
+    </div>
+  </div>
+</section>
+
+<!-- SEITE: MINDMAP -->
+<section class="page" id="page-mindmap">
+  <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+  <h1 style="margin-bottom:6px">Übersicht / Mindmap</h1>
+  <p class="lede">Der gesamte Klausurstoff als aufklappbare Themen-Karte. Klick auf einen Knoten, um seine Unterthemen auszurollen – von dort springst du direkt ins passende Kapitel der Zusammenfassung.</p>
+  <div class="block" style="padding:24px">
+    <div class="mind-node open">
+      <div class="node-row"><span class="tog">−</span><span class="node-title">Projektmanagement (Koch)</span><span class="node-count">9 Themenblöcke</span></div>
+      <div class="mind-children">
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">1 Grundlagen</span><span class="node-count">definitiv dran</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1"><span class="tog">›</span><span class="node-title">Projektmerkmale (DIN 69901)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1"><span class="tog">›</span><span class="node-title">Projektarten (Klassifizierung)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1"><span class="tog">›</span><span class="node-title">Magisches Dreieck</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1"><span class="tog">›</span><span class="node-title">Klassisch vs. agil vs. hybrid</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1"><span class="tog">›</span><span class="node-title">PM-Kompetenzen (Reihenfolge!)</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">2 Projektorganisation</span><span class="node-count">nur oberflächlich</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch2"><span class="tog">›</span><span class="node-title">Stabs-PO</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch2"><span class="tog">›</span><span class="node-title">Matrix-PO</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch2"><span class="tog">›</span><span class="node-title">Reine PO</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch2"><span class="tog">›</span><span class="node-title">Wichtige Rollen (AG, AN, PL …)</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">3 Projektphasen</span><span class="node-count">Kern der Klausur</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.1 Vorselektion / Machbarkeitsstudie</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.2 Projektstart / Umfeldanalyse</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.3 Zielformulierung (SMART)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.4 Projektplanung / kritischer Pfad</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.5 Projektdurchführung</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.6 Projektcontrolling (nicht klausurrelevant)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch3"><span class="tog">›</span><span class="node-title">3.7 Projektabschluss (nicht klausurrelevant)</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">4–5 Digitalisierung / Nachhaltigkeit</span><span class="node-count">nicht klausurrelevant</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch45"><span class="tog">›</span><span class="node-title">Nur Trends auf hoher Flugebene</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">6 Risikomanagement</span><span class="node-count">sehr wichtig</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch6"><span class="tog">›</span><span class="node-title">Risikoarten (6 Stück)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch6"><span class="tog">›</span><span class="node-title">4 Phasen des RM-Prozesses</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch6"><span class="tog">›</span><span class="node-title">4 Risikostrategien (Hammer!)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch6"><span class="tog">›</span><span class="node-title">Praxis-Case Hochstraße Ludwigshafen</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">7 Projekterfolg</span><span class="node-count">sehr wichtig</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch7"><span class="tog">›</span><span class="node-title">10 + X Erfolgsfaktoren</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch7"><span class="tog">›</span><span class="node-title">Best Practice</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch7"><span class="tog">›</span><span class="node-title">Auftraggeber vs. Kunde</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">8 PM bei Großprojekten</span><span class="node-count">sehr wichtig</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch8"><span class="tog">›</span><span class="node-title">Merkmale von Großprojekten</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch8"><span class="tog">›</span><span class="node-title">Baumanagement-Projekthandbuch</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch8"><span class="tog">›</span><span class="node-title">Praxisbeispiele (Hochstraße, NEOM, Seidenstraße …)</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">9 Internationales PM</span><span class="node-count">sehr wichtig</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch9"><span class="tog">›</span><span class="node-title">Globalisierung: Chancen &amp; Risiken</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch9"><span class="tog">›</span><span class="node-title">Erfolgsfaktoren internationaler Projekte</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch9"><span class="tog">›</span><span class="node-title">BOT / BOOT / PPP</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch9"><span class="tog">›</span><span class="node-title">Praxis-Case Abfallentsorgung Albanien</span></div></div>
+          </div>
+        </div>
+
+        <div class="mind-node">
+          <div class="node-row"><span class="tog">+</span><span class="node-title">10–11 PM 2025 &amp; Zusatzfragen</span><span class="node-count">kam schon in Altklausuren</span></div>
+          <div class="mind-children">
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1011"><span class="tog">›</span><span class="node-title">Warum wird PM bedeutender? (10 Punkte)</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1011"><span class="tog">›</span><span class="node-title">Zukunft des Projektgeschäfts</span></div></div>
+            <div class="mind-node leaf"><div class="node-row" data-goto="zusammenfassung" data-ch="ch1011"><span class="tog">›</span><span class="node-title">Geopolitische Risiken (Koch-Lieblingsthema)</span></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-quiz">
+  <div class="two-col">
+    <div class="filter-col">
+      <p>Kartenstapel</p>
+      <button class="chip on">Alle Kapitel (48)</button>
+      <button class="chip">Nur Kapitel 1 (12)</button>
+      <button class="chip">Nur „Nicht verstanden" (6)</button>
+      <p>Austausch</p>
+      <button class="chip">⬇ Als Anki exportieren</button>
+      <button class="chip">⬆ Anki-Deck importieren</button>
+    </div>
+    <div>
+      <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+      <h1 style="margin-bottom:6px">Karteikarten-Quiz</h1>
+      <div class="progress-line" style="margin:14px 0 5px"><span>Karte <span id="cardNum">1</span> von 3 (Demo)</span><span>Kapitel 1 – Grundlagen</span></div>
+      <div class="bar" style="background:var(--line); margin-bottom:22px"><i id="quizBar" style="width:33%"></i></div>
+      <div class="flashcard" id="flashcard">Was sind die vier DIN-69901-Kriterien für ein Projekt?</div>
+      <p class="hint">Karte anklicken zum Umdrehen</p>
+      <div class="srs" id="srsRow">
+        <button class="r-ok">Gut verstanden</button><button class="r-mid">Geht so</button><button class="r-bad">Nicht verstanden</button>
+      </div>
+      <div class="support-bar"><a href="#">✦ KI fragen</a><a href="#">💬 Tutor/in fragen</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- SEITE: LERNPLÄNE -->
+<section class="page" id="page-lernplan">
+  <div class="two-col">
+    <div class="filter-col">
+      <p>Plan wählen</p>
+      <button class="chip on" data-plan="4w">4-Wochen-Plan</button>
+      <button class="chip" data-plan="1w">1-Wochen-Crash</button>
+      <p>Klausurtermin</p>
+      <input type="date" id="examDateInput" value="2026-09-14" style="width:100%; font:inherit; font-size:13px; padding:7px 8px; border:1px solid var(--line); border-radius:7px; background:var(--card)">
+      <button class="ghost" id="adjustPlanBtn" style="width:100%; margin-top:10px">↻ Plan an neuen Klausurtermin anpassen</button>
+      <button class="ghost" id="exportAllIcsBtn" style="width:100%; margin-top:8px">🗓 Gesamten Plan in Kalender exportieren</button>
+      <p style="margin-top:16px">Der Plan führt dich strukturiert durch Zusammenfassung, Tutorien, Übungsaufgaben, Mindmap, Karteikarten und Altklausuren – Klick auf eine Aufgabe springt direkt zur passenden Stelle. Ist eine Woche komplett abgehakt, klappt sie automatisch zusammen.</p>
+    </div>
+    <div>
+      <div class="crumb">Kurse / Projektmanagement (Koch)</div>
+      <h1 id="planTitle" style="margin-bottom:6px">4-Wochen-Plan bis zur Klausur</h1>
+      <div class="progress-line" style="margin:14px 0 5px"><span>Gesamt-Fortschritt Plan</span><span id="planCount">0 von 20 erledigt</span></div>
+      <div class="bar" style="background:var(--line); margin-bottom:8px"><i id="planBar" style="width:0%"></i></div>
+
+      <div id="plan4w">
+        <div class="plan-week" id="week-w1">
+          <div class="week-head"><h2>Woche 1 — Grundlagen &amp; Organisation</h2><span class="week-range"></span><span class="week-status">0/5</span></div>
+          <div class="checklist" id="planList">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mo</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch1">Kapitel 1 Grundlagen lesen (1.1–1.5)</a></span><span class="dur">40 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Di</span><span class="date-label"></span><span class="task"><a href="#" data-goto="quiz">Karteikarten Kapitel 1 durchgehen</a></span><span class="dur">20 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mi</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch2">Kapitel 2 Projektorganisation lesen</a></span><span class="dur">25 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Do</span><span class="date-label"></span><span class="task"><a href="#" data-goto="tutorien">Tutorium 1 – Projektorganisation durchgehen</a></span><span class="dur">30 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Fr</span><span class="date-label"></span><span class="task"><a href="#" data-goto="mindmap">Mindmap: Zweige 1 &amp; 2 durchklicken, Lücken markieren</a></span><span class="dur">15 min</span></label>
+          </div>
+        </div>
+
+        <div class="plan-week" id="week-w2">
+          <div class="week-head"><h2>Woche 2 — Projektphasen (Kern der Klausur!)</h2><span class="week-range"></span><span class="week-status">0/5</span></div>
+          <div class="checklist" id="planList2">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mo</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch3">3.1–3.3 Vorselektion, Start, Zielformulierung</a></span><span class="dur">40 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Di</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch3">3.4–3.5 Projektplanung, kritischer Pfad, Durchführung</a></span><span class="dur">45 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mi</span><span class="date-label"></span><span class="task"><a href="#" data-goto="tutorien">Tutorium 2 + 3 – Netzplantechnik</a></span><span class="dur">40 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Do</span><span class="date-label"></span><span class="task"><a href="#" data-goto="uebungen">Übungsaufgaben Netzplantechnik (N1–N2)</a></span><span class="dur">35 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Fr</span><span class="date-label"></span><span class="task"><a href="#" data-goto="altklausuren">Altklausur SS 2023: Netzplantechnik-Aufgabe lösen</a></span><span class="dur">30 min</span></label>
+          </div>
+        </div>
+
+        <div class="plan-week" id="week-w3">
+          <div class="week-head"><h2>Woche 3 — Risiko, Erfolg &amp; Großprojekte</h2><span class="week-range"></span><span class="week-status">0/5</span></div>
+          <div class="checklist" id="planList3">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mo</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch6">Kapitel 6 Risikomanagement – 4 Strategien auswendig</a></span><span class="dur">35 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Di</span><span class="date-label"></span><span class="task"><a href="#" data-goto="altklausuren">Altklausur WS 2023/24: Risiko-Aufgabe (Praxis-Case Hochstraße)</a></span><span class="dur">30 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mi</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch7">Kapitel 7 Projekterfolg lesen</a></span><span class="dur">25 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Do</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch8">Kapitel 8 Großprojekte lesen</a></span><span class="dur">25 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Fr</span><span class="date-label"></span><span class="task"><a href="#" data-goto="quiz">Karteikarten: nur „Nicht verstanden" wiederholen</a></span><span class="dur">20 min</span></label>
+          </div>
+        </div>
+
+        <div class="plan-week" id="week-w4">
+          <div class="week-head"><h2>Woche 4 — Internationales PM &amp; Generalprobe</h2><span class="week-range"></span><span class="week-status">0/5</span></div>
+          <div class="checklist" id="planList4">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mo</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch9">Kapitel 9 Internationales PM – BOT/BOOT/PPP</a></span><span class="dur">35 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Di</span><span class="date-label"></span><span class="task"><a href="#" data-goto="altklausuren">Altklausur SS 2024: komplett unter Zeitdruck lösen</a></span><span class="dur">50 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Mi</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch1011">Kapitel 10–11 PM 2025 &amp; Zusatzfragen</a></span><span class="dur">30 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Do</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch12">Checkliste „Blind beherrschen" komplett durchgehen</a></span><span class="dur">30 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">Fr</span><span class="date-label"></span><span class="task"><a href="#" data-goto="mindmap">Mindmap: gesamte Struktur einmal laut erklären</a></span><span class="dur">20 min</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div id="plan1w" style="display:none">
+        <div class="plan-week" id="week-c1">
+          <div class="week-head"><h2>Tag 1 — Grundlagen &amp; Organisation (Speedrun)</h2><span class="week-range"></span><span class="week-status">0/2</span></div>
+          <div class="checklist" id="planListCrash1">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">1</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch1">Kapitel 1 + 2 im Schnelldurchlauf lesen</a></span><span class="dur">45 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">2</span><span class="date-label"></span><span class="task"><a href="#" data-goto="quiz">Karteikarten Kapitel 1 einmal komplett durch</a></span><span class="dur">20 min</span></label>
+          </div>
+        </div>
+        <div class="plan-week" id="week-c2">
+          <div class="week-head"><h2>Tag 2 — Projektphasen (Kern!)</h2><span class="week-range"></span><span class="week-status">0/2</span></div>
+          <div class="checklist" id="planListCrash2">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">3</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch3">Kapitel 3 komplett (3.1–3.7)</a></span><span class="dur">70 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">4</span><span class="date-label"></span><span class="task"><a href="#" data-goto="tutorien">Tutorien 1–3 im Schnelldurchlauf</a></span><span class="dur">40 min</span></label>
+          </div>
+        </div>
+        <div class="plan-week" id="week-c3">
+          <div class="week-head"><h2>Tag 3 — Übung &amp; Anwendung</h2><span class="week-range"></span><span class="week-status">0/2</span></div>
+          <div class="checklist" id="planListCrash3">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">5</span><span class="date-label"></span><span class="task"><a href="#" data-goto="uebungen">Alle Übungsaufgaben durchgehen</a></span><span class="dur">45 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">6</span><span class="date-label"></span><span class="task"><a href="#" data-goto="mindmap">Mindmap: alle Zweige einmal aufklappen</a></span><span class="dur">20 min</span></label>
+          </div>
+        </div>
+        <div class="plan-week" id="week-c4">
+          <div class="week-head"><h2>Tag 4 — Risiko, Erfolg, Großprojekte, International</h2><span class="week-range"></span><span class="week-status">0/1</span></div>
+          <div class="checklist" id="planListCrash4">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">7</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch6">Kapitel 6, 7, 8, 9 im Schnelldurchlauf</a></span><span class="dur">70 min</span></label>
+          </div>
+        </div>
+        <div class="plan-week" id="week-c5">
+          <div class="week-head"><h2>Tag 5 — PM 2025 &amp; Checkliste</h2><span class="week-range"></span><span class="week-status">0/1</span></div>
+          <div class="checklist" id="planListCrash5">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">8</span><span class="date-label"></span><span class="task"><a href="#" data-goto="zusammenfassung" data-ch="ch12">Kapitel 10–11 + Checkliste „Blind beherrschen"</a></span><span class="dur">45 min</span></label>
+          </div>
+        </div>
+        <div class="plan-week" id="week-c6">
+          <div class="week-head"><h2>Tag 6 — Altklausuren unter Zeitdruck</h2><span class="week-range"></span><span class="week-status">0/1</span></div>
+          <div class="checklist" id="planListCrash6">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">9</span><span class="date-label"></span><span class="task"><a href="#" data-goto="altklausuren">Eine komplette Altklausur simulieren</a></span><span class="dur">90 min</span></label>
+          </div>
+        </div>
+        <div class="plan-week" id="week-c7">
+          <div class="week-head"><h2>Tag 7 — Letzter Check</h2><span class="week-range"></span><span class="week-status">0/2</span></div>
+          <div class="checklist" id="planListCrash7">
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">10</span><span class="date-label"></span><span class="task"><a href="#" data-goto="quiz">Karteikarten: nur „Nicht verstanden" wiederholen</a></span><span class="dur">25 min</span></label>
+            <label class="check-row"><input type="checkbox"><button class="cal-btn" type="button" aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button><span class="day">11</span><span class="date-label"></span><span class="task"><a href="#" data-goto="mindmap">Mindmap laut erklären, letzte Lücken schließen</a></span><span class="dur">20 min</span></label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+</main>
+</div>
+</div>
+<script>
+function showView(id){
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('[data-goto-view]').forEach(function(el){
+  el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
+});
+var searchInput = document.getElementById('subjectSearch');
+var sgSel = 'alle';
+function filterSubjects(){
+  var q = searchInput.value.trim().toLowerCase();
+  var any = false;
+  document.querySelectorAll('#subjectList .subject-row').forEach(function(r){
+    var okSg = sgSel==='alle' || r.dataset.sg.split(' ').indexOf(sgSel)>=0;
+    var okQ = q==='' || r.dataset.name.indexOf(q)>=0;
+    var show = okSg && okQ;
+    r.style.display = show ? 'flex' : 'none';
+    if(show) any = true;
+  });
+  document.getElementById('noResults').style.display = any ? 'none' : 'block';
+}
+searchInput.addEventListener('input', filterSubjects);
+document.querySelectorAll('#studiengangChips button').forEach(function(c){
+  c.addEventListener('click', function(){
+    document.querySelectorAll('#studiengangChips button').forEach(function(x){ x.classList.remove('on'); });
+    c.classList.add('on'); sgSel = c.dataset.sg; filterSubjects();
+  });
+});
+document.querySelectorAll('.nav-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){ showPage(btn.dataset.page); });
+});
+document.querySelectorAll('[data-goto]').forEach(function(el){
+  el.addEventListener('click', function(e){
+    e.preventDefault();
+    showPage(el.dataset.goto);
+    if(el.dataset.ch){ showChapter(el.dataset.ch); }
+  });
+});
+function showPage(id){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.page===id); });
+  var target = document.getElementById('page-'+id);
+  if(target){ target.classList.add('active'); window.scrollTo(0,0); }
+}
+function showChapter(id, anchor){
+  document.querySelectorAll('.ch-content').forEach(function(c){ c.classList.remove('active'); });
+  var target = document.getElementById(id);
+  if(target){ target.classList.add('active'); }
+  document.querySelectorAll('#chNav .nav-group > button').forEach(function(b){ b.classList.toggle('cur', b.dataset.ch===id); });
+  document.querySelectorAll('#chNav .sub-list button').forEach(function(b){ b.classList.toggle('cur-sub', !!anchor && b.dataset.anchor===anchor); });
+  document.querySelectorAll('.nav-group').forEach(function(g){
+    var top = g.querySelector(':scope > button');
+    g.classList.toggle('open', !!(top && top.dataset.ch===id));
+  });
+  var page = document.getElementById('page-zusammenfassung');
+  if(anchor){
+    var anchorEl = document.getElementById(anchor);
+    if(anchorEl){ setTimeout(function(){ anchorEl.scrollIntoView({block:'start', behavior:'smooth'}); }, 30); return; }
+  }
+  if(page){ page.scrollIntoView({block:'start'}); }
+}
+document.querySelectorAll('#chNav .nav-group > button').forEach(function(b){
+  b.addEventListener('click', function(){ showChapter(b.dataset.ch); });
+});
+document.querySelectorAll('#chNav .sub-list button').forEach(function(b){
+  b.addEventListener('click', function(e){
+    e.stopPropagation();
+    showChapter(b.dataset.ch, b.dataset.anchor);
+  });
+});
+document.querySelectorAll('[data-nextch]').forEach(function(b){
+  b.addEventListener('click', function(){ showChapter(b.dataset.nextch); });
+});
+var progress = { zusammenfassung:{}, uebungen:{}, altklausuren:{}, karteikarten:{} };
+document.querySelectorAll('.ampel').forEach(function(row){
+  row.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){
+      row.querySelectorAll('button').forEach(function(x){ x.className=''; });
+      b.className = 'sel-' + b.dataset.v;
+      progress.zusammenfassung[row.dataset.key] = b.dataset.v;
+      updateProgressUI();
+    });
+  });
+});
+document.querySelectorAll('.status.rate').forEach(function(el){
+  var order = ['', 'ok', 'mid', 'bad'];
+  var labels = {'':'Offen', ok:'Gut', mid:'Mittel', bad:'Schlecht'};
+  el.addEventListener('click', function(){
+    var cur = order.indexOf(progress[el.dataset.cat][el.dataset.key] || '');
+    var next = order[(cur+1) % order.length];
+    if(next===''){ delete progress[el.dataset.cat][el.dataset.key]; } else { progress[el.dataset.cat][el.dataset.key] = next; }
+    el.textContent = labels[next];
+    el.classList.remove('st-ok','st-mid','st-bad');
+    if(next){ el.classList.add('st-'+next); }
+    updateProgressUI();
+  });
+});
+function updateProgressUI(){
+  var totals = {
+    zusammenfassung: document.querySelectorAll('#page-zusammenfassung .ampel').length,
+    uebungen: document.querySelectorAll('[data-cat="uebungen"]').length,
+    altklausuren: document.querySelectorAll('[data-cat="altklausuren"]').length,
+    karteikarten: cards.length
+  };
+  var grandRated = 0, grandTotal = 0;
+  ['zusammenfassung','uebungen','altklausuren','karteikarten'].forEach(function(cat){
+    var vals = Object.values(progress[cat]);
+    var total = totals[cat] || 1;
+    var rated = vals.length;
+    var ok = vals.filter(function(v){ return v==='ok'; }).length;
+    var mid = vals.filter(function(v){ return v==='mid'; }).length;
+    var bad = vals.filter(function(v){ return v==='bad'; }).length;
+    var pctText = document.getElementById('pct-'+cat);
+    if(pctText){ pctText.textContent = 'Bearbeitet ' + Math.round((rated/total)*100) + ' %'; }
+    var bar = document.getElementById('bar-'+cat);
+    if(bar){
+      bar.children[0].style.width = Math.round((ok/total)*100) + '%';
+      bar.children[1].style.width = Math.round((mid/total)*100) + '%';
+      bar.children[2].style.width = Math.round((bad/total)*100) + '%';
+    }
+    grandRated += rated; grandTotal += total;
+  });
+  var overallPct = grandTotal ? Math.round((grandRated/grandTotal)*100) : 0;
+  var overallBar = document.getElementById('overallBar');
+  if(overallBar){ overallBar.style.width = overallPct + '%'; }
+  var overallPctEl = document.getElementById('overallPct');
+  if(overallPctEl){ overallPctEl.textContent = overallPct + ' % bearbeitet'; }
+  var fachBar = document.getElementById('fachBarPM');
+  if(fachBar){ fachBar.style.width = overallPct + '%'; }
+  var fachPct = document.getElementById('fachPctPM');
+  if(fachPct){ fachPct.textContent = overallPct + ' % bearbeitet'; }
+}
+document.querySelectorAll('.mind-node:not(.leaf) > .node-row').forEach(function(row){
+  row.addEventListener('click', function(e){
+    e.stopPropagation();
+    var node = row.parentElement;
+    node.classList.toggle('open');
+    row.querySelector('.tog').textContent = node.classList.contains('open') ? '−' : '+';
+  });
+});
+var cards = [
+  {q:'Was sind die vier DIN-69901-Kriterien für ein Projekt?', a:'Zielvorgabe · zeitliche, finanzielle und personelle Begrenzung · projektspezifische Organisation · Neuartigkeit'},
+  {q:'Was berechnet man mit der Vorwärtsrechnung im Netzplan?', a:'Die frühesten Anfangs- und Endzeitpunkte (FAZ/FEZ) jedes Vorgangs'},
+  {q:'Welche drei Rollen kennt Scrum?', a:'Product Owner · Scrum Master · Entwicklungsteam'}
+];
+var ci = 0, flipped = false;
+var fc = document.getElementById('flashcard'), srs = document.getElementById('srsRow');
+fc.addEventListener('click', function(){
+  flipped = !flipped;
+  fc.textContent = flipped ? cards[ci].a : cards[ci].q;
+  fc.classList.toggle('back', flipped);
+  srs.style.display = flipped ? 'grid' : 'none';
+});
+srs.querySelectorAll('button').forEach(function(b){
+  b.addEventListener('click', function(){
+    var map = {'r-bad':'bad', 'r-mid':'mid', 'r-ok':'ok'};
+    var v = map[b.className] || 'ok';
+    progress.karteikarten['card'+ci] = v;
+    updateProgressUI();
+    ci = (ci+1) % cards.length; flipped = false;
+    fc.textContent = cards[ci].q; fc.classList.remove('back');
+    srs.style.display = 'none';
+    document.getElementById('cardNum').textContent = ci+1;
+    document.getElementById('quizBar').style.width = Math.round(((ci+1)/3)*100) + '%';
+  });
+});
+var themaSel = 'alle', terminSel = 'alle';
+document.querySelectorAll('[data-thema]').forEach(function(c){
+  c.addEventListener('click', function(){
+    document.querySelectorAll('[data-thema]').forEach(function(x){ x.classList.remove('on'); });
+    c.classList.add('on'); themaSel = c.dataset.thema; filterExams();
+  });
+});
+document.querySelectorAll('[data-termin].chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    document.querySelectorAll('[data-termin].chip').forEach(function(x){ x.classList.remove('on'); });
+    c.classList.add('on'); terminSel = c.dataset.termin; filterExams();
+  });
+});
+function filterExams(){
+  document.querySelectorAll('#exam-list .exam-row').forEach(function(r){
+    var okThema = themaSel==='alle' || r.dataset.themen.split(' ').indexOf(themaSel)>=0;
+    var okTermin = terminSel==='alle' || r.dataset.termin===terminSel;
+    r.style.display = (okThema && okTermin) ? 'flex' : 'none';
+  });
+}
+function buildAskPanel(placeholder){
+  var p = document.createElement('div');
+  p.className = 'ask-panel';
+  var ta = document.createElement('textarea');
+  ta.placeholder = placeholder;
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Absenden';
+  var msg = document.createElement('div');
+  msg.className = 'sent-msg';
+  msg.textContent = 'Danke, deine Frage wurde übermittelt.';
+  p.appendChild(ta); p.appendChild(btn); p.appendChild(msg);
+  btn.addEventListener('click', function(){
+    if(ta.value.trim()===''){ return; }
+    msg.style.display = 'block';
+    ta.value = '';
+  });
+  return p;
+}
+function initAskBoxes(){
+  document.querySelectorAll('.support-bar').forEach(function(bar){
+    if(bar.dataset.wired){ return; }
+    bar.dataset.wired = '1';
+    var links = bar.querySelectorAll('a');
+    var aiLink = links[0], tutorLink = links[1];
+    var aiPanel = buildAskPanel('Frag die KI zu diesem Abschnitt …');
+    var tutorPanel = buildAskPanel('Frag deine/n Tutor/in zu diesem Abschnitt …');
+    bar.insertAdjacentElement('afterend', tutorPanel);
+    bar.insertAdjacentElement('afterend', aiPanel);
+    if(aiLink){
+      aiLink.addEventListener('click', function(e){
+        e.preventDefault();
+        tutorPanel.classList.remove('open');
+        aiPanel.classList.toggle('open');
+      });
+    }
+    if(tutorLink){
+      tutorLink.addEventListener('click', function(e){
+        e.preventDefault();
+        aiPanel.classList.remove('open');
+        tutorPanel.classList.toggle('open');
+      });
+    }
+  });
+}
+document.querySelectorAll('[data-plan]').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('[data-plan]').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    document.getElementById('plan4w').style.display = b.dataset.plan==='4w' ? 'block' : 'none';
+    document.getElementById('plan1w').style.display = b.dataset.plan==='1w' ? 'block' : 'none';
+    document.getElementById('planTitle').textContent = b.dataset.plan==='4w' ? '4-Wochen-Plan bis zur Klausur' : '1-Wochen-Crash-Plan bis zur Klausur';
+    updatePlanUI();
+  });
+});
+function updatePlanUI(){
+  var activeContainer = document.getElementById('plan4w').style.display!=='none' ? document.getElementById('plan4w') : document.getElementById('plan1w');
+  var boxes = Array.from(activeContainer.querySelectorAll('input[type="checkbox"]'));
+  var done = 0;
+  boxes.forEach(function(b){ b.closest('.check-row').classList.toggle('done', b.checked); if(b.checked) done++; });
+  document.getElementById('planCount').textContent = done + ' von ' + boxes.length + ' erledigt';
+  document.getElementById('planBar').style.width = boxes.length ? Math.round((done/boxes.length)*100) + '%' : '0%';
+  document.querySelectorAll('.plan-week').forEach(function(week){
+    var wboxes = Array.from(week.querySelectorAll('input[type="checkbox"]'));
+    if(!wboxes.length){ return; }
+    var wdone = wboxes.filter(function(b){ return b.checked; }).length;
+    var allDone = wdone === wboxes.length;
+    var wasDone = week.classList.contains('done');
+    week.classList.toggle('done', allDone);
+    var badge = week.querySelector('.week-status');
+    if(badge){ badge.textContent = allDone ? '✓ erledigt' : wdone + '/' + wboxes.length; }
+    if(allDone && !wasDone){ week.classList.add('collapsed'); }
+    if(!allDone){ week.classList.remove('collapsed'); }
+  });
+}
+document.querySelectorAll('.week-head').forEach(function(h){
+  h.addEventListener('click', function(){ h.closest('.plan-week').classList.toggle('collapsed'); });
+});
+document.querySelectorAll('#page-lernplan input[type="checkbox"]').forEach(function(b){
+  b.addEventListener('change', updatePlanUI);
+});
+function pad2(n){ return n<10 ? '0'+n : ''+n; }
+function fmtDate(d){ return pad2(d.getDate()) + '.' + pad2(d.getMonth()+1) + '.'; }
+function isoDate(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+var weekdayShort = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+function setRowDate(row, d){
+  row.dataset.date = isoDate(d);
+  var label = row.querySelector('.date-label');
+  if(label){ label.textContent = fmtDate(d); }
+}
+function assignPlanDates(rowList, lastDate){
+  var rows = Array.prototype.slice.call(rowList);
+  var n = rows.length;
+  rows.forEach(function(row, i){
+    var offset = (n - 1 - i);
+    var d = new Date(lastDate.getTime() - offset*86400000);
+    setRowDate(row, d);
+    var dayLabel = row.querySelector('.day');
+    if(dayLabel){ dayLabel.textContent = weekdayShort[d.getDay()]; }
+  });
+}
+function updateWeekRanges(){
+  document.querySelectorAll('.plan-week').forEach(function(week){
+    var rows = week.querySelectorAll('.check-row');
+    var rangeEl = week.querySelector('.week-range');
+    if(rangeEl && rows.length){
+      var firstD = new Date(rows[0].dataset.date + 'T00:00:00');
+      var lastD = new Date(rows[rows.length-1].dataset.date + 'T00:00:00');
+      rangeEl.textContent = rows.length > 1 ? (fmtDate(firstD) + ' – ' + fmtDate(lastD)) : fmtDate(firstD);
+    }
+  });
+}
+function computeDates(){
+  var input = document.getElementById('examDateInput');
+  if(!input || !input.value){ return; }
+  var exam = new Date(input.value + 'T00:00:00');
+  if(isNaN(exam.getTime())){ return; }
+
+  var lastDate = new Date(exam.getTime()); lastDate.setDate(lastDate.getDate()-1);
+
+  assignPlanDates(document.querySelectorAll('#plan4w .check-row'), lastDate);
+  assignPlanDates(document.querySelectorAll('#plan1w .check-row'), lastDate);
+  updateWeekRanges();
+}
+function showToast(msg){
+  var t = document.getElementById('planToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'planToast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+function icsEscape(s){ return s.replace(/[\\;,]/g, function(m){ return '\\'+m; }); }
+function buildICS(events){
+  var lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Klausurfuchs//DE'];
+  var stamp = isoDate(new Date()).replace(/-/g,'');
+  events.forEach(function(ev, i){
+    var start = new Date(ev.date + 'T00:00:00');
+    var end = new Date(start.getTime()); end.setDate(end.getDate()+1);
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + Date.now() + '-' + i + '@klausurfuchs');
+    lines.push('DTSTAMP:' + stamp + 'T000000Z');
+    lines.push('DTSTART;VALUE=DATE:' + ev.date.replace(/-/g,''));
+    lines.push('DTEND;VALUE=DATE:' + isoDate(end).replace(/-/g,''));
+    lines.push('SUMMARY:' + icsEscape(ev.title));
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function downloadICS(filename, content){
+  var blob = new Blob([content], {type:'text/calendar'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+function rowTitle(row){
+  var link = row.querySelector('.task a');
+  return link ? link.textContent.trim() : row.querySelector('.task').textContent.trim();
+}
+document.querySelectorAll('#page-lernplan .cal-btn').forEach(function(btn){
+  btn.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var row = btn.closest('.check-row');
+    if(!row.dataset.date){ return; }
+    downloadICS('lernplan-aufgabe.ics', buildICS([{ title: rowTitle(row), date: row.dataset.date }]));
+  });
+});
+var adjustBtn = document.getElementById('adjustPlanBtn');
+if(adjustBtn){
+  adjustBtn.addEventListener('click', function(){
+    computeDates();
+    var input = document.getElementById('examDateInput');
+    showToast('Plan aktualisiert – Zieltermin ' + (input ? input.value.split('-').reverse().join('.') : ''));
+  });
+}
+var exportAllBtn = document.getElementById('exportAllIcsBtn');
+if(exportAllBtn){
+  exportAllBtn.addEventListener('click', function(){
+    var activeContainer = document.getElementById('plan4w').style.display!=='none' ? document.getElementById('plan4w') : document.getElementById('plan1w');
+    var rows = Array.from(activeContainer.querySelectorAll('.check-row')).filter(function(r){ return r.dataset.date; });
+    var events = rows.map(function(r){ return { title: rowTitle(r), date: r.dataset.date }; });
+    downloadICS('lernplan-projektmanagement.ics', buildICS(events));
+  });
+}
+computeDates();
+updatePlanUI();
+updateProgressUI();
+initAskBoxes();
+</script>
+</body>
+</html>
