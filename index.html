@@ -192,6 +192,82 @@ ul.plain li{margin-bottom:5px;}
   .two-col{grid-template-columns:1fr;}
   .main{padding:24px 18px;}
 }
+
+/* CREATOR-WIZARD */
+.subject-head{display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:4px;}
+.creator-cta{background:none; border:1.5px dashed var(--accent); color:var(--accent); font:inherit; font-size:13px; font-weight:600; padding:9px 16px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+.creator-cta:hover{background:var(--accent-soft);}
+.creator-shell{display:grid; grid-template-columns:250px 1fr; min-height:100vh;}
+.step-nav{background:var(--ink); color:#E9EDF2; padding:28px 20px; position:sticky; top:0; height:100vh; overflow-y:auto;}
+.step-item{display:flex; align-items:flex-start; gap:10px; padding:9px 4px; border-radius:8px; font-size:13px; color:#9AA7B5; cursor:pointer;}
+.step-item:hover{color:#fff;}
+.step-item.cur{color:#fff; font-weight:600;}
+.step-item .num{width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,.12); color:#D7DEE6; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;}
+.step-item.cur .num{background:var(--amber); color:#1B2A41;}
+.step-item.done .num{background:#639922; color:#fff;}
+.step-item.locked{opacity:.4; cursor:default;}
+.creator-main{padding:36px 44px; max-width:760px;}
+.cstep{display:none;}
+.cstep.active{display:block; animation:fade .2s ease;}
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:5px;}
+.field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea{width:100%; font:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--card);}
+.field textarea{min-height:90px; resize:vertical;}
+.field .hint-sm{font-size:12px; color:var(--muted); margin-top:4px;}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.upload-box{border:1.5px dashed var(--line); border-radius:var(--radius); padding:18px; text-align:center; font-size:13px; color:var(--muted); cursor:pointer;}
+.upload-box:hover{border-color:var(--accent); color:var(--accent);}
+.upload-box .fname{margin-top:6px; font-size:12px; color:var(--accent); font-weight:600; display:none;}
+.repeat-row{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; position:relative;}
+.repeat-row .rm{position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px;}
+.repeat-row .rm:hover{color:var(--danger);}
+.add-row-btn{background:none; border:1px dashed var(--line); color:var(--muted); font:inherit; font-size:13px; padding:9px 14px; border-radius:8px; cursor:pointer; width:100%; text-align:center; margin-bottom:18px;}
+.add-row-btn:hover{border-color:var(--accent); color:var(--accent);}
+.wizard-foot{display:flex; justify-content:space-between; margin-top:28px; padding-top:20px; border-top:1px solid var(--line);}
+.chapter-pack{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:10px; display:flex; align-items:center; gap:14px;}
+.chapter-pack .info{flex:1;}
+.chapter-pack h3{margin-bottom:2px; font-size:14px;}
+.chapter-pack p{font-size:12px; color:var(--muted);}
+.pack-status{font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; white-space:nowrap;}
+.pack-status.open{background:var(--paper); border:1px solid var(--line); color:var(--muted);}
+.pack-status.review{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber);}
+.pack-status.done{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
+.copyright-box{background:#FCF3F1; border-left:4px solid var(--danger); border-radius:0 var(--radius) var(--radius) 0; padding:14px 18px; font-size:13px; color:#7A2E1E; margin-bottom:20px;}
+.copyright-box strong{display:block; margin-bottom:3px; color:var(--danger);}
+.step-intro{font-size:13px; color:var(--muted); margin-bottom:20px; max-width:520px;}
+
+/* Speichern (inline in Fußzeile) */
+.wizard-foot{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+.save-inline{display:flex; align-items:center; gap:10px;}
+.save-btn{background:var(--card); border:1px solid var(--line); color:var(--ink); font:inherit; font-size:13px; font-weight:600; padding:9px 16px; border-radius:8px; cursor:pointer;}
+.save-btn:hover{border-color:var(--accent); color:var(--accent);}
+.save-status{font-size:12px; color:var(--muted); white-space:nowrap;}
+.entry-badge{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--amber); margin-left:7px; vertical-align:middle;}
+
+/* Sidebar-Badge */
+.step-item{position:relative;}
+.nav-badge{margin-left:auto; width:8px; height:8px; border-radius:50%; background:var(--amber); flex-shrink:0;}
+.nav-badge.done{background:#639922;}
+
+/* Kapitel-Kontext */
+.kapitel-context{display:flex; align-items:center; gap:10px; background:var(--accent-soft); border-radius:var(--radius); padding:10px 14px; margin-bottom:16px; font-size:13px; color:var(--accent); font-weight:600;}
+.kapitel-context select{font:inherit; font-size:13px; font-weight:600; color:var(--accent); background:#fff; border:1px solid #BFDAD3; border-radius:6px; padding:5px 8px;}
+
+/* Toggle „Fertig" / Zusammenfassen */
+.row-actions{position:absolute; top:10px; right:10px; display:flex; gap:6px;}
+.toggle-fertig{background:none; border:1px solid var(--line); color:var(--muted); font:inherit; font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; cursor:pointer;}
+.toggle-fertig.on{background:var(--ok-soft); border-color:#97C459; color:#3B6D11;}
+.summary-line{display:none; font-size:14px; font-weight:600; padding-right:120px;}
+.repeat-row.collapsed{padding:12px 16px;}
+.repeat-row.collapsed .summary-line{display:block;}
+.repeat-row.collapsed > .field, .repeat-row.collapsed > .field-row{display:none;}
+
+/* Text/Bild-Umschalter für Lösungswege */
+.mode-toggle{display:flex; gap:6px; margin-bottom:8px;}
+.mode-toggle button{font:inherit; font-size:12px; border:1px solid var(--line); background:var(--card); color:var(--muted); padding:5px 13px; border-radius:20px; cursor:pointer;}
+.mode-toggle button.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;}
+.sol-block{display:none;}
+.sol-block.active{display:block;}
 </style>
 </head>
 <body>
@@ -215,9 +291,14 @@ ul.plain li{margin-bottom:5px;}
 <div class="view" id="view-subjects">
   <div class="portal">
     <button class="back-link" data-goto-view="view-landing">‹ Andere Hochschule wählen</button>
-    <div class="portal-brand">Klausur<span>fuchs</span></div>
-    <h1>HWG Ludwigshafen</h1>
-    <p class="lede">Alle verfügbaren Fach-Kurse. Nach Name, Professor oder Studiengang suchen.</p>
+    <div class="subject-head">
+      <div>
+        <div class="portal-brand">Klausur<span>fuchs</span></div>
+        <h1>HWG Ludwigshafen</h1>
+      </div>
+      <button class="creator-cta" id="creatorEntryBtn" data-goto-view="view-creator-intro">✦ Creator werden<span class="entry-badge" id="creatorEntryBadge" style="display:none"></span></button>
+    </div>
+    <p class="lede">Alle verfügbaren Fach-Kurse. Nach Name, Professor oder Studiengang suchen. Dein Fach ist noch nicht dabei? Werde Creator und bau den ersten Kurs dafür.</p>
     <div class="search-row"><input type="text" id="subjectSearch" placeholder="Fach oder Professor suchen, z. B. „Koch" oder „Statistik"…"></div>
     <div class="filter-chips" id="studiengangChips">
       <button class="on" data-sg="alle">Alle Studiengänge</button>
@@ -251,7 +332,275 @@ ul.plain li{margin-bottom:5px;}
         <span class="meta">2. Semester</span>
       </div>
     </div>
-    <p class="no-results" id="noResults" style="display:none">Kein Fach gefunden. Sei der Erste und werde Creator für dieses Fach.</p>
+    <p class="no-results" id="noResults" style="display:none">Kein Fach gefunden. <a href="#" data-goto-view="view-creator-intro" style="font-weight:600">Sei der Erste und werde Creator für dieses Fach ›</a></p>
+  </div>
+</div>
+
+<!-- ANSICHT: CREATOR – INTRO -->
+<div class="view" id="view-creator-intro">
+  <div class="portal">
+    <button class="back-link" data-goto-view="view-subjects">‹ Zurück zur Fächerliste</button>
+    <div class="portal-brand">Klausur<span>fuchs</span> <span style="color:var(--muted); font-weight:400">für Creator</span></div>
+    <h1>Bau den Kurs für dein Fach</h1>
+    <p class="lede">Du hast eine Klausur mit sehr guter Note bestanden? Dann kannst du daraus einen Kurs machen, von dem alle Kommilitonen nach dir profitieren – und wirst am Umsatz beteiligt. Damit jeder Kurs auf demselben hohen Niveau ist, führt dich dieser Assistent Schritt für Schritt durch unser festes Kursschema.</p>
+    <div class="grid">
+      <div class="tile" style="cursor:default"><span class="tag">Schritt 1</span><h3>Zugang</h3><p>Fach wählen und Notennachweis (Transcript of Records) hochladen.</p></div>
+      <div class="tile" style="cursor:default"><span class="tag">Schritt 2–6</span><h3>Kursbau</h3><p>Struktur, Zusammenfassung, Karteikarten, Übungen und Altklausuren – kapitelweise.</p></div>
+      <div class="tile" style="cursor:default"><span class="tag">Schritt 7</span><h3>Review</h3><p>Jedes Kapitel wird von uns geprüft, bevor das nächste freigeschaltet wird.</p></div>
+    </div>
+    <div class="copyright-box">
+      <strong>Bevor du startest:</strong>
+      Lade niemals Original-Skripte, Folien oder Aufgabentexte deines Professors hoch. Nur eigene, selbst formulierte Inhalte und Lösungswege sind erlaubt – das prüfen wir in jedem Kapitel.
+    </div>
+    <button class="cta" data-goto-view="view-creator-setup">Jetzt starten →</button>
+  </div>
+</div>
+
+<!-- ANSICHT: CREATOR – ZUGANG/SETUP -->
+<div class="view" id="view-creator-setup">
+  <div class="portal">
+    <button class="back-link" data-goto-view="view-creator-intro">‹ Zurück</button>
+    <div class="portal-brand">Klausur<span>fuchs</span> <span style="color:var(--muted); font-weight:400">für Creator</span></div>
+    <h1>Für welches Fach möchtest du Creator werden?</h1>
+    <p class="lede">Pro Fach und Prüfer gibt es genau einen Kurs. Ist der Slot schon vergeben, kannst du dich auf die Warteliste setzen, falls der aktuelle Creator ausfällt.</p>
+
+    <div class="field">
+      <label>Hochschule</label>
+      <select disabled><option>HWG Ludwigshafen</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Fach</label>
+        <input type="text" id="cFach" placeholder="z. B. Mathematik mit Statistik A">
+      </div>
+      <div class="field">
+        <label>Professor/in</label>
+        <input type="text" id="cProf" placeholder="z. B. Prof. Weber">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Studiengang</label>
+        <select id="cStudiengang">
+          <option>Betriebswirtschaft</option>
+          <option>Wirtschaftsinformatik</option>
+          <option>Wirtschaftsingenieurwesen</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Semester der Klausur</label>
+        <select id="cSemester">
+          <option>1. Semester</option><option>2. Semester</option><option>3. Semester</option>
+          <option>4. Semester</option><option>5. Semester</option><option>6. Semester</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Notennachweis (Transcript of Records)</label>
+      <div class="upload-box" id="uploadTor">
+        ⇪ Datei auswählen oder hierher ziehen (PDF)
+        <div class="fname" id="uploadTorName"></div>
+      </div>
+      <p class="hint-sm">Zugelassen sind Creator mit Note 1,0 oder 1,3 in dieser Klausur. Dein Transcript wird nur zur Prüfung verwendet und DSGVO-konform gespeichert.</p>
+    </div>
+
+    <div class="wizard-foot">
+      <span></span>
+      <button class="cta" data-goto-view="view-creator-wizard">Antrag senden &amp; Kursbau starten →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANSICHT: CREATOR – WIZARD (KURSBAU) -->
+<div class="view" id="view-creator-wizard">
+  <div class="creator-shell">
+    <aside class="step-nav">
+      <button class="back-link" data-goto-view="view-subjects" style="color:#9AA7B5; margin-bottom:14px">‹ Zurück zum normalen Modus</button>
+      <div class="brand">Klausur<span>fuchs</span></div>
+      <div class="brand-sub">Creator-Modus<br><span id="wizardFachLabel">Neues Fach</span></div>
+      <div class="nav-label">Kursbau nach Kursschema v1</div>
+      <div class="step-item cur" data-step="struktur"><span class="num">1</span><span>Struktur (Kapitel)</span></div>
+      <div class="step-item" data-step="zusammenfassung"><span class="num">2</span><span>Zusammenfassung</span></div>
+      <div class="step-item" data-step="karteikarten"><span class="num">3</span><span>Karteikarten</span></div>
+      <div class="step-item" data-step="uebungen"><span class="num">4</span><span>Übungsaufgaben</span></div>
+      <div class="step-item" data-step="altklausuren"><span class="num">5</span><span>Altklausuren</span></div>
+      <div class="step-item" data-step="tutorien"><span class="num">6</span><span>Tutorien</span></div>
+      <div class="step-item" data-step="einreichen"><span class="num">7</span><span>Kapitel einreichen</span><span class="nav-badge" id="einreichenBadge" style="display:none"></span></div>
+      <div class="side-progress">
+        <p>Freigegebene Kapitel</p>
+        <div class="bar"><i id="wizardOverallBar" style="width:0%"></i></div>
+        <p style="margin:6px 0 0; font-size:12px; color:#C7CFD8" id="wizardOverallPct">0 von 0 Kapiteln freigegeben</p>
+      </div>
+    </aside>
+
+    <main class="creator-main">
+
+      <section class="cstep active" id="cstep-struktur">
+        <h1 style="margin-bottom:6px">Kapitel &amp; Unterkapitel anlegen</h1>
+        <p class="step-intro">Lege zuerst dein komplettes Inhaltsverzeichnis fest – Kapitel und Unterkapitel im Schema 1, 1.1, 1.2 … Danach reichst du jedes Kapitel einzeln ein und arbeitest dich Stück für Stück durch. Du kannst jederzeit zwischenspeichern und später weitermachen.</p>
+        <div id="chapterRows">
+          <div class="repeat-row">
+            <button class="rm" type="button">✕</button>
+            <div class="field"><label>Kapitel 1 – Titel</label><input type="text" placeholder="z. B. Grundlagen"></div>
+            <div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="1.1 Projektmerkmale&#10;1.2 Projektarten&#10;1.3 Magisches Dreieck"></textarea></div>
+          </div>
+        </div>
+        <button class="add-row-btn" id="addChapterBtn" type="button">+ Weiteres Kapitel hinzufügen</button>
+        <div class="wizard-foot"><span></span><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="zusammenfassung">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 2: ZUSAMMENFASSUNG -->
+      <section class="cstep" id="cstep-zusammenfassung">
+        <h1 style="margin-bottom:6px">Zusammenfassung</h1>
+        <div class="kapitel-context">
+          <span>Du bearbeitest gerade:</span>
+          <select class="kapitelCtxSelect" id="zfKapitelSelect"><option>Kapitel 1 – Grundlagen</option></select>
+        </div>
+        <p class="step-intro">Die Felder unten entsprechen automatisch den Unterkapiteln, die du in Schritt 1 (Struktur) für dieses Kapitel angelegt hast. Pflicht: mind. eine „Merke"-Box und ein Abschnitt „Tipps für die Klausur" am Kapitelende.</p>
+        <div id="zfDynamicFields"></div>
+        <div class="field">
+          <label>„Merke"-Box (Kernaussage für das ganze Kapitel)</label>
+          <textarea id="zfMerke" placeholder="Die wichtigste Kernaussage des Kapitels in 2–3 Sätzen …"></textarea>
+        </div>
+        <div class="field">
+          <label>„Tipps für die Klausur"</label>
+          <textarea id="zfTipps" placeholder="Konkrete Hinweise, worauf dieser Professor bei dieser Klausur besonders achtet …"></textarea>
+        </div>
+        <div class="wizard-foot"><button class="ghost" data-next="struktur">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="karteikarten">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 3: KARTEIKARTEN -->
+      <section class="cstep" id="cstep-karteikarten">
+        <h1 style="margin-bottom:6px">Karteikarten</h1>
+        <div class="kapitel-context">
+          <span>Du bearbeitest gerade:</span>
+          <select class="kapitelCtxSelect" id="kkKapitelSelect"><option>Kapitel 1 – Grundlagen</option></select>
+        </div>
+        <p class="step-intro">Jede Karte braucht Vorder- und Rückseite sowie eine Kapitel-Zuordnung. Hast du schon ein eigenes Set (z. B. aus Anki oder als CSV), kannst du es hier importieren, statt alles neu abzutippen.</p>
+
+        <div class="field">
+          <label>Bestehendes Set importieren</label>
+          <input type="file" id="cardImportInput" accept=".csv,.txt" style="display:none">
+          <div class="upload-box" id="cardImportBox">⇪ Anki-Export oder CSV hochladen<div class="fname" id="cardImportName"></div></div>
+          <p class="hint-sm">Eine Karte pro Zeile, Frage und Antwort getrennt durch Tab, Semikolon oder Komma – so exportiert Anki über „Notizen exportieren → Textdatei" bzw. jede gängige CSV-Karteikarten-App. Die Karten landen automatisch im aktuell gewählten Kapitel und lassen sich danach noch anpassen.</p>
+        </div>
+
+        <div id="cardRows">
+          <div class="repeat-row">
+            <div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>
+            <div class="summary-line"></div>
+            <div class="field"><label>Frage (Vorderseite)</label><input type="text" placeholder="z. B. Was sind die vier DIN-69901-Kriterien für ein Projekt?"></div>
+            <div class="field"><label>Antwort (Rückseite)</label><textarea placeholder="Zielvorgabe, zeitliche Begrenzung, Einmaligkeit, projektspezifische Organisation"></textarea></div>
+            <div class="field"><label>Kapitel</label><select class="rowKapitelSelect"><option>Kapitel 1 – Grundlagen</option></select></div>
+          </div>
+        </div>
+        <p class="hint-sm" id="cardEmptyHint" style="display:none">Noch keine Karten für dieses Kapitel – leg über „+ Weitere Karte hinzufügen" die erste an oder importiere ein Set.</p>
+        <button class="add-row-btn" id="addCardBtn" type="button">+ Weitere Karte hinzufügen</button>
+        <div class="wizard-foot"><button class="ghost" data-next="zusammenfassung">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="uebungen">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 4: ÜBUNGSAUFGABEN -->
+      <section class="cstep" id="cstep-uebungen">
+        <h1 style="margin-bottom:6px">Übungsaufgaben</h1>
+        <div class="kapitel-context">
+          <span>Du bearbeitest gerade:</span>
+          <select class="kapitelCtxSelect" id="uebKapitelSelect"><option>Kapitel 1 – Grundlagen</option></select>
+        </div>
+        <p class="step-intro">Eigene Übungsaufgaben, nach Thema sortiert und einem Kapitel zugeordnet. Der Original-Aufgabentext eines Tutoriums oder Skripts wird hier nicht eingegeben, nur deine eigene Aufgabe + Lösungsweg.</p>
+        <div id="uebungRows">
+          <div class="repeat-row">
+            <div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>
+            <div class="summary-line"></div>
+            <div class="field-row">
+              <div class="field"><label>Themen-Kürzel</label><input type="text" placeholder="z. B. N1"></div>
+              <div class="field"><label>Schwierigkeit</label><select><option>leicht</option><option>mittel</option><option>schwer</option></select></div>
+            </div>
+            <div class="field"><label>Kapitel</label><select class="rowKapitelSelect"><option>Kapitel 1 – Grundlagen</option></select></div>
+            <div class="field"><label>Eigene Aufgabenstellung</label><textarea placeholder="Formuliere eine eigene Aufgabe zu diesem Thema …"></textarea></div>
+            <div class="field">
+              <label>Lösungsweg</label>
+              <div class="mode-toggle"><button type="button" class="on" data-mode="text">Text</button><button type="button" data-mode="bild">Bild</button></div>
+              <div class="sol-block active" data-mode-block="text"><textarea placeholder="Schritt-für-Schritt-Lösung …"></textarea></div>
+              <div class="sol-block" data-mode-block="bild"><div class="upload-box">⇪ Foto/Screenshot der Lösung hochladen (z. B. aus Goodnotes)<div class="fname"></div></div></div>
+            </div>
+            <div class="field">
+              <label>Erklärvideo (optional, Bildschirmaufnahme)</label>
+              <div class="upload-box">⇪ Video hochladen<div class="fname"></div></div>
+            </div>
+          </div>
+        </div>
+        <p class="hint-sm" id="uebungEmptyHint" style="display:none">Noch keine Übungsaufgaben für dieses Kapitel – leg über „+ Weitere Aufgabe hinzufügen" die erste an.</p>
+        <button class="add-row-btn" id="addUebungBtn" type="button">+ Weitere Aufgabe hinzufügen</button>
+        <div class="wizard-foot"><button class="ghost" data-next="karteikarten">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="altklausuren">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 5: ALTKLAUSUREN -->
+      <section class="cstep" id="cstep-altklausuren">
+        <h1 style="margin-bottom:6px">Altklausuren</h1>
+        <p class="step-intro">Altklausuren gehören nicht zu einem einzelnen Kapitel, sondern werden gesammelt am Ende geprüft. Trage pro Aufgabe Termin, Thema und ausschließlich deinen eigenen Lösungsweg ein.</p>
+        <div class="copyright-box">
+          <strong>Wichtig – nur die Lösung, nie die Frage:</strong>
+          Gib hier niemals den Original-Aufgabentext ein (auch nicht abgetippt oder als Foto/Scan). Nur dein eigener Lösungsweg zu „Semester · Aufgabe" wird gespeichert.
+        </div>
+        <div id="altklausurRows">
+          <div class="repeat-row">
+            <div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>
+            <div class="summary-line"></div>
+            <div class="field-row">
+              <div class="field">
+                <label>Semester</label>
+                <select class="semTyp"><option>Sommersemester</option><option>Wintersemester</option></select>
+              </div>
+              <div class="field">
+                <label>Jahr</label>
+                <input type="text" class="semJahr" placeholder="z. B. 2024 oder 2023/24" maxlength="9">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Aufgabennummer</label><input type="text" placeholder="z. B. Aufgabe 1"></div>
+              <div class="field"><label>Thema</label><input type="text" placeholder="z. B. Netzplantechnik"></div>
+            </div>
+            <div class="field">
+              <label>Dein Lösungsweg</label>
+              <div class="mode-toggle"><button type="button" class="on" data-mode="text">Text</button><button type="button" data-mode="bild">Bild</button></div>
+              <div class="sol-block active" data-mode-block="text"><textarea placeholder="Eigener Lösungsweg zu dieser Aufgabe (nur Antwort, keine Originalfrage) …"></textarea></div>
+              <div class="sol-block" data-mode-block="bild"><div class="upload-box">⇪ Foto/Screenshot der Lösung hochladen<div class="fname"></div></div></div>
+            </div>
+            <div class="field">
+              <label>Erklärvideo (optional)</label>
+              <div class="upload-box">⇪ Video hochladen<div class="fname"></div></div>
+            </div>
+          </div>
+        </div>
+        <button class="add-row-btn" id="addAltklausurBtn" type="button">+ Weitere Altklausur-Aufgabe hinzufügen</button>
+        <div class="wizard-foot"><button class="ghost" data-next="uebungen">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="tutorien">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 6: TUTORIEN -->
+      <section class="cstep" id="cstep-tutorien">
+        <h1 style="margin-bottom:6px">Tutorien</h1>
+        <p class="step-intro">Lösungswege zu den offiziellen Tutoriumsblättern – auch hier ausschließlich dein eigener, nachvollziehbarer Lösungsweg.</p>
+        <div id="tutRows">
+          <div class="repeat-row">
+            <button class="rm" type="button">✕</button>
+            <div class="field"><label>Tutoriumsblatt</label><input type="text" placeholder="z. B. Tutorium 1 – Projektorganisation"></div>
+            <div class="field"><label>Lösungsweg</label><textarea placeholder="Eigener Lösungsweg zu den Aufgaben dieses Blatts …"></textarea></div>
+          </div>
+        </div>
+        <button class="add-row-btn" id="addTutBtn" type="button">+ Weiteres Tutorium hinzufügen</button>
+        <div class="wizard-foot"><button class="ghost" data-next="altklausuren">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="einreichen">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 7: EINREICHEN -->
+      <section class="cstep" id="cstep-einreichen">
+        <h1 style="margin-bottom:6px">Kapitel zur Prüfung einreichen</h1>
+        <p class="step-intro">Du reichst jedes Kapitel einzeln als vollständiges Paket ein (Zusammenfassung + Karteikarten + passende Übungsaufgaben). Erst nach Freigabe wird das jeweils nächste Kapitel entsperrt. Altklausuren und Tutorien werden gesammelt geprüft, sobald alle Kapitel freigegeben sind. Diese Liste passt sich automatisch an die Kapitel aus Schritt 1 an.</p>
+        <div id="chapterPackList"></div>
+        <div class="wizard-foot"><button class="ghost" data-next="tutorien">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><span></span></div>
+      </section>
+
+    </main>
   </div>
 </div>
 
@@ -1536,6 +1885,8 @@ function showView(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
+  if(id === 'view-subjects' && typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
+  if(id === 'view-creator-wizard' && typeof window.markCreatorSeen === 'function'){ window.markCreatorSeen(); }
 }
 document.querySelectorAll('[data-goto-view]').forEach(function(el){
   el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
@@ -1915,6 +2266,643 @@ computeDates();
 updatePlanUI();
 updateProgressUI();
 initAskBoxes();
+
+/* ===== CREATOR-WIZARD ===== */
+(function(){
+
+  function updateWizardFachLabel(){
+    var fach = (document.getElementById('cFach')||{}).value || '';
+    var prof = (document.getElementById('cProf')||{}).value || '';
+    var label = document.getElementById('wizardFachLabel');
+    if(label){ label.textContent = (fach.trim() || 'Neues Fach') + (prof.trim() ? ' — ' + prof.trim() : ''); }
+  }
+  ['cFach','cProf'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){ el.addEventListener('input', updateWizardFachLabel); }
+  });
+  var startBtn = document.querySelector('#view-creator-setup .cta');
+  if(startBtn){ startBtn.addEventListener('click', updateWizardFachLabel); }
+
+  // Datei-Upload-Boxen (generisch, außer Notennachweis + Karteikarten-Import, die eigene Logik haben)
+  function wireUploadBoxes(scope){
+    (scope || document).querySelectorAll('.upload-box').forEach(function(box){
+      if(box._wired || box.id === 'uploadTor' || box.id === 'cardImportBox'){ return; }
+      box._wired = true;
+      box.addEventListener('click', function(){
+        var fnameEl = box.querySelector('.fname');
+        if(fnameEl){
+          var label = box.textContent;
+          var demo = /video/i.test(label) ? 'aufnahme.mp4' : (/foto|screenshot|bild/i.test(label) ? 'loesung_foto.jpg' : 'nachweis.pdf');
+          fnameEl.textContent = '✓ ' + demo + ' hochgeladen';
+          fnameEl.style.display = 'block';
+        }
+        box.classList.add('done');
+      });
+    });
+  }
+  wireUploadBoxes(document);
+  var torBox = document.getElementById('uploadTor');
+  if(torBox){
+    torBox.addEventListener('click', function(){
+      var n = document.getElementById('uploadTorName');
+      n.textContent = '✓ transcript_of_records.pdf hochgeladen';
+      n.style.display = 'block';
+    });
+  }
+
+  // Step-Navigation (Sidebar-Klicks + Weiter/Zurück-Buttons)
+  var stepOrder = ['struktur','zusammenfassung','karteikarten','uebungen','altklausuren','tutorien','einreichen'];
+  function showCreatorStep(step){
+    document.querySelectorAll('.cstep').forEach(function(s){ s.classList.remove('active'); });
+    var target = document.getElementById('cstep-' + step);
+    if(target){ target.classList.add('active'); }
+    document.querySelectorAll('.step-item').forEach(function(item){
+      var isCur = item.dataset.step === step;
+      item.classList.toggle('cur', isCur);
+      if(isCur){ item.classList.remove('done'); }
+    });
+    var idx = stepOrder.indexOf(step);
+    document.querySelectorAll('.step-item').forEach(function(item){
+      var i = stepOrder.indexOf(item.dataset.step);
+      if(i < idx){ item.classList.add('done'); }
+    });
+    var main = document.querySelector('.creator-main');
+    if(main){ main.scrollTo(0,0); window.scrollTo(0,0); }
+    if(step === 'zusammenfassung' && typeof renderZfStep === 'function'){ renderZfStep(); }
+    if(step === 'karteikarten' && typeof filterRowsByContext === 'function'){ filterRowsByContext('cardRows', 'kkKapitelSelect'); }
+    if(step === 'uebungen' && typeof filterRowsByContext === 'function'){ filterRowsByContext('uebungRows', 'uebKapitelSelect'); }
+  }
+  document.querySelectorAll('.step-item').forEach(function(item){
+    item.addEventListener('click', function(){ showCreatorStep(item.dataset.step); });
+  });
+  document.querySelectorAll('[data-next]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      showCreatorStep(btn.dataset.next);
+      if(typeof saveDraft === 'function'){ saveDraft(true); }
+    });
+  });
+
+  /* ---- Kapitel-Titel & Kontext-Auswahl (Schritt 1 → 2/3/4 + Zeilen) ---- */
+  function chapterTitles(){
+    return Array.prototype.map.call(document.querySelectorAll('#chapterRows .repeat-row'), function(row, i){
+      var input = row.querySelector('input[type=text]');
+      var t = input ? input.value.trim() : '';
+      return 'Kapitel ' + (i+1) + (t ? ' – ' + t : '');
+    });
+  }
+  function kapitelOptionsHTML(selectedText){
+    return chapterTitles().map(function(t){
+      return '<option' + (t === selectedText ? ' selected' : '') + '>' + t + '</option>';
+    }).join('');
+  }
+  function refreshAllKapitelSelects(){
+    var titles = chapterTitles();
+    var optHtml = titles.map(function(t){ return '<option>' + t + '</option>'; }).join('');
+    ['zfKapitelSelect','kkKapitelSelect','uebKapitelSelect'].forEach(function(id){
+      var sel = document.getElementById(id);
+      if(!sel){ return; }
+      var prevVal = sel.value;
+      sel.innerHTML = optHtml;
+      if(titles.indexOf(prevVal) >= 0){ sel.value = prevVal; }
+    });
+    document.querySelectorAll('.rowKapitelSelect').forEach(function(sel){
+      var prevVal = sel.value;
+      sel.innerHTML = optHtml;
+      if(titles.indexOf(prevVal) >= 0){ sel.value = prevVal; }
+    });
+    filterRowsByContext('cardRows', 'kkKapitelSelect');
+    filterRowsByContext('uebungRows', 'uebKapitelSelect');
+  }
+  function syncContextFrom(sourceId){
+    var src = document.getElementById(sourceId);
+    if(!src){ return; }
+    var val = src.value;
+    ['zfKapitelSelect','kkKapitelSelect','uebKapitelSelect'].forEach(function(id){
+      if(id === sourceId){ return; }
+      var sel = document.getElementById(id);
+      if(sel){ sel.value = val; }
+    });
+    if(sourceId === 'zfKapitelSelect'){ renderZfStep(); }
+    filterRowsByContext('cardRows', 'kkKapitelSelect');
+    filterRowsByContext('uebungRows', 'uebKapitelSelect');
+  }
+  ['zfKapitelSelect','kkKapitelSelect','uebKapitelSelect'].forEach(function(id){
+    var sel = document.getElementById(id);
+    if(sel){ sel.addEventListener('change', function(){ syncContextFrom(id); }); }
+  });
+
+  /* ---- Kapitel-Filter: nur Karten/Aufgaben des gerade gewählten Kapitels anzeigen ---- */
+  function filterRowsByContext(containerId, ctxId){
+    var container = document.getElementById(containerId);
+    var ctx = document.getElementById(ctxId);
+    if(!container || !ctx){ return; }
+    var ctxVal = ctx.value;
+    var visibleCount = 0;
+    container.querySelectorAll('.repeat-row').forEach(function(row){
+      var sel = row.querySelector('.rowKapitelSelect');
+      var match = !sel || sel.value === ctxVal;
+      row.style.display = match ? '' : 'none';
+      if(match){ visibleCount++; }
+    });
+    var hintId = containerId === 'cardRows' ? 'cardEmptyHint' : 'uebungEmptyHint';
+    var hint = document.getElementById(hintId);
+    if(hint){ hint.style.display = visibleCount === 0 ? 'block' : 'none'; }
+  }
+
+  /* ---- Zusammenfassung: Felder dynamisch aus den Unterkapiteln der Struktur ---- */
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  var zfData = {};
+  var currentZfIdx = null;
+  function getSubchapterLines(chapterIdx){
+    var rows = document.querySelectorAll('#chapterRows .repeat-row');
+    var row = rows[chapterIdx];
+    if(!row){ return []; }
+    var ta = row.querySelectorAll('textarea')[0];
+    if(!ta){ return []; }
+    return ta.value.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+  }
+  function ensureZfEntry(idx){
+    if(!zfData[idx]){ zfData[idx] = { subs: [], merke: '', tipps: '' }; }
+    return zfData[idx];
+  }
+  function saveCurrentZfFields(){
+    if(currentZfIdx === null){ return; }
+    var entry = ensureZfEntry(currentZfIdx);
+    var subFields = document.querySelectorAll('#zfDynamicFields .zf-sub-field');
+    if(subFields.length){
+      entry.subs = Array.prototype.map.call(subFields, function(el){ return el.value; });
+    }
+    var merkeEl = document.getElementById('zfMerke');
+    var tippsEl = document.getElementById('zfTipps');
+    if(merkeEl){ entry.merke = merkeEl.value; }
+    if(tippsEl){ entry.tipps = tippsEl.value; }
+  }
+  function renderZfStep(){
+    var select = document.getElementById('zfKapitelSelect');
+    if(!select){ return; }
+    var idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+    saveCurrentZfFields();
+    currentZfIdx = idx;
+    var lines = getSubchapterLines(idx);
+    var entry = ensureZfEntry(idx);
+    while(entry.subs.length < lines.length){ entry.subs.push(''); }
+
+    var container = document.getElementById('zfDynamicFields');
+    if(!container){ return; }
+    if(lines.length === 0){
+      container.innerHTML = '<p class="hint-sm" style="margin-bottom:16px">Noch keine Unterkapitel für dieses Kapitel definiert. Leg sie in Schritt 1 (Struktur) an – hier erscheinen dann automatisch passende Textfelder.</p>';
+    } else {
+      container.innerHTML = lines.map(function(line){
+        return '<div class="field"><label>' + escapeHtml(line) + '</label><textarea class="zf-sub-field" placeholder="Text zu „' + escapeHtml(line) + '" …"></textarea></div>';
+      }).join('');
+      var fields = container.querySelectorAll('.zf-sub-field');
+      fields.forEach(function(f, i){ f.value = entry.subs[i] || ''; });
+    }
+    var merkeEl = document.getElementById('zfMerke');
+    var tippsEl = document.getElementById('zfTipps');
+    if(merkeEl){ merkeEl.value = entry.merke || ''; }
+    if(tippsEl){ tippsEl.value = entry.tipps || ''; }
+  }
+  document.addEventListener('input', function(e){
+    if(e.target && (e.target.id === 'zfMerke' || e.target.id === 'zfTipps' || e.target.classList.contains('zf-sub-field'))){
+      saveCurrentZfFields();
+    }
+  });
+
+  /* ---- Generische Zeilen-Ausstattung: Entfernen, „Fertig"-Toggle, Text/Bild-Umschalter ---- */
+  function buildSummary(row, containerId){
+    if(containerId === 'cardRows'){
+      var frage = row.querySelector('input[type=text]');
+      var kap = row.querySelector('.rowKapitelSelect');
+      return (frage && frage.value ? frage.value : 'Karte ohne Frage') + (kap ? '  ·  ' + kap.value : '');
+    }
+    if(containerId === 'uebungRows'){
+      var kuerzel = row.querySelector('input[type=text]');
+      var kap2 = row.querySelector('.rowKapitelSelect');
+      return (kuerzel && kuerzel.value ? kuerzel.value : 'Übungsaufgabe') + (kap2 ? '  ·  ' + kap2.value : '');
+    }
+    if(containerId === 'altklausurRows'){
+      var typ = row.querySelector('.semTyp');
+      var jahr = row.querySelector('.semJahr');
+      var frows = row.querySelectorAll('.field-row');
+      var aufg = frows[1] ? frows[1].querySelectorAll('input[type=text]')[0] : null;
+      return (typ ? typ.value : '') + ' ' + (jahr ? jahr.value : '') + (aufg && aufg.value ? '  ·  ' + aufg.value : '');
+    }
+    var firstText = row.querySelector('input[type=text]');
+    return firstText && firstText.value ? firstText.value : 'Eintrag';
+  }
+  function enhanceRow(row, container){
+    var rm = row.querySelector('.rm');
+    if(rm && !rm._wired){
+      rm._wired = true;
+      rm.addEventListener('click', function(){
+        if(container.querySelectorAll('.repeat-row').length > 1){ row.remove(); refreshAllKapitelSelects(); }
+      });
+    }
+    var tf = row.querySelector('.toggle-fertig');
+    if(tf && !tf._wired){
+      tf._wired = true;
+      tf.addEventListener('click', function(){
+        var collapsed = row.classList.toggle('collapsed');
+        tf.classList.toggle('on', collapsed);
+        tf.textContent = collapsed ? '↺ Bearbeiten' : '✓ Fertig';
+        if(collapsed){
+          var sl = row.querySelector('.summary-line');
+          if(sl){ sl.textContent = buildSummary(row, container.id); }
+        }
+      });
+    }
+    row.querySelectorAll('.mode-toggle').forEach(function(mt){
+      if(mt._wired){ return; }
+      mt._wired = true;
+      mt.querySelectorAll('button').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          mt.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+          btn.classList.add('on');
+          var parentField = mt.closest('.field');
+          parentField.querySelectorAll('.sol-block').forEach(function(sb){
+            sb.classList.toggle('active', sb.dataset.modeBlock === btn.dataset.mode);
+          });
+        });
+      });
+    });
+    wireUploadBoxes(row);
+    var rowKapSel = row.querySelector('.rowKapitelSelect');
+    if(rowKapSel && !rowKapSel._wired){
+      rowKapSel._wired = true;
+      rowKapSel.addEventListener('change', function(){
+        if(container.id === 'cardRows'){ filterRowsByContext('cardRows', 'kkKapitelSelect'); }
+        if(container.id === 'uebungRows'){ filterRowsByContext('uebungRows', 'uebKapitelSelect'); }
+      });
+    }
+  }
+
+  /* ---- Zeilen-Erzeuger je Bereich ---- */
+  function addChapterRow(){
+    var container = document.getElementById('chapterRows');
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="repeat-row"><button class="rm" type="button">✕</button>' +
+      '<div class="field"><label>Kapitel – Titel</label><input type="text" placeholder="z. B. Projektorganisation"></div>' +
+      '<div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="2.1 …&#10;2.2 …"></textarea></div></div>';
+    var row = wrap.firstElementChild;
+    container.appendChild(row);
+    enhanceRow(row, container);
+    row.querySelector('input[type=text]').addEventListener('input', refreshAllKapitelSelects);
+    refreshAllKapitelSelects();
+    return row;
+  }
+  function addCardRow(frage, antwort, kapitelText){
+    var container = document.getElementById('cardRows');
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="repeat-row">' +
+      '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
+      '<div class="summary-line"></div>' +
+      '<div class="field"><label>Frage (Vorderseite)</label><input type="text" placeholder="Frage eingeben …"></div>' +
+      '<div class="field"><label>Antwort (Rückseite)</label><textarea placeholder="Antwort eingeben …"></textarea></div>' +
+      '<div class="field"><label>Kapitel</label><select class="rowKapitelSelect">' + kapitelOptionsHTML(kapitelText) + '</select></div></div>';
+    var row = wrap.firstElementChild;
+    if(frage){ row.querySelector('input[type=text]').value = frage; }
+    if(antwort){ row.querySelector('textarea').value = antwort; }
+    container.appendChild(row);
+    enhanceRow(row, container);
+    return row;
+  }
+  function addUebungRow(kapitelText){
+    var container = document.getElementById('uebungRows');
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="repeat-row">' +
+      '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
+      '<div class="summary-line"></div>' +
+      '<div class="field-row"><div class="field"><label>Themen-Kürzel</label><input type="text" placeholder="z. B. N2"></div>' +
+      '<div class="field"><label>Schwierigkeit</label><select><option>leicht</option><option>mittel</option><option>schwer</option></select></div></div>' +
+      '<div class="field"><label>Kapitel</label><select class="rowKapitelSelect">' + kapitelOptionsHTML(kapitelText) + '</select></div>' +
+      '<div class="field"><label>Eigene Aufgabenstellung</label><textarea placeholder="Formuliere eine eigene Aufgabe …"></textarea></div>' +
+      '<div class="field"><label>Lösungsweg</label>' +
+      '<div class="mode-toggle"><button type="button" class="on" data-mode="text">Text</button><button type="button" data-mode="bild">Bild</button></div>' +
+      '<div class="sol-block active" data-mode-block="text"><textarea placeholder="Schritt-für-Schritt-Lösung …"></textarea></div>' +
+      '<div class="sol-block" data-mode-block="bild"><div class="upload-box">⇪ Foto/Screenshot der Lösung hochladen<div class="fname"></div></div></div></div>' +
+      '<div class="field"><label>Erklärvideo (optional)</label><div class="upload-box">⇪ Video hochladen<div class="fname"></div></div></div></div>';
+    var row = wrap.firstElementChild;
+    container.appendChild(row);
+    enhanceRow(row, container);
+    return row;
+  }
+  function addAltklausurRow(){
+    var container = document.getElementById('altklausurRows');
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="repeat-row">' +
+      '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
+      '<div class="summary-line"></div>' +
+      '<div class="field-row"><div class="field"><label>Semester</label><select class="semTyp"><option>Sommersemester</option><option>Wintersemester</option></select></div>' +
+      '<div class="field"><label>Jahr</label><input type="text" class="semJahr" placeholder="z. B. 2024 oder 2023/24"></div></div>' +
+      '<div class="field-row"><div class="field"><label>Aufgabennummer</label><input type="text" placeholder="z. B. Aufgabe 2"></div>' +
+      '<div class="field"><label>Thema</label><input type="text" placeholder="z. B. Scrum"></div></div>' +
+      '<div class="field"><label>Dein Lösungsweg</label>' +
+      '<div class="mode-toggle"><button type="button" class="on" data-mode="text">Text</button><button type="button" data-mode="bild">Bild</button></div>' +
+      '<div class="sol-block active" data-mode-block="text"><textarea placeholder="Eigener Lösungsweg (nur Antwort, keine Originalfrage) …"></textarea></div>' +
+      '<div class="sol-block" data-mode-block="bild"><div class="upload-box">⇪ Foto/Screenshot der Lösung hochladen<div class="fname"></div></div></div></div>' +
+      '<div class="field"><label>Erklärvideo (optional)</label><div class="upload-box">⇪ Video hochladen<div class="fname"></div></div></div></div>';
+    var row = wrap.firstElementChild;
+    container.appendChild(row);
+    enhanceRow(row, container);
+    return row;
+  }
+  function addTutRow(){
+    var container = document.getElementById('tutRows');
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="repeat-row"><button class="rm" type="button">✕</button>' +
+      '<div class="field"><label>Tutoriumsblatt</label><input type="text" placeholder="z. B. Tutorium 2 – Netzplantechnik"></div>' +
+      '<div class="field"><label>Lösungsweg</label><textarea placeholder="Eigener Lösungsweg …"></textarea></div></div>';
+    var row = wrap.firstElementChild;
+    container.appendChild(row);
+    enhanceRow(row, container);
+    return row;
+  }
+
+  document.getElementById('addChapterBtn').addEventListener('click', addChapterRow);
+  document.getElementById('addCardBtn').addEventListener('click', function(){
+    var ctx = document.getElementById('kkKapitelSelect');
+    addCardRow('', '', ctx ? ctx.value : null);
+    filterRowsByContext('cardRows', 'kkKapitelSelect');
+  });
+  document.getElementById('addUebungBtn').addEventListener('click', function(){
+    var ctx = document.getElementById('uebKapitelSelect');
+    addUebungRow(ctx ? ctx.value : null);
+    filterRowsByContext('uebungRows', 'uebKapitelSelect');
+  });
+  document.getElementById('addAltklausurBtn').addEventListener('click', addAltklausurRow);
+  document.getElementById('addTutBtn').addEventListener('click', addTutRow);
+
+  // Bereits im Markup vorhandene Startzeilen ausstatten
+  ['chapterRows','cardRows','uebungRows','altklausurRows','tutRows'].forEach(function(cid){
+    var container = document.getElementById(cid);
+    if(!container){ return; }
+    container.querySelectorAll('.repeat-row').forEach(function(row){ enhanceRow(row, container); });
+  });
+  document.querySelectorAll('#chapterRows input[type=text]').forEach(function(inp){
+    inp.addEventListener('input', refreshAllKapitelSelects);
+  });
+  refreshAllKapitelSelects();
+
+  /* ---- Karteikarten-Import (Anki-Export / CSV) ---- */
+  var cardImportBox = document.getElementById('cardImportBox');
+  var cardImportInput = document.getElementById('cardImportInput');
+  if(cardImportBox && cardImportInput){
+    cardImportBox.addEventListener('click', function(){ cardImportInput.click(); });
+    cardImportInput.addEventListener('change', function(){
+      var file = cardImportInput.files[0];
+      if(!file){ return; }
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var text = String(e.target.result || '');
+        var lines = text.split(/\r?\n/).filter(function(l){ return l.trim().length > 0 && l.charAt(0) !== '#'; });
+        var kap = document.getElementById('kkKapitelSelect') ? document.getElementById('kkKapitelSelect').value : null;
+        var added = 0;
+        lines.forEach(function(line){
+          var parts = line.split('\t');
+          if(parts.length < 2){ parts = line.split(';'); }
+          if(parts.length < 2){ parts = line.split(','); }
+          if(parts.length >= 2){
+            var frage = parts[0].replace(/^"|"$/g, '').trim();
+            var antwort = parts.slice(1).join(' ').replace(/^"|"$/g, '').trim();
+            if(frage){ addCardRow(frage, antwort, kap); added++; }
+          }
+        });
+        var nameEl = document.getElementById('cardImportName');
+        if(nameEl){
+          nameEl.textContent = added > 0
+            ? '✓ ' + file.name + ' importiert – ' + added + ' Karten übernommen'
+            : '⚠ Keine Karten erkannt – bitte Format prüfen (Frage[Tab/Semikolon/Komma]Antwort je Zeile)';
+          nameEl.style.display = 'block';
+        }
+        cardImportBox.classList.add('done');
+        filterRowsByContext('cardRows', 'kkKapitelSelect');
+        if(added > 0){ showToast(added + ' Karteikarten aus „' + file.name + '" importiert.'); }
+      };
+      reader.readAsText(file, 'UTF-8');
+    });
+  }
+
+  /* ---- Kapitel-Freigabestatus (beliebig viele Kapitel) ---- */
+  var chapterStatuses = ['offen'];
+  function renderChapterPackList(){
+    var titles = chapterTitles();
+    var list = document.getElementById('chapterPackList');
+    if(!list){ return; }
+    while(chapterStatuses.length < titles.length){ chapterStatuses.push('gesperrt'); }
+    chapterStatuses.length = titles.length || 1;
+    var html = '';
+    titles.forEach(function(title, i){
+      var unlocked = (i === 0) || (chapterStatuses[i-1] === 'freigegeben');
+      var st = unlocked ? chapterStatuses[i] : 'gesperrt';
+      chapterStatuses[i] = st;
+      var statusHtml, btnHtml = '';
+      if(st === 'gesperrt'){
+        statusHtml = '<span class="pack-status open" style="opacity:.5">Gesperrt</span>';
+      } else if(st === 'pruefung'){
+        statusHtml = '<span class="pack-status review">In Prüfung durch Klausurfuchs</span>';
+      } else if(st === 'freigegeben'){
+        statusHtml = '<span class="pack-status done">Freigegeben ✓</span>';
+      } else {
+        statusHtml = '<span class="pack-status open">Bereit zur Einreichung</span>';
+        btnHtml = '<button class="cta" style="padding:8px 16px; font-size:13px" data-submit-idx="' + i + '">Einreichen</button>';
+      }
+      html += '<div class="chapter-pack"><div class="info"><h3>' + title + '</h3><p>Zusammenfassung, Karteikarten &amp; Übungsaufgaben</p></div>' + btnHtml + statusHtml + '</div>';
+    });
+    list.innerHTML = html;
+    list.querySelectorAll('[data-submit-idx]').forEach(function(btn){
+      btn.addEventListener('click', function(){ submitChapter(parseInt(btn.dataset.submitIdx, 10)); });
+    });
+    updateOverallProgress();
+    updateEinreichenBadge();
+  }
+  function updateOverallProgress(){
+    var total = chapterStatuses.length;
+    var approved = chapterStatuses.filter(function(s){ return s === 'freigegeben'; }).length;
+    var bar = document.getElementById('wizardOverallBar');
+    var pct = document.getElementById('wizardOverallPct');
+    if(bar){ bar.style.width = (total ? Math.round(approved / total * 100) : 0) + '%'; }
+    if(pct){ pct.textContent = approved + ' von ' + total + ' Kapiteln freigegeben'; }
+  }
+  function updateEinreichenBadge(){
+    var badge = document.getElementById('einreichenBadge');
+    if(!badge){ return; }
+    var hasReview = chapterStatuses.indexOf('pruefung') >= 0;
+    var hasApproved = chapterStatuses.indexOf('freigegeben') >= 0;
+    if(hasReview){
+      badge.style.display = 'block'; badge.className = 'nav-badge'; badge.title = 'In Prüfung';
+    } else if(hasApproved && newsUnseen){
+      badge.style.display = 'block'; badge.className = 'nav-badge done'; badge.title = 'Neuigkeiten – Kapitel freigegeben';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  function submitChapter(idx){
+    chapterStatuses[idx] = 'pruefung';
+    renderChapterPackList();
+    showToast('Kapitel ' + (idx + 1) + ' eingereicht. Du bekommst Bescheid, sobald die Prüfung abgeschlossen ist.');
+    saveDraft(true);
+    setTimeout(function(){
+      chapterStatuses[idx] = 'freigegeben';
+      newsUnseen = true;
+      renderChapterPackList();
+      var next = idx + 2 <= chapterStatuses.length ? ' – Kapitel ' + (idx + 2) + ' ist jetzt entsperrt.' : ' – geschafft, alle bisherigen Kapitel sind freigegeben!';
+      showToast('Kapitel ' + (idx + 1) + ' freigegeben' + next + ' Klick links auf „Kapitel einreichen", um den Status jederzeit zu sehen.');
+      saveDraft(true);
+      if(typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
+    }, 2600);
+  }
+
+  /* ---- Speichern & Laden (Zwischenstand) ---- */
+  var STORAGE_KEY = 'klausurfuchs_creator_draft';
+  var newsUnseen = false;
+  function rowsData(containerId){
+    var container = document.getElementById(containerId);
+    if(!container){ return []; }
+    return Array.prototype.map.call(container.querySelectorAll('.repeat-row'), function(row){
+      return Array.prototype.map.call(row.querySelectorAll('input,textarea,select'), function(f){ return f.value; });
+    });
+  }
+  function fillRows(containerId, data){
+    var container = document.getElementById(containerId);
+    if(!container || !data){ return; }
+    var rows = container.querySelectorAll('.repeat-row');
+    rows.forEach(function(row, i){
+      var rowData = data[i];
+      if(!rowData){ return; }
+      var fields = row.querySelectorAll('input,textarea,select');
+      fields.forEach(function(f, j){ if(rowData[j] !== undefined){ f.value = rowData[j]; } });
+    });
+  }
+  function ensureRowCount(containerId, count, addFn){
+    var container = document.getElementById(containerId);
+    if(!container || !count){ return; }
+    while(container.querySelectorAll('.repeat-row').length < count){ addFn(); }
+  }
+  function fieldsData(sectionId){
+    var sec = document.getElementById(sectionId);
+    if(!sec){ return []; }
+    return Array.prototype.map.call(sec.querySelectorAll('textarea, select'), function(f){ return f.value; });
+  }
+  function fillFields(sectionId, data){
+    var sec = document.getElementById(sectionId);
+    if(!sec || !data){ return; }
+    var fields = sec.querySelectorAll('textarea, select');
+    fields.forEach(function(f, i){ if(data[i] !== undefined){ f.value = data[i]; } });
+  }
+  function collectState(){
+    saveCurrentZfFields();
+    return {
+      fach: (document.getElementById('cFach')||{}).value || '',
+      prof: (document.getElementById('cProf')||{}).value || '',
+      studiengang: (document.getElementById('cStudiengang')||{}).value || '',
+      semester: (document.getElementById('cSemester')||{}).value || '',
+      currentStep: document.querySelector('.step-item.cur') ? document.querySelector('.step-item.cur').dataset.step : 'struktur',
+      chapters: rowsData('chapterRows'),
+      zusammenfassungData: zfData,
+      cards: rowsData('cardRows'),
+      uebungen: rowsData('uebungRows'),
+      altklausuren: rowsData('altklausurRows'),
+      tutorien: rowsData('tutRows'),
+      chapterStatuses: chapterStatuses,
+      newsUnseen: newsUnseen
+    };
+  }
+  function restoreState(state){
+    if(!state){ return; }
+    if(document.getElementById('cFach')){ document.getElementById('cFach').value = state.fach || ''; }
+    if(document.getElementById('cProf')){ document.getElementById('cProf').value = state.prof || ''; }
+    if(document.getElementById('cStudiengang') && state.studiengang){ document.getElementById('cStudiengang').value = state.studiengang; }
+    if(document.getElementById('cSemester') && state.semester){ document.getElementById('cSemester').value = state.semester; }
+    updateWizardFachLabel();
+
+    ensureRowCount('chapterRows', (state.chapters||[]).length, addChapterRow);
+    fillRows('chapterRows', state.chapters);
+    refreshAllKapitelSelects();
+
+    ensureRowCount('cardRows', (state.cards||[]).length, function(){ addCardRow('', '', null); });
+    fillRows('cardRows', state.cards);
+
+    ensureRowCount('uebungRows', (state.uebungen||[]).length, function(){ addUebungRow(null); });
+    fillRows('uebungRows', state.uebungen);
+
+    ensureRowCount('altklausurRows', (state.altklausuren||[]).length, addAltklausurRow);
+    fillRows('altklausurRows', state.altklausuren);
+
+    ensureRowCount('tutRows', (state.tutorien||[]).length, addTutRow);
+    fillRows('tutRows', state.tutorien);
+
+    zfData = state.zusammenfassungData || {};
+    currentZfIdx = null;
+
+    if(state.chapterStatuses && state.chapterStatuses.length){ chapterStatuses = state.chapterStatuses.slice(); }
+    newsUnseen = !!state.newsUnseen;
+    renderChapterPackList();
+    filterRowsByContext('cardRows', 'kkKapitelSelect');
+    filterRowsByContext('uebungRows', 'uebKapitelSelect');
+
+    if(state.currentStep){ showCreatorStep(state.currentStep); }
+  }
+
+  function updateAllSaveStatus(text){
+    document.querySelectorAll('.save-status').forEach(function(el){ el.textContent = text; });
+  }
+  function saveDraft(silent){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
+      var now = new Date();
+      updateAllSaveStatus('Gespeichert um ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ' Uhr');
+      if(!silent){ showToast('Fortschritt gespeichert – du kannst jederzeit hier weitermachen.'); }
+    }catch(e){
+      if(!silent){ showToast('Speichern nicht möglich – Speicher voll oder im Browser blockiert.'); }
+    }
+  }
+  document.querySelectorAll('.save-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ saveDraft(false); });
+  });
+
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      restoreState(JSON.parse(raw));
+      updateAllSaveStatus('Zuletzt gespeicherter Entwurf geladen.');
+    } else {
+      renderChapterPackList();
+      filterRowsByContext('cardRows', 'kkKapitelSelect');
+      filterRowsByContext('uebungRows', 'uebKapitelSelect');
+    }
+  }catch(e){ renderChapterPackList(); }
+
+  // Vor dem Verlassen der Seite automatisch sichern
+  window.addEventListener('beforeunload', function(){ saveDraft(true); });
+
+  /* ---- Wieder-Einstieg in den Creator-Modus aus der Fächerliste ---- */
+  window.refreshCreatorEntryPoint = function(){
+    var btn = document.getElementById('creatorEntryBtn');
+    var badge = document.getElementById('creatorEntryBadge');
+    if(!btn){ return; }
+    var hasDraft = false;
+    try{ hasDraft = !!localStorage.getItem(STORAGE_KEY); }catch(e){}
+    if(hasDraft){
+      btn.childNodes[0].nodeValue = '→ Weiter am Kurs bauen';
+      btn.dataset.gotoView = 'view-creator-wizard';
+      if(badge){ badge.style.display = newsUnseen ? 'inline-block' : 'none'; }
+    } else {
+      btn.childNodes[0].nodeValue = '✦ Creator werden';
+      btn.dataset.gotoView = 'view-creator-intro';
+      if(badge){ badge.style.display = 'none'; }
+    }
+  };
+  window.markCreatorSeen = function(){
+    newsUnseen = false;
+    saveDraft(true);
+    updateEinreichenBadge();
+    window.refreshCreatorEntryPoint();
+  };
+  window.refreshCreatorEntryPoint();
+})();
 </script>
 </body>
 </html>
