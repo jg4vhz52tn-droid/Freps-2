@@ -269,6 +269,12 @@ ul.plain li{margin-bottom:5px;}
 .sol-block{display:none;}
 .sol-block.active{display:block;}
 
+/* Zusatzmodule: verschachtelte Themen-Zeilen */
+.zm-theme-row{background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:8px; position:relative;}
+.zm-theme-rm{position:absolute; top:8px; right:8px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px;}
+.zm-theme-rm:hover{color:var(--danger);}
+.zm-theme-row .field:last-child{margin-bottom:0;}
+
 @media (max-width:760px){
   .creator-shell{grid-template-columns:1fr;}
   .step-nav{position:static; height:auto; padding:20px 18px;}
@@ -435,7 +441,8 @@ ul.plain li{margin-bottom:5px;}
       <div class="step-item" data-step="uebungen"><span class="num">4</span><span>Übungsaufgaben</span></div>
       <div class="step-item" data-step="altklausuren"><span class="num">5</span><span>Altklausuren</span></div>
       <div class="step-item" data-step="tutorien"><span class="num">6</span><span>Tutorien</span></div>
-      <div class="step-item" data-step="einreichen"><span class="num">7</span><span>Kapitel einreichen</span><span class="nav-badge" id="einreichenBadge" style="display:none"></span></div>
+      <div class="step-item" data-step="zusatz"><span class="num">7</span><span>Zusatzmodule</span></div>
+      <div class="step-item" data-step="einreichen"><span class="num">8</span><span>Kapitel einreichen</span><span class="nav-badge" id="einreichenBadge" style="display:none"></span></div>
       <div class="side-progress">
         <p>Freigegebene Kapitel</p>
         <div class="bar"><i id="wizardOverallBar" style="width:0%"></i></div>
@@ -598,15 +605,33 @@ ul.plain li{margin-bottom:5px;}
           </div>
         </div>
         <button class="add-row-btn" id="addTutBtn" type="button">+ Weiteres Tutorium hinzufügen</button>
-        <div class="wizard-foot"><button class="ghost" data-next="altklausuren">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="einreichen">Weiter →</button></div>
+        <div class="wizard-foot"><button class="ghost" data-next="altklausuren">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="zusatz">Weiter →</button></div>
       </section>
 
-      <!-- SCHRITT 7: EINREICHEN -->
+      <!-- SCHRITT 7: ZUSATZMODULE (OPTIONAL) -->
+      <section class="cstep" id="cstep-zusatz">
+        <h1 style="margin-bottom:6px">Zusatzmodule (optional)</h1>
+        <p class="step-intro">Manche Fächer haben Prüfungsformen, die sonst kein anderes Fach hat – z. B. eine Gruppenarbeit, eine Ausarbeitung/Hausarbeit oder eine Präsentation. Das ist kein Pflichtbereich; aktiviere es nur, wenn es bei deinem Fach tatsächlich vorkommt.</p>
+        <div class="field">
+          <label>Gibt es in diesem Fach eine weitere Prüfungs- oder Aufgabenform?</label>
+          <div class="mode-toggle" id="zusatzToggle">
+            <button type="button" class="on" data-zusatz="nein">Nein</button>
+            <button type="button" data-zusatz="ja">Ja</button>
+          </div>
+        </div>
+        <div id="zusatzArea" style="display:none">
+          <div id="zusatzModuleRows"></div>
+          <button class="add-row-btn" id="addZusatzModulBtn" type="button">+ Weiteres Zusatzmodul hinzufügen</button>
+        </div>
+        <div class="wizard-foot"><button class="ghost" data-next="tutorien">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="einreichen">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 8: EINREICHEN -->
       <section class="cstep" id="cstep-einreichen">
         <h1 style="margin-bottom:6px">Kapitel zur Prüfung einreichen</h1>
-        <p class="step-intro">Du reichst jedes Kapitel einzeln als vollständiges Paket ein (Zusammenfassung + Karteikarten + passende Übungsaufgaben). Erst nach Freigabe wird das jeweils nächste Kapitel entsperrt. Altklausuren und Tutorien werden gesammelt geprüft, sobald alle Kapitel freigegeben sind. Diese Liste passt sich automatisch an die Kapitel aus Schritt 1 an.</p>
+        <p class="step-intro">Du reichst jedes Kapitel einzeln als vollständiges Paket ein (Zusammenfassung + Karteikarten + passende Übungsaufgaben). Erst nach Freigabe wird das jeweils nächste Kapitel entsperrt. Altklausuren, Tutorien und Zusatzmodule werden gesammelt geprüft, sobald alle Kapitel freigegeben sind. Diese Liste passt sich automatisch an die Kapitel aus Schritt 1 an.</p>
         <div id="chapterPackList"></div>
-        <div class="wizard-foot"><button class="ghost" data-next="tutorien">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><span></span></div>
+        <div class="wizard-foot"><button class="ghost" data-next="zusatz">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><span></span></div>
       </section>
 
     </main>
@@ -2320,7 +2345,7 @@ initAskBoxes();
   }
 
   // Step-Navigation (Sidebar-Klicks + Weiter/Zurück-Buttons)
-  var stepOrder = ['struktur','zusammenfassung','karteikarten','uebungen','altklausuren','tutorien','einreichen'];
+  var stepOrder = ['struktur','zusammenfassung','karteikarten','uebungen','altklausuren','tutorien','zusatz','einreichen'];
   function showCreatorStep(step){
     document.querySelectorAll('.cstep').forEach(function(s){ s.classList.remove('active'); });
     var target = document.getElementById('cstep-' + step);
@@ -2499,6 +2524,13 @@ initAskBoxes();
       var aufg = frows[1] ? frows[1].querySelectorAll('input[type=text]')[0] : null;
       return (typ ? typ.value : '') + ' ' + (jahr ? jahr.value : '') + (aufg && aufg.value ? '  ·  ' + aufg.value : '');
     }
+    if(containerId === 'zusatzModuleRows'){
+      var art = row.querySelector('.zmArt');
+      var titel = row.querySelector('.zmTitel');
+      var themeCount = row.querySelectorAll('.zm-theme-row').length;
+      var label = (titel && titel.value ? titel.value : (art ? art.value : 'Zusatzmodul'));
+      return label + '  ·  ' + themeCount + (themeCount === 1 ? ' Thema' : ' Themen');
+    }
     var firstText = row.querySelector('input[type=text]');
     return firstText && firstText.value ? firstText.value : 'Eintrag';
   }
@@ -2507,7 +2539,8 @@ initAskBoxes();
     if(rm && !rm._wired){
       rm._wired = true;
       rm.addEventListener('click', function(){
-        if(container.querySelectorAll('.repeat-row').length > 1){ row.remove(); refreshAllKapitelSelects(); }
+        var minRows = container.id === 'zusatzModuleRows' ? 0 : 1;
+        if(container.querySelectorAll('.repeat-row').length > minRows){ row.remove(); refreshAllKapitelSelects(); }
       });
     }
     var tf = row.querySelector('.toggle-fertig');
@@ -2629,6 +2662,64 @@ initAskBoxes();
     enhanceRow(row, container);
     return row;
   }
+
+  /* ---- Zusatzmodule (optional): Gruppenarbeit, Ausarbeitung, Präsentation … ---- */
+  function addZmThemeRow(themeContainer, titel, text){
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="zm-theme-row">' +
+      '<button class="zm-theme-rm" type="button">✕</button>' +
+      '<div class="field"><label>Thema</label><input type="text" class="zmThemaTitel" placeholder="z. B. Thema 3 – Nachhaltigkeit im Projektmanagement"></div>' +
+      '<div class="field"><label>Eigener Text / eigene Ausarbeitung</label><textarea class="zmThemaText" placeholder="Deine eigene Zusammenfassung, Gliederung oder Ausarbeitung zu diesem Thema …"></textarea></div></div>';
+    var row = wrap.firstElementChild;
+    if(titel){ row.querySelector('.zmThemaTitel').value = titel; }
+    if(text){ row.querySelector('.zmThemaText').value = text; }
+    themeContainer.appendChild(row);
+    var rm = row.querySelector('.zm-theme-rm');
+    rm.addEventListener('click', function(){ row.remove(); });
+    return row;
+  }
+  function addZusatzModul(data){
+    var container = document.getElementById('zusatzModuleRows');
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="repeat-row">' +
+      '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
+      '<div class="summary-line"></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label>Art</label><select class="zmArt"><option>Gruppenarbeit</option><option>Ausarbeitung/Hausarbeit</option><option>Präsentation</option><option>Projekt</option><option>Sonstiges</option></select></div>' +
+      '<div class="field"><label>Eigener Titel (optional)</label><input type="text" class="zmTitel" placeholder="z. B. Gruppenarbeit SS 2024"></div>' +
+      '</div>' +
+      '<div class="field"><label>Allgemeine Hinweise / Bewertungskriterien</label><textarea class="zmHinweise" placeholder="Was erwartet der Professor bei dieser Aufgabenform? Formale Vorgaben, Bewertungsschema, Abgabefristen …"></textarea></div>' +
+      '<div class="field"><label>Themen</label><div class="zm-theme-rows"></div>' +
+      '<button class="add-row-btn zm-add-theme" type="button">+ Thema hinzufügen</button></div></div>';
+    var row = wrap.firstElementChild;
+    container.appendChild(row);
+    var themeContainer = row.querySelector('.zm-theme-rows');
+    if(data){
+      if(row.querySelector('.zmArt')){ row.querySelector('.zmArt').value = data.art || 'Gruppenarbeit'; }
+      if(row.querySelector('.zmTitel')){ row.querySelector('.zmTitel').value = data.titel || ''; }
+      if(row.querySelector('.zmHinweise')){ row.querySelector('.zmHinweise').value = data.hinweise || ''; }
+      (data.themes || []).forEach(function(t){ addZmThemeRow(themeContainer, t.titel, t.text); });
+    }
+    if(!data || !(data.themes && data.themes.length)){ addZmThemeRow(themeContainer); }
+    row.querySelector('.zm-add-theme').addEventListener('click', function(){ addZmThemeRow(themeContainer); });
+    enhanceRow(row, container);
+    return row;
+  }
+  var zusatzToggle = document.getElementById('zusatzToggle');
+  var zusatzArea = document.getElementById('zusatzArea');
+  if(zusatzToggle){
+    zusatzToggle.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        zusatzToggle.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+        btn.classList.add('on');
+        var isJa = btn.dataset.zusatz === 'ja';
+        if(zusatzArea){ zusatzArea.style.display = isJa ? 'block' : 'none'; }
+        if(isJa && document.getElementById('zusatzModuleRows').children.length === 0){ addZusatzModul(); }
+      });
+    });
+  }
+  var addZusatzModulBtn = document.getElementById('addZusatzModulBtn');
+  if(addZusatzModulBtn){ addZusatzModulBtn.addEventListener('click', function(){ addZusatzModul(); }); }
 
   document.getElementById('addChapterBtn').addEventListener('click', addChapterRow);
   document.getElementById('addCardBtn').addEventListener('click', function(){
@@ -2801,6 +2892,39 @@ initAskBoxes();
     var fields = sec.querySelectorAll('textarea, select');
     fields.forEach(function(f, i){ if(data[i] !== undefined){ f.value = data[i]; } });
   }
+  function collectZusatzData(){
+    var onBtn = zusatzToggle ? zusatzToggle.querySelector('button.on') : null;
+    var enabled = !!(onBtn && onBtn.dataset.zusatz === 'ja');
+    var modules = Array.prototype.map.call(document.querySelectorAll('#zusatzModuleRows .repeat-row'), function(row){
+      var themes = Array.prototype.map.call(row.querySelectorAll('.zm-theme-row'), function(tr){
+        return {
+          titel: tr.querySelector('.zmThemaTitel').value,
+          text: tr.querySelector('.zmThemaText').value
+        };
+      });
+      return {
+        art: row.querySelector('.zmArt').value,
+        titel: row.querySelector('.zmTitel').value,
+        hinweise: row.querySelector('.zmHinweise').value,
+        themes: themes
+      };
+    });
+    return { enabled: enabled, modules: modules };
+  }
+  function restoreZusatzData(data){
+    var container = document.getElementById('zusatzModuleRows');
+    if(container){ container.innerHTML = ''; }
+    var enabled = !!(data && data.enabled);
+    if(zusatzToggle){
+      zusatzToggle.querySelectorAll('button').forEach(function(b){
+        b.classList.toggle('on', enabled ? b.dataset.zusatz === 'ja' : b.dataset.zusatz === 'nein');
+      });
+    }
+    if(zusatzArea){ zusatzArea.style.display = enabled ? 'block' : 'none'; }
+    if(enabled && data.modules && data.modules.length){
+      data.modules.forEach(function(m){ addZusatzModul(m); });
+    }
+  }
   function collectState(){
     saveCurrentZfFields();
     return {
@@ -2815,6 +2939,7 @@ initAskBoxes();
       uebungen: rowsData('uebungRows'),
       altklausuren: rowsData('altklausurRows'),
       tutorien: rowsData('tutRows'),
+      zusatz: collectZusatzData(),
       chapterStatuses: chapterStatuses,
       newsUnseen: newsUnseen
     };
@@ -2842,6 +2967,8 @@ initAskBoxes();
 
     ensureRowCount('tutRows', (state.tutorien||[]).length, addTutRow);
     fillRows('tutRows', state.tutorien);
+
+    restoreZusatzData(state.zusatz);
 
     zfData = state.zusammenfassungData || {};
     currentZfIdx = null;
