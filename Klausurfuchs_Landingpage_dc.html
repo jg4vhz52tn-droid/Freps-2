@@ -16,13 +16,30 @@ body{margin:0;background:#FAFAF7;color:#1B2A41;font-family:'Inter',sans-serif;fo
 h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.25;margin:0}
 a{color:#2D7D6F}
 a:hover{color:#256A5E}
+
+@media (max-width:760px){
+  .site-header{flex-wrap:wrap !important;padding:16px 20px !important;gap:10px !important}
+  .site-nav{gap:10px !important;flex-wrap:wrap !important;width:100% !important;justify-content:flex-start !important}
+  .site-nav a{font-size:13px !important;padding:8px 12px !important}
+  .hero-grid{grid-template-columns:1fr !important;gap:32px !important;padding:36px 0 48px !important}
+  .problem-grid{grid-template-columns:1fr !important;gap:24px !important;padding-bottom:48px !important}
+  .steps-grid{grid-template-columns:1fr !important}
+  .quality-grid{grid-template-columns:1fr !important}
+  .creator-grid{grid-template-columns:1fr !important;gap:32px !important}
+  .section-pad{padding-top:44px !important;padding-bottom:44px !important}
+  .tabs-row{flex-wrap:wrap !important}
+  h2{font-size:23px !important}
+}
+@media (max-width:420px){
+  .site-nav a{font-size:12px !important;padding:7px 10px !important;white-space:normal !important}
+}
 </style>
 </helmet>
 
 <!-- HEADER -->
-<header style="display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,4vw,44px);border-bottom:1px solid #E3E1DA;background:#FAFAF7;max-width:1160px;margin:0 auto">
+<header class="site-header" style="display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,4vw,44px);border-bottom:1px solid #E3E1DA;background:#FAFAF7;max-width:1160px;margin:0 auto">
   <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:19px;color:#1B2A41">Klausur<span style="color:#2D7D6F">fuchs</span></div>
-  <nav style="display:flex;align-items:center;gap:28px">
+  <nav class="site-nav" style="display:flex;align-items:center;gap:28px">
     <a href="#faq" style="font-size:14px;font-weight:500;color:#6B7280;text-decoration:none">FAQ</a>
     <a href="index.html?goto=view-creator-intro" style="font-size:14px;font-weight:600;padding:9px 16px;border:1.5px dashed #2D7D6F;border-radius:8px;color:#2D7D6F;text-decoration:none;white-space:nowrap">Creator werden</a>
     <a href="index.html?goto=view-subjects" style="font-size:14px;font-weight:600;padding:9px 18px;border-radius:8px;background:#2D7D6F;color:#fff;text-decoration:none;white-space:nowrap">Kurs finden</a>
@@ -32,7 +49,7 @@ a:hover{color:#256A5E}
 <div style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,44px)">
 
 <!-- HERO -->
-<section style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;padding:72px 0 88px">
+<section class="hero-grid" style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;padding:72px 0 88px">
   <div>
     <div style="display:inline-block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:#E4F1EE;color:#2D7D6F;padding:5px 12px;border-radius:20px;margin-bottom:18px">Für Fachhochschulen</div>
     <h1 style="font-size:clamp(32px,4vw,46px);font-weight:700;letter-spacing:-.01em;margin-bottom:18px">Spar dir das Zusammensuchen. Lern das, was wirklich drankommt.</h1>
@@ -77,7 +94,7 @@ a:hover{color:#256A5E}
 </section>
 
 <!-- PROBLEM -->
-<section style="padding:0 0 88px;display:grid;grid-template-columns:0.9fr 1.1fr;gap:56px;align-items:start">
+<section class="problem-grid" style="padding:0 0 88px;display:grid;grid-template-columns:0.9fr 1.1fr;gap:56px;align-items:start">
   <h2 style="font-size:28px;font-weight:700;max-width:360px">Die Klausurvorbereitung kostet heute doppelt Zeit</h2>
   <div>
     <p style="font-size:16px;color:#374151;max-width:560px;margin-bottom:20px">Studierende an Fachhochschulen sammeln sich ihre Vorbereitung heute meist selbst zusammen: Vorlesungen nacharbeiten, Foren-PDFs durchsuchen, am Ende noch den eigenen Lernzettel und die Karteikarten schreiben. Dabei sitzt in jedem Kurs mindestens eine Person, die die Klausur schon mit Bestnote gemeistert und genau diese Arbeit schon einmal gemacht hat.</p>
@@ -90,12 +107,12 @@ a:hover{color:#256A5E}
 </section>
 
 <!-- HOW IT WORKS -->
-<section id="kurs-finden" style="padding:0 0 88px">
+<section id="kurs-finden" class="section-pad" style="padding:0 0 88px">
   <div style="margin-bottom:40px">
     <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">So funktioniert's</div>
     <h2 style="font-size:28px;font-weight:700">Drei Schritte, statt wochenlang selbst zu sammeln</h2>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+  <div class="steps-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
     <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:24px">
       <div style="width:34px;height:34px;border-radius:50%;background:#1B2A41;color:#E8B44F;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">1</div>
       <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Hochschule &amp; Fach wählen</h3>
@@ -115,7 +132,7 @@ a:hover{color:#256A5E}
 </section>
 
 <!-- WHAT'S INCLUDED -->
-<section style="padding:0 0 88px">
+<section class="section-pad" style="padding:0 0 88px">
   <div style="margin-bottom:36px;max-width:600px">
     <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Kursinhalt</div>
     <h2 style="font-size:28px;font-weight:700;margin-bottom:10px">Jeder Kurs folgt demselben Bauplan</h2>
@@ -133,12 +150,12 @@ a:hover{color:#256A5E}
 </section>
 
 <!-- QUALITY PROMISE -->
-<section style="padding:0 0 88px">
+<section class="section-pad" style="padding:0 0 88px">
   <div style="margin-bottom:36px;max-width:600px">
     <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Qualitätsversprechen</div>
     <h2 style="font-size:28px;font-weight:700">Was Klausurfuchs vom PDF-Sammelsurium unterscheidet</h2>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="quality-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:22px 24px">
       <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">Fester Bauplan statt Wildwuchs</h3>
       <p style="font-size:14px;color:#6B7280">Jeder Kurs folgt demselben Schema &mdash; Zusammenfassung, Übungsaufgaben, Altklausuren, Mindmap, Karteikarten, Lernpläne.</p>
@@ -162,8 +179,8 @@ a:hover{color:#256A5E}
 
 <!-- FOR CREATORS (full-bleed) -->
 <section id="creator" style="background:#1B2A41;color:#E9EDF2">
-  <div style="max-width:1160px;margin:0 auto;padding:64px clamp(20px,4vw,44px)">
-  <div style="display:grid;grid-template-columns:0.9fr 1.1fr;gap:56px;align-items:start">
+  <div class="section-pad" style="max-width:1160px;margin:0 auto;padding:64px clamp(20px,4vw,44px)">
+  <div class="creator-grid" style="display:grid;grid-template-columns:0.9fr 1.1fr;gap:56px;align-items:start">
     <div>
       <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#E8B44F;margin-bottom:8px">Für Creator</div>
       <h2 style="font-size:28px;font-weight:700;margin-bottom:16px;color:#fff">Dein Wissen verdient Geld — für kaum mehr Aufwand als heute schon</h2>
@@ -194,7 +211,7 @@ a:hover{color:#256A5E}
 <div style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,44px)">
 
 <!-- EXAMPLE PREVIEW -->
-<section style="padding:88px 0">
+<section class="section-pad" style="padding:88px 0">
   <div style="margin-bottom:36px;max-width:640px">
     <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Der erste Kurs</div>
     <h2 style="font-size:28px;font-weight:700;margin-bottom:10px">Projektmanagement &mdash; Prof. Koch, HWG Ludwigshafen</h2>
@@ -202,7 +219,7 @@ a:hover{color:#256A5E}
   </div>
 
   <div style="background:#fff;border:1px solid #E3E1DA;border-radius:14px;overflow:hidden">
-    <div style="display:flex;gap:4px;padding:14px 20px 0;border-bottom:1px solid #E3E1DA">
+    <div class="tabs-row" style="display:flex;gap:4px;padding:14px 20px 0;border-bottom:1px solid #E3E1DA">
       <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
         <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
       </sc-for>
@@ -238,7 +255,7 @@ a:hover{color:#256A5E}
 </section>
 
 <!-- FAQ -->
-<section id="faq" style="padding:0 0 88px">
+<section id="faq" class="section-pad" style="padding:0 0 88px">
   <div style="margin-bottom:32px">
     <h2 style="font-size:28px;font-weight:700">Häufige Fragen</h2>
   </div>
@@ -261,7 +278,7 @@ a:hover{color:#256A5E}
 
 <!-- FINAL CTA (full-bleed) -->
 <section id="creator-cta" style="background:#E4F1EE">
-  <div style="max-width:1160px;margin:0 auto;padding:64px clamp(20px,4vw,44px);text-align:center">
+  <div class="section-pad" style="max-width:1160px;margin:0 auto;padding:64px clamp(20px,4vw,44px);text-align:center">
     <div style="max-width:620px;margin:0 auto">
       <h2 style="font-size:30px;font-weight:700;margin-bottom:14px">Bereit für deine Klausur?</h2>
       <p style="font-size:15px;color:#374151;margin-bottom:26px">Egal ob du lernen oder unterrichten willst &mdash; leg direkt los. Weitere Hochschulen folgen, sobald sich dort Creator melden.</p>
