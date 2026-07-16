@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#FAFAF7;color:#1B2A41;font-family:'Inter',sans-serif;font-size:16px;line-height:1.6}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.25;margin:0}
+a{color:#2D7D6F}
+a:hover{color:#256A5E}
+</style>
+</helmet>
+
+<!-- HEADER -->
+<header style="display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,4vw,44px);border-bottom:1px solid #E3E1DA;background:#FAFAF7;max-width:1160px;margin:0 auto">
+  <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:19px;color:#1B2A41">Klausur<span style="color:#2D7D6F">fuchs</span></div>
+  <nav style="display:flex;align-items:center;gap:28px">
+    <a href="#faq" style="font-size:14px;font-weight:500;color:#6B7280;text-decoration:none">FAQ</a>
+    <a href="index.html?goto=view-creator-intro" style="font-size:14px;font-weight:600;padding:9px 16px;border:1.5px dashed #2D7D6F;border-radius:8px;color:#2D7D6F;text-decoration:none;white-space:nowrap">Creator werden</a>
+    <a href="index.html?goto=view-subjects" style="font-size:14px;font-weight:600;padding:9px 18px;border-radius:8px;background:#2D7D6F;color:#fff;text-decoration:none;white-space:nowrap">Kurs finden</a>
+  </nav>
+</header>
+
+<div style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,44px)">
+
+<!-- HERO -->
+<section style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;padding:72px 0 88px">
+  <div>
+    <div style="display:inline-block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:#E4F1EE;color:#2D7D6F;padding:5px 12px;border-radius:20px;margin-bottom:18px">Für Fachhochschulen</div>
+    <h1 style="font-size:clamp(32px,4vw,46px);font-weight:700;letter-spacing:-.01em;margin-bottom:18px">Spar dir das Zusammensuchen. Lern das, was wirklich drankommt.</h1>
+    <p style="font-size:17px;color:#374151;max-width:520px;margin-bottom:14px">Klausurfuchs bietet pro Fach und Professor genau einen Kurs — fertig aufbereitet von jemandem, der diese Klausur mit 1,0 oder 1,3 bestanden hat. Kein Vorlesungen-Nachholen, kein eigener Lernzettel, keine PDF-Wühlerei: Zusammenfassung, Karteikarten und Altklausur-Lösungswege liegen schon für dich bereit.</p>
+    <p style="font-size:14px;color:#6B7280;max-width:520px;margin-bottom:30px">Kapitel für Kapitel von der Redaktion geprüft, bevor er live geht.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px">
+      <a href="index.html?goto=view-subjects" style="font-size:15px;font-weight:600;padding:13px 24px;border-radius:8px;background:#2D7D6F;color:#fff;text-decoration:none">Kurs für mein Fach finden</a>
+      <a href="index.html?goto=view-creator-intro" style="font-size:15px;font-weight:600;padding:13px 24px;border-radius:8px;border:1.5px solid #E3E1DA;color:#1B2A41;text-decoration:none;background:#fff">Creator werden</a>
+    </div>
+    <p style="font-size:13px;color:#6B7280">Aktuell an der HWG Ludwigshafen &middot; jeder Kurs redaktionell geprüft &middot; Creator weisen Note 1,0 oder 1,3 nach</p>
+  </div>
+
+  <div style="background:#fff;border:1px solid #E3E1DA;border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(27,42,65,.04)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;color:#6B7280">Projektmanagement &mdash; Prof. Koch</div>
+      <span style="font-size:11px;font-weight:600;background:#E4F1EE;color:#2D7D6F;padding:3px 10px;border-radius:20px">3. Semester</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:14px">
+        <div style="width:26px;height:26px;border-radius:7px;background:#2D7D6F;color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;margin-bottom:8px">Z</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">Zusammenfassung</div>
+        <div style="font-size:12px;color:#6B7280">12 Kapitel</div>
+      </div>
+      <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:14px">
+        <div style="width:26px;height:26px;border-radius:7px;background:#2D7D6F;color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;margin-bottom:8px">K</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">Karteikarten</div>
+        <div style="font-size:12px;color:#6B7280">184 Karten</div>
+      </div>
+      <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:14px">
+        <div style="width:26px;height:26px;border-radius:7px;background:#2D7D6F;color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;margin-bottom:8px">A</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">Altklausuren</div>
+        <div style="font-size:12px;color:#6B7280">7 Termine</div>
+      </div>
+      <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:14px">
+        <div style="width:26px;height:26px;border-radius:7px;background:#2D7D6F;color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;margin-bottom:8px">L</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">Lernplan</div>
+        <div style="font-size:12px;color:#6B7280">bis Klausurtermin</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;background:#EAF3DE;border-radius:8px;padding:9px 12px;font-size:12px;color:#3B6D11;font-weight:600">&#10003; Redaktionell geprüft &middot; Creator-Note 1,0</div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section style="padding:0 0 88px;display:grid;grid-template-columns:0.9fr 1.1fr;gap:56px;align-items:start">
+  <h2 style="font-size:28px;font-weight:700;max-width:360px">Die Klausurvorbereitung kostet heute doppelt Zeit</h2>
+  <div>
+    <p style="font-size:16px;color:#374151;max-width:560px;margin-bottom:20px">Studierende an Fachhochschulen sammeln sich ihre Vorbereitung heute meist selbst zusammen: Vorlesungen nacharbeiten, Foren-PDFs durchsuchen, am Ende noch den eigenen Lernzettel und die Karteikarten schreiben. Dabei sitzt in jedem Kurs mindestens eine Person, die die Klausur schon mit Bestnote gemeistert und genau diese Arbeit schon einmal gemacht hat.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#6B7280"><span style="color:#C0442E;font-weight:700;flex-shrink:0">&times;</span>Unsortierte Foren-PDFs und alte WhatsApp-Dumps</div>
+      <div style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#6B7280"><span style="color:#C0442E;font-weight:700;flex-shrink:0">&times;</span>Generische Plattformen ohne Bezug zur eigenen Hochschule</div>
+      <div style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#6B7280"><span style="color:#C0442E;font-weight:700;flex-shrink:0">&times;</span>Zeitaufwand für eigene Zusammenfassung und Karteikarten, bevor überhaupt gelernt werden kann</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="kurs-finden" style="padding:0 0 88px">
+  <div style="margin-bottom:40px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">So funktioniert's</div>
+    <h2 style="font-size:28px;font-weight:700">Drei Schritte, statt wochenlang selbst zu sammeln</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:24px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#1B2A41;color:#E8B44F;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">1</div>
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Hochschule &amp; Fach wählen</h3>
+      <p style="font-size:14px;color:#6B7280">Aktuell HWG Ludwigshafen, weitere Hochschulen folgen laufend.</p>
+    </div>
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:24px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#1B2A41;color:#E8B44F;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">2</div>
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Kurs kaufen</h3>
+      <p style="font-size:14px;color:#6B7280">Einmalige Freischaltung — die komplette Vorbereitung ist schon fertig, keine Zusammenstellung nötig.</p>
+    </div>
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:24px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#1B2A41;color:#E8B44F;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">3</div>
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Strukturiert lernen</h3>
+      <p style="font-size:14px;color:#6B7280">Zusammenfassung, Karteikarten und Altklausuren durcharbeiten, Fortschritt per Ampel-System im Blick.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT'S INCLUDED -->
+<section style="padding:0 0 88px">
+  <div style="margin-bottom:36px;max-width:600px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Kursinhalt</div>
+    <h2 style="font-size:28px;font-weight:700;margin-bottom:10px">Jeder Kurs folgt demselben Bauplan</h2>
+    <p style="font-size:15px;color:#6B7280">Sieben feste Bausteine &mdash; wer einen Kurs kennt, findet sich in jedem anderen sofort zurecht.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+    <sc-for list="{{ bausteine }}" as="b" hint-placeholder-count="7">
+      <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:20px">
+        <div style="width:30px;height:30px;border-radius:8px;background:#E4F1EE;color:#2D7D6F;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-bottom:12px">{{ b.letter }}</div>
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">{{ b.title }}</h3>
+        <p style="font-size:13px;color:#6B7280">{{ b.desc }}</p>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- QUALITY PROMISE -->
+<section style="padding:0 0 88px">
+  <div style="margin-bottom:36px;max-width:600px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Qualitätsversprechen</div>
+    <h2 style="font-size:28px;font-weight:700">Was Klausurfuchs vom PDF-Sammelsurium unterscheidet</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:22px 24px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">Fester Bauplan statt Wildwuchs</h3>
+      <p style="font-size:14px;color:#6B7280">Jeder Kurs folgt demselben Schema &mdash; Zusammenfassung, Übungsaufgaben, Altklausuren, Mindmap, Karteikarten, Lernpläne.</p>
+    </div>
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:22px 24px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">Kapitelweise Freigabe</h3>
+      <p style="font-size:14px;color:#6B7280">Kein Kurs geht am Stück online. Jedes Kapitel wird geprüft und erst freigegeben, wenn es den Standard erfüllt.</p>
+    </div>
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:22px 24px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">Ein Creator pro Fach, mit Notennachweis</h3>
+      <p style="font-size:14px;color:#6B7280">Nur wer die Klausur selbst mit 1,0 oder 1,3 bestanden hat, darf den Kurs für dieses Fach bauen.</p>
+    </div>
+    <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:22px 24px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">Urheberrechtlich sauber</h3>
+      <p style="font-size:14px;color:#6B7280">Keine Original-Skripte, keine Original-Aufgabentexte &mdash; nur eigene Zusammenfassungen und eigene Lösungswege.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- FOR CREATORS (full-bleed) -->
+<section id="creator" style="background:#1B2A41;color:#E9EDF2">
+  <div style="max-width:1160px;margin:0 auto;padding:64px clamp(20px,4vw,44px)">
+  <div style="display:grid;grid-template-columns:0.9fr 1.1fr;gap:56px;align-items:start">
+    <div>
+      <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#E8B44F;margin-bottom:8px">Für Creator</div>
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:16px;color:#fff">Dein Wissen verdient Geld — für kaum mehr Aufwand als heute schon</h2>
+      <p style="font-size:14px;color:#9AA7B5;margin-bottom:18px;max-width:440px">Den Stoff lernst du für die Klausur ohnehin. Der Kurs ist im Kern das, was du dir sowieso erarbeitest — nur noch einmal sauber hochgeladen.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:22px">
+        <div style="display:flex;gap:12px"><span style="color:#E8B44F;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#D7DEE6">Kein leeres Blatt: festes Kursschema und Schritt-für-Schritt-Vorlage führen dich durchs Erstellen.</span></div>
+        <div style="display:flex;gap:12px"><span style="color:#E8B44F;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#D7DEE6">Rechtlich auf der sicheren Seite: klare Regeln, was rein darf &mdash; und was nicht.</span></div>
+        <div style="display:flex;gap:12px"><span style="color:#E8B44F;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#D7DEE6">Qualitätskontrolle gibt deinem Kurs Gewicht: erst geprüfte Kapitel gehen live.</span></div>
+        <div style="display:flex;gap:12px"><span style="color:#E8B44F;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#D7DEE6">Genau ein Kurs pro Fach und Professor &mdash; keine Konkurrenz um denselben Stoff.</span></div>
+      </div>
+      <a href="index.html?goto=view-creator-intro" style="display:inline-block;margin-top:26px;font-size:15px;font-weight:600;padding:12px 22px;border-radius:8px;background:#2D7D6F;color:#fff;text-decoration:none">Creator werden</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ creatorSteps }}" as="s" hint-placeholder-count="4">
+        <div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.12)">
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.12);color:#D7DEE6;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">{{ s.num }}</div>
+          <div>
+            <h3 style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px">{{ s.title }}</h3>
+            <p style="font-size:13px;color:#9AA7B5">{{ s.desc }}</p>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </div>
+</section>
+
+<div style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,44px)">
+
+<!-- EXAMPLE PREVIEW -->
+<section style="padding:88px 0">
+  <div style="margin-bottom:36px;max-width:640px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Der erste Kurs</div>
+    <h2 style="font-size:28px;font-weight:700;margin-bottom:10px">Projektmanagement &mdash; Prof. Koch, HWG Ludwigshafen</h2>
+    <p style="font-size:15px;color:#6B7280">Der Pilotkurs zeigt, wie es funktioniert: Netzplantechnik, Scrum, Risiko und Kalkulation &mdash; in Kapitel gegliedert und mit allen sieben Bausteinen.</p>
+  </div>
+
+  <div style="background:#fff;border:1px solid #E3E1DA;border-radius:14px;overflow:hidden">
+    <div style="display:flex;gap:4px;padding:14px 20px 0;border-bottom:1px solid #E3E1DA">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+      </sc-for>
+    </div>
+    <div style="padding:26px">
+      <sc-if value="{{ showZsf }}" hint-placeholder-val="{{ true }}">
+        <div style="border-left:4px solid #2D7D6F;padding:14px 18px;background:#fff;border-radius:0 10px 10px 0;border:1px solid #E3E1DA;border-left-width:4px;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#2D7D6F;margin-bottom:6px">Merke</div>
+          <p style="font-size:14px;color:#1B2A41">Das magische Dreieck (Zeit, Kosten, Qualität) beschreibt die zentrale Zielspannung jedes Projekts &mdash; jede Änderung an einer Ecke wirkt auf die anderen beiden.</p>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">
+          <button onClick="{{ setAmpelBad }}" style="{{ ampelBadStyle }}">nicht verstanden</button>
+          <button onClick="{{ setAmpelMid }}" style="{{ ampelMidStyle }}">geht so</button>
+          <button onClick="{{ setAmpelOk }}" style="{{ ampelOkStyle }}">verstanden</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showKk }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleFlip }}" style="{{ flashcardStyle }}">{{ flashcardText }}</div>
+        <p style="text-align:center;font-size:12px;color:#6B7280">Zum Umdrehen klicken</p>
+      </sc-if>
+      <sc-if value="{{ showAk }}" hint-placeholder-val="{{ false }}">
+        <div style="border-left:4px solid #C0442E;padding:12px 16px;background:#FCF3F1;border-radius:0 10px 10px 0;font-size:13px;color:#7A2E1E;margin-bottom:14px">
+          <strong style="display:block;margin-bottom:3px;color:#C0442E">Original-Aufgabentexte nicht enthalten</strong>
+          Nur der eigene Lösungsweg der Creator wird gezeigt.
+        </div>
+        <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:16px 18px">
+          <div style="font-size:12px;color:#6B7280;margin-bottom:6px">Sommersemester 2024 &middot; Aufgabe 2 &middot; Netzplantechnik</div>
+          <p style="font-size:14px;color:#1B2A41">Eigener Lösungsweg: Vorwärts- und Rückwärtsrechnung zur Ermittlung des kritischen Pfads, inkl. Pufferzeiten je Vorgang.</p>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="padding:0 0 88px">
+  <div style="margin-bottom:32px">
+    <h2 style="font-size:28px;font-weight:700">Häufige Fragen</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:760px">
+    <sc-for list="{{ faqItems }}" as="f" hint-placeholder-count="5">
+      <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;overflow:hidden">
+        <button onClick="{{ f.onClick }}" style="width:100%;text-align:left;background:none;border:none;font:inherit;font-size:15px;font-weight:600;padding:18px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:#1B2A41">
+          <span>{{ f.q }}</span>
+          <span style="color:#2D7D6F;font-size:18px;flex-shrink:0;margin-left:12px">{{ f.symbol }}</span>
+        </button>
+        <sc-if value="{{ f.isOpen }}" hint-placeholder-val="{{ false }}">
+          <p style="padding:0 20px 18px;font-size:14px;color:#6B7280;max-width:640px">{{ f.a }}</p>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+</div>
+
+<!-- FINAL CTA (full-bleed) -->
+<section id="creator-cta" style="background:#E4F1EE">
+  <div style="max-width:1160px;margin:0 auto;padding:64px clamp(20px,4vw,44px);text-align:center">
+    <div style="max-width:620px;margin:0 auto">
+      <h2 style="font-size:30px;font-weight:700;margin-bottom:14px">Bereit für deine Klausur?</h2>
+      <p style="font-size:15px;color:#374151;margin-bottom:26px">Egal ob du lernen oder unterrichten willst &mdash; leg direkt los. Weitere Hochschulen folgen, sobald sich dort Creator melden.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <a href="index.html?goto=view-subjects" style="font-size:15px;font-weight:600;padding:13px 24px;border-radius:8px;background:#2D7D6F;color:#fff;text-decoration:none">Kurs für mein Fach finden</a>
+        <a href="index.html?goto=view-creator-intro" style="font-size:15px;font-weight:600;padding:13px 24px;border-radius:8px;border:1.5px solid #1B2A41;color:#1B2A41;text-decoration:none">Creator werden</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,44px)">
+<footer style="padding:36px 0 48px;border-top:1px solid #E3E1DA;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+  <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px">Klausur<span style="color:#2D7D6F">fuchs</span></div>
+  <p style="font-size:13px;color:#6B7280">Aktuell HWG Ludwigshafen &middot; weitere Hochschulen folgen</p>
+</footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { openFaq: 0, activeTab: 'zsf', flipped: false, ampel: null };
+
+  bausteine = [
+    { letter: 'Z', title: 'Zusammenfassung', desc: 'In Kapitel gegliedert, mit Merke-Boxen.' },
+    { letter: 'T', title: 'Tutorien', desc: 'Eigene Lösungswege zu den Tutoriumsblättern.' },
+    { letter: 'Ü', title: 'Übungsaufgaben', desc: 'Nach Thema sortiert, mit Lösungsweg.' },
+    { letter: 'A', title: 'Altklausuren', desc: 'Eigene Lösungswege zu vergangenen Terminen.' },
+    { letter: 'M', title: 'Mindmap', desc: 'Der gesamte Stoff auf einen Blick.' },
+    { letter: 'K', title: 'Karteikarten', desc: 'Zum Abfragen, kapitelweise sortiert.' },
+    { letter: 'L', title: 'Lernpläne', desc: 'Fertiger Zeitplan bis zum Klausurtermin.' },
+  ];
+
+  creatorSteps = [
+    { num: 1, title: 'Notennachweis hochladen', desc: 'Fach und Professor auswählen — pro Fach/Professor gibt es genau einen Slot.' },
+    { num: 2, title: 'Struktur anlegen', desc: 'Kapitel und Unterkapitel für den gesamten Stoff festlegen.' },
+    { num: 3, title: 'Kapitel befüllen', desc: 'Ein geführter Assistent leitet durch Zusammenfassung, Karteikarten und Übungen.' },
+    { num: 4, title: 'Prüfung abwarten', desc: 'Jedes Kapitel wird freigegeben, dann geht der Kurs live — du verdienst an jedem Verkauf mit.' },
+  ];
+
+  faqData = [
+    { q: 'Woher weiß ich, dass der Kurs zu meinem Professor passt?', a: 'Jeder Kurs wird für genau ein Fach bei genau einem Professor an einer bestimmten Hochschule erstellt — zugeschnitten auf das, was in dieser Vorlesung wirklich geprüft wird.' },
+    { q: 'Wer erstellt die Kurse?', a: 'Studierende, die die jeweilige Klausur bereits mit 1,0 oder 1,3 bestanden haben und das per Notennachweis belegen.' },
+    { q: 'Sind die Altklausur-Lösungen legal?', a: 'Es werden ausschließlich eigene Lösungswege der Creator gezeigt, nie die Original-Aufgabentexte oder Original-Skripte der Professoren.' },
+    { q: 'Wie werde ich Creator?', a: 'Notennachweis hochladen, Fach auswählen, Kurs Kapitel für Kapitel aufbauen — eine geführte Vorlage nimmt dir die Struktur-Arbeit ab. Nach Prüfung und Freigabe verdienst du an jedem Verkauf mit.' },
+    { q: 'Für welche Hochschulen gibt es das schon?', a: 'Aktuell HWG Ludwigshafen, weitere Hochschulen folgen — auch deine Hochschule kann als Nächstes dazukommen, wenn sich jemand als Creator meldet.' },
+  ];
+
+  tabDefs = [
+    { key: 'zsf', label: 'Zusammenfassung' },
+    { key: 'kk', label: 'Karteikarten' },
+    { key: 'ak', label: 'Altklausuren' },
+  ];
+
+  toggleFaq(i) { this.setState(s => ({ openFaq: s.openFaq === i ? null : i })); }
+  setTab(k) { this.setState({ activeTab: k }); }
+
+  renderVals() {
+    const active = this.state.activeTab;
+    const tabStyle = (k) => ({
+      background: k === active ? '#E4F1EE' : 'transparent',
+      color: k === active ? '#2D7D6F' : '#6B7280',
+      border: 'none', fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
+      padding: '10px 16px', borderRadius: '8px 8px 0 0', cursor: 'pointer',
+    });
+    const ampelStyle = (kind) => {
+      const sel = this.state.ampel === kind;
+      const map = {
+        ok: { bg: '#EAF3DE', border: '#97C459', color: '#3B6D11' },
+        mid: { bg: '#FAF0DA', border: '#E8B44F', color: '#854F0B' },
+        bad: { bg: '#F9E9E5', border: '#C0442E', color: '#C0442E' },
+      };
+      const c = map[kind];
+      return sel
+        ? { background: c.bg, border: '1px solid ' + c.border, color: c.color, fontFamily: 'inherit', fontSize: '12px', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer' }
+        : { background: '#fff', border: '1px solid #E3E1DA', color: '#6B7280', fontFamily: 'inherit', fontSize: '12px', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer' };
+    };
+
+    return {
+      bausteine: this.bausteine,
+      creatorSteps: this.creatorSteps,
+      faqItems: this.faqData.map((f, i) => ({
+        q: f.q, a: f.a, isOpen: this.state.openFaq === i, symbol: this.state.openFaq === i ? '–' : '+',
+        onClick: () => this.toggleFaq(i),
+      })),
+      tabs: this.tabDefs.map(t => ({ key: t.key, label: t.label, onClick: () => this.setTab(t.key), style: tabStyle(t.key) })),
+      showZsf: active === 'zsf',
+      showKk: active === 'kk',
+      showAk: active === 'ak',
+      flashcardStyle: {
+        background: this.state.flipped ? '#E4F1EE' : '#fff',
+        border: '1px solid ' + (this.state.flipped ? '#2D7D6F' : '#E3E1DA'),
+        borderRadius: '14px', minHeight: '140px', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', textAlign: 'center', padding: '28px', cursor: 'pointer',
+        fontSize: this.state.flipped ? '14px' : '16px', fontWeight: this.state.flipped ? 400 : 500,
+        marginBottom: '8px', userSelect: 'none',
+      },
+      flashcardText: this.state.flipped
+        ? 'Zielvorgabe, zeitliche Begrenzung, Einmaligkeit, projektspezifische Organisation.'
+        : 'Was sind die vier DIN-69901-Kriterien für ein Projekt?',
+      toggleFlip: () => this.setState(s => ({ flipped: !s.flipped })),
+      ampelOkStyle: ampelStyle('ok'), ampelMidStyle: ampelStyle('mid'), ampelBadStyle: ampelStyle('bad'),
+      setAmpelOk: () => this.setState({ ampel: 'ok' }),
+      setAmpelMid: () => this.setState({ ampel: 'mid' }),
+      setAmpelBad: () => this.setState({ ampel: 'bad' }),
+    };
+  }
+}
+</script>
+</body>
+</html>
