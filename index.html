@@ -213,7 +213,7 @@ ul.plain li{margin-bottom:5px;}
 .cstep.active{display:block; animation:fade .2s ease;}
 .field{margin-bottom:16px;}
 .field label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:5px;}
-.field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea{width:100%; font:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--card);}
+.field input[type=text], .field input[type=email], .field input[type=password], .field input[type=number], .field input[type=date], .field select, .field textarea{width:100%; font:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--card);}
 .field textarea{min-height:90px; resize:vertical;}
 .field .hint-sm{font-size:12px; color:var(--muted); margin-top:4px;}
 .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
@@ -238,7 +238,12 @@ ul.plain li{margin-bottom:5px;}
 
 /* Login / Auth */
 .auth-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:26px 24px;}
-.auth-card .field{margin-bottom:16px;}
+.auth-card .field{margin-bottom:18px;}
+.auth-card .field label{font-size:13px; margin-bottom:7px;}
+.auth-card .field input{font-size:16px; padding:14px 16px;}
+.role-toggle{display:flex; gap:8px; margin-bottom:16px;}
+.role-toggle-btn{flex:1; font:inherit; font-size:14px; font-weight:600; padding:11px 14px; border-radius:9px; border:1.5px solid var(--line); background:var(--card); color:var(--muted); cursor:pointer;}
+.role-toggle-btn.active{border-color:var(--accent); background:var(--accent-soft); color:var(--accent);}
 .auth-error{background:var(--danger-soft); border:1px solid var(--danger); color:var(--danger); font-size:13px; padding:10px 14px; border-radius:8px; margin-bottom:14px;}
 .auth-hint{font-size:12px; color:var(--muted); background:var(--paper); border:1px dashed var(--line); border-radius:8px; padding:10px 12px; margin-top:16px; line-height:1.5;}
 .auth-alt{font-size:13px; color:var(--muted); text-align:center; margin-top:16px;}
@@ -379,7 +384,11 @@ ul.plain li{margin-bottom:5px;}
     <a href="Klausurfuchs_Landingpage_dc.html" class="back-link" style="display:inline-block;text-decoration:none">‹ Zurück zur Startseite</a>
     <div class="portal-brand">Klausur<span>fuchs</span></div>
     <h1 style="margin-bottom:6px">Willkommen zurück</h1>
-    <p class="lede" style="margin-bottom:24px">Melde dich an, um deine Kurse zu verwalten oder weiter am Kursbau zu arbeiten.</p>
+    <p class="lede" style="margin-bottom:20px">Melde dich an, um deine Kurse zu verwalten oder weiter am Kursbau zu arbeiten.</p>
+    <div class="role-toggle" id="loginRoleToggle">
+      <button type="button" class="role-toggle-btn active" data-role="lernender">Als Lernende:r</button>
+      <button type="button" class="role-toggle-btn" data-role="creator">Als Creator</button>
+    </div>
     <div class="auth-card">
       <div class="field"><label>E-Mail</label><input type="email" id="loginEmail" placeholder="dein.name@hochschule.de" autocomplete="username"></div>
       <div class="field"><label>Passwort</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
@@ -401,11 +410,11 @@ ul.plain li{margin-bottom:5px;}
         <button class="ghost" id="logoutBtn" style="padding:7px 14px; font-size:13px">Abmelden</button>
       </div>
     </div>
-    <h1 style="margin-bottom:6px">Meine Kurse</h1>
-    <p class="lede" style="margin-bottom:24px">Alle Kurse, die du erstellst oder bereits veröffentlicht hast – mit aktuellem Prüfstatus je Kapitel.</p>
+    <h1 id="myCoursesTitle" style="margin-bottom:6px">Meine Kurse</h1>
+    <p class="lede" id="myCoursesLede" style="margin-bottom:24px">Alle Kurse, die du erstellst oder bereits veröffentlicht hast – mit aktuellem Prüfstatus je Kapitel.</p>
     <div id="myCoursesList"></div>
     <div style="margin-top:26px">
-      <a href="index.html?goto=view-creator-intro" class="cta" style="display:inline-block; text-decoration:none">+ Neuen Kurs erstellen</a>
+      <a href="index.html?goto=view-creator-intro" class="cta" id="myCoursesCta" style="display:inline-block; text-decoration:none">+ Neuen Kurs erstellen</a>
     </div>
   </div>
 </div>
@@ -2118,8 +2127,8 @@ window.KFStore = (function(){
       writeAll(list);
     },
     /* Session (Login-Mockup) */
-    setSession: function(email){
-      try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email, since: nowISO() })); }catch(e){}
+    setSession: function(email, role){
+      try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email, role: role || 'lernender', since: nowISO() })); }catch(e){}
     },
     getSession: function(){
       try{ return JSON.parse(localStorage.getItem(SESSION_KEY)); }catch(e){ return null; }
@@ -2132,6 +2141,16 @@ window.KFStore = (function(){
 
 /* ---- Login / Logout ---- */
 (function(){
+  var selectedRole = 'lernender';
+  var roleToggle = document.getElementById('loginRoleToggle');
+  if(roleToggle){
+    roleToggle.querySelectorAll('.role-toggle-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        selectedRole = btn.dataset.role;
+        roleToggle.querySelectorAll('.role-toggle-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+      });
+    });
+  }
   var loginBtn = document.getElementById('loginSubmitBtn');
   if(loginBtn){
     loginBtn.addEventListener('click', function(){
@@ -2143,7 +2162,7 @@ window.KFStore = (function(){
         return;
       }
       if(err){ err.style.display='none'; }
-      window.KFStore.setSession(email.trim());
+      window.KFStore.setSession(email.trim(), selectedRole);
       showView('view-my-courses');
     });
   }
@@ -2160,10 +2179,28 @@ window.KFStore = (function(){
 window.renderMyCourses = function(){
   var list = document.getElementById('myCoursesList');
   var userEl = document.getElementById('myCoursesUser');
+  var titleEl = document.getElementById('myCoursesTitle');
+  var ledeEl = document.getElementById('myCoursesLede');
+  var ctaEl = document.getElementById('myCoursesCta');
   if(!list){ return; }
   var session = window.KFStore.getSession();
-  if(userEl){ userEl.textContent = session ? session.email : ''; }
+  var role = session ? session.role : 'lernender';
+  if(userEl){ userEl.textContent = session ? session.email + ' · ' + (role === 'creator' ? 'Creator' : 'Lernende:r') : ''; }
 
+  if(role === 'creator'){
+    if(titleEl){ titleEl.textContent = 'Meine Kurse'; }
+    if(ledeEl){ ledeEl.textContent = 'Alle Kurse, die du erstellst oder bereits veröffentlicht hast – mit aktuellem Prüfstatus je Kapitel.'; }
+    if(ctaEl){ ctaEl.href = 'index.html?goto=view-creator-intro'; ctaEl.textContent = '+ Neuen Kurs erstellen'; }
+    renderMyCoursesCreator(list);
+  } else {
+    if(titleEl){ titleEl.textContent = 'Meine gekauften Kurse'; }
+    if(ledeEl){ ledeEl.textContent = 'Deine laufenden Kurse mit Lernfortschritt. Neue Fächer findest du in der Kursübersicht.'; }
+    if(ctaEl){ ctaEl.href = 'Unsere_Kurse_dc.html'; ctaEl.textContent = 'Weitere Kurse durchstöbern →'; }
+    renderMyCoursesLearner(list);
+  }
+};
+
+function renderMyCoursesCreator(list){
   var STATUS_LABEL = { pruefung:'In Prüfung', freigegeben:'Freigegeben ✓', ueberarbeitung:'Überarbeitung nötig', offen:'In Arbeit' };
   var STATUS_CLASS = { pruefung:'review', freigegeben:'done', ueberarbeitung:'revise', offen:'open' };
 
@@ -2206,7 +2243,24 @@ window.renderMyCourses = function(){
     '</div></div>';
 
   list.innerHTML = cards;
-};
+}
+
+function renderMyCoursesLearner(list){
+  /* Beispielhafte gekaufte Kurse mit Lernfortschritt (Prototyp-Daten) */
+  var cards = '';
+  cards += '<div class="mycourse-card">' +
+    '<div class="mycourse-head"><div><h3>Projektmanagement — Prof. Koch</h3><p>HWG Ludwigshafen · gekauft am 12.06.2026</p></div>' +
+    '<span class="mycourse-badge live">Läuft</span></div>' +
+    '<div style="margin-bottom:12px">' +
+      '<div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:5px"><span>Fortschritt</span><span>62 %</span></div>' +
+      '<div class="bar" style="background:var(--paper); border:1px solid var(--line)"><i style="width:62%"></i></div>' +
+    '</div>' +
+    '<div style="margin-top:14px"><a href="index.html?goto=view-course" class="cta" style="display:inline-block;text-decoration:none;padding:8px 16px;font-size:13px">Weiterlernen →</a></div>' +
+    '</div>';
+  list.innerHTML = cards +
+    '<p style="font-size:13px; color:var(--muted); margin-top:4px">Möchtest du selbst Wissen weitergeben? <a href="index.html?goto=view-creator-intro">Werde Creator ›</a></p>';
+}
+
 function escapeHtmlMy(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 (function(){
