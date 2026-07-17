@@ -191,6 +191,8 @@ ul.plain li{margin-bottom:5px;}
   .sidebar{position:static; height:auto;}
   .two-col{grid-template-columns:1fr;}
   .main{padding:24px 18px;}
+  .subject-head{flex-direction:column; align-items:stretch; gap:12px;}
+  .creator-cta{white-space:normal; text-align:center; width:100%;}
 }
 
 /* CREATOR-WIZARD */
@@ -237,6 +239,14 @@ ul.plain li{margin-bottom:5px;}
 .dup-check{background:var(--warn-soft); border:1px solid var(--amber); border-radius:var(--radius); padding:14px 18px; margin-bottom:20px; font-size:13px; color:#854F0B;}
 .dup-check p{margin:0;}
 .dup-check .cta, .dup-check .ghost{font-size:13px;}
+
+/* Hochschul-Autocomplete */
+.hs-suggestions{position:absolute; left:0; right:0; top:100%; margin-top:4px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 20px rgba(27,42,65,.12); z-index:20; max-height:240px; overflow-y:auto;}
+.hs-suggestion{padding:10px 14px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--line);}
+.hs-suggestion:last-child{border-bottom:none;}
+.hs-suggestion:hover, .hs-suggestion.active{background:var(--accent-soft); color:var(--accent);}
+.hs-suggestion .hs-alias{display:block; font-size:11px; color:var(--muted); margin-top:1px;}
+.hs-suggestion:hover .hs-alias, .hs-suggestion.active .hs-alias{color:var(--accent);}
 
 /* Überblick (Drag & Drop Kapitelstruktur) */
 .ueb-chapter{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; cursor:grab;}
@@ -340,7 +350,7 @@ ul.plain li{margin-bottom:5px;}
       <button class="creator-cta" id="creatorEntryBtn" data-goto-view="view-creator-intro">✦ Creator werden<span class="entry-badge" id="creatorEntryBadge" style="display:none"></span></button>
     </div>
     <p class="lede">Alle verfügbaren Fach-Kurse. Nach Name, Professor oder Studiengang suchen. Dein Fach ist noch nicht dabei? Werde Creator und bau den ersten Kurs dafür.</p>
-    <div class="search-row"><input type="text" id="subjectSearch" placeholder="Fach oder Professor suchen, z. B. „Koch" oder „Statistik"…"></div>
+    <div class="search-row"><input type="text" id="subjectSearch" placeholder="Fach oder Professor suchen, z. B. „Koch“ oder „Statistik“…"></div>
     <div class="filter-chips" id="studiengangChips">
       <button class="on" data-sg="alle">Alle Studiengänge</button>
       <button data-sg="biw">Betriebswirtschaft</button>
@@ -405,9 +415,11 @@ ul.plain li{margin-bottom:5px;}
     <h1>Für welches Fach möchtest du Creator werden?</h1>
     <p class="lede">Pro Fach und Prüfer gibt es genau einen Kurs. Ist der Slot schon vergeben, kannst du dich auf die Warteliste setzen, falls der aktuelle Creator ausfällt.</p>
 
-    <div class="field">
+    <div class="field" style="position:relative">
       <label>Hochschule</label>
-      <input type="text" id="cHochschule" value="HWG Ludwigshafen" placeholder="z. B. HWG Ludwigshafen">
+      <input type="text" id="cHochschule" value="HWG Ludwigshafen" placeholder="z. B. HWG Ludwigshafen" autocomplete="off">
+      <div id="hochschuleSuggestions" class="hs-suggestions" style="display:none"></div>
+      <p class="hint-sm">Wähle deine Hochschule aus der Liste, damit Kurse eindeutig zugeordnet werden können.</p>
     </div>
     <div class="field-row">
       <div class="field">
@@ -2418,6 +2430,110 @@ initAskBoxes();
     if(el){ el.addEventListener('blur', checkDuplicateCourse); }
   });
 
+  /* ---- Hochschul-Autocomplete (verhindert Schreibweisen-Inkonsistenzen) ---- */
+  var hochschulenDB = [
+    { name: 'HWG Ludwigshafen', aliases: ['Hochschule Ludwigshafen', 'Hochschule für Wirtschaft und Gesellschaft Ludwigshafen', 'HWG LU'] },
+    { name: 'Frankfurt University of Applied Sciences', aliases: ['FH Frankfurt', 'Fachhochschule Frankfurt', 'Frankfurt UAS'] },
+    { name: 'Hochschule Mainz', aliases: ['FH Mainz', 'Fachhochschule Mainz'] },
+    { name: 'Hochschule Worms', aliases: ['FH Worms', 'Fachhochschule Worms'] },
+    { name: 'Hochschule Trier', aliases: ['FH Trier', 'Fachhochschule Trier'] },
+    { name: 'Hochschule RheinMain', aliases: ['FH Wiesbaden', 'Hochschule Wiesbaden'] },
+    { name: 'Hochschule Darmstadt', aliases: ['h_da', 'FH Darmstadt'] },
+    { name: 'Technische Hochschule Mittelhessen', aliases: ['THM', 'FH Gießen-Friedberg'] },
+    { name: 'Hochschule Fulda', aliases: ['FH Fulda'] },
+    { name: 'Hochschule Koblenz', aliases: ['FH Koblenz'] },
+    { name: 'Hochschule Kaiserslautern', aliases: ['FH Kaiserslautern'] },
+    { name: 'Duale Hochschule Baden-Württemberg Mannheim', aliases: ['DHBW Mannheim'] },
+    { name: 'Duale Hochschule Baden-Württemberg Stuttgart', aliases: ['DHBW Stuttgart'] },
+    { name: 'Hochschule Mannheim', aliases: ['FH Mannheim'] },
+    { name: 'Hochschule Heilbronn', aliases: ['FH Heilbronn'] },
+    { name: 'Hochschule Karlsruhe', aliases: ['HKA', 'FH Karlsruhe'] },
+    { name: 'Hochschule Pforzheim', aliases: ['FH Pforzheim'] },
+    { name: 'Hochschule Esslingen', aliases: ['FH Esslingen'] },
+    { name: 'Hochschule für Technik Stuttgart', aliases: ['HFT Stuttgart'] },
+    { name: 'Technische Hochschule Nürnberg Georg Simon Ohm', aliases: ['TH Nürnberg', 'Ohm Nürnberg'] },
+    { name: 'Hochschule München', aliases: ['FH München'] },
+    { name: 'Technische Hochschule Rosenheim', aliases: ['TH Rosenheim', 'FH Rosenheim'] },
+    { name: 'Hochschule Augsburg', aliases: ['FH Augsburg'] },
+    { name: 'Technische Hochschule Ingolstadt', aliases: ['THI'] },
+    { name: 'Hochschule Köln', aliases: ['TH Köln', 'FH Köln'] },
+    { name: 'Hochschule Bonn-Rhein-Sieg', aliases: ['H-BRS'] },
+    { name: 'Hochschule Düsseldorf', aliases: ['HSD', 'FH Düsseldorf'] },
+    { name: 'Hochschule Niederrhein', aliases: ['FH Niederrhein', 'Krefeld Mönchengladbach'] },
+    { name: 'Fachhochschule Aachen', aliases: ['FH Aachen'] },
+    { name: 'Hochschule Bochum', aliases: ['FH Bochum'] },
+    { name: 'Hochschule Bremen', aliases: ['FH Bremen'] },
+    { name: 'Hochschule für Angewandte Wissenschaften Hamburg', aliases: ['HAW Hamburg'] },
+    { name: 'Hochschule Hannover', aliases: ['FH Hannover', 'HsH'] },
+    { name: 'Ostfalia Hochschule für angewandte Wissenschaften', aliases: ['Ostfalia'] },
+    { name: 'Hochschule für Technik und Wirtschaft Berlin', aliases: ['HTW Berlin'] },
+    { name: 'Beuth Hochschule für Technik Berlin', aliases: ['Beuth Hochschule'] },
+    { name: 'Hochschule für Wirtschaft und Recht Berlin', aliases: ['HWR Berlin'] },
+    { name: 'Hochschule für Technik und Wirtschaft Dresden', aliases: ['HTW Dresden'] },
+    { name: 'Westsächsische Hochschule Zwickau', aliases: ['WHZ'] },
+    { name: 'Hochschule Merseburg', aliases: [] },
+    { name: 'Hochschule Anhalt', aliases: [] },
+    { name: 'Universität Mannheim', aliases: [] },
+    { name: 'Universität Heidelberg', aliases: [] },
+    { name: 'Goethe-Universität Frankfurt', aliases: ['Uni Frankfurt'] },
+    { name: 'Johannes Gutenberg-Universität Mainz', aliases: ['Uni Mainz', 'JGU'] },
+    { name: 'Ludwig-Maximilians-Universität München', aliases: ['LMU München', 'LMU'] },
+    { name: 'Technische Universität München', aliases: ['TU München', 'TUM'] },
+    { name: 'Rheinisch-Westfälische Technische Hochschule Aachen', aliases: ['RWTH Aachen'] }
+  ];
+
+  function normalizeHs(s){ return (s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
+
+  function matchHochschulen(query){
+    var q = normalizeHs(query);
+    if(!q){ return []; }
+    var scored = [];
+    hochschulenDB.forEach(function(h){
+      var candidates = [h.name].concat(h.aliases || []);
+      var bestIdx = -1;
+      candidates.forEach(function(c){
+        var idx = normalizeHs(c).indexOf(q);
+        if(idx !== -1 && (bestIdx === -1 || idx < bestIdx)){ bestIdx = idx; }
+      });
+      if(bestIdx !== -1){ scored.push({ h: h, score: bestIdx }); }
+    });
+    scored.sort(function(a, b){ return a.score - b.score; });
+    return scored.map(function(s){ return s.h; }).slice(0, 6);
+  }
+
+  function renderHsSuggestions(matches){
+    var box = document.getElementById('hochschuleSuggestions');
+    if(!box){ return; }
+    if(!matches.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.innerHTML = matches.map(function(h){
+      var aliasHtml = h.aliases && h.aliases.length ? '<span class="hs-alias">' + escapeHtml(h.aliases[0]) + '</span>' : '';
+      return '<div class="hs-suggestion" data-name="' + escapeHtml(h.name) + '">' + escapeHtml(h.name) + aliasHtml + '</div>';
+    }).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('.hs-suggestion').forEach(function(item){
+      item.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        var inp = document.getElementById('cHochschule');
+        if(inp){ inp.value = item.dataset.name; }
+        box.style.display = 'none';
+        box.innerHTML = '';
+        checkDuplicateCourse();
+      });
+    });
+  }
+
+  var hsInput = document.getElementById('cHochschule');
+  if(hsInput){
+    hsInput.addEventListener('input', function(){ renderHsSuggestions(matchHochschulen(hsInput.value)); });
+    hsInput.addEventListener('focus', function(){ renderHsSuggestions(matchHochschulen(hsInput.value)); });
+    hsInput.addEventListener('blur', function(){
+      setTimeout(function(){
+        var box = document.getElementById('hochschuleSuggestions');
+        if(box){ box.style.display = 'none'; }
+      }, 150);
+    });
+  }
+
   function updateWizardFachLabel(){
     var fach = (document.getElementById('cFach')||{}).value || '';
     var prof = (document.getElementById('cProf')||{}).value || '';
@@ -3313,7 +3429,18 @@ initAskBoxes();
     var badge = document.getElementById('creatorEntryBadge');
     if(!btn){ return; }
     var hasDraft = false;
-    try{ hasDraft = !!localStorage.getItem(STORAGE_KEY); }catch(e){}
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var state = JSON.parse(raw);
+        var hasFach = !!(state.fach && state.fach.trim());
+        var hasProf = !!(state.prof && state.prof.trim());
+        var hasChapterTitle = !!(state.chapters && state.chapters.some(function(c){
+          return c && c[0] && String(c[0]).trim();
+        }));
+        hasDraft = hasFach || hasProf || hasChapterTitle;
+      }
+    }catch(e){}
     if(hasDraft){
       btn.childNodes[0].nodeValue = '→ Weiter am Kurs bauen';
       btn.dataset.gotoView = 'view-creator-wizard';
