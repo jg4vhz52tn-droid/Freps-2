@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#FAFAF7;font-family:'Inter',sans-serif;color:#1B2A41;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#2D7D6F}
+  a:hover{color:#1B2A41}
+  h1,h2,h3{font-family:'Sora',sans-serif}
+  ::selection{background:#E8B44F;color:#1B2A41}
+  @media (max-width:760px){
+    .earnings-grid{grid-template-columns:1fr !important; padding:32px 24px !important;}
+  }
+</style>
+</helmet>
+<div style="max-width:1120px;margin:0 auto;padding:0 24px">
+
+  <!-- NAV -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:28px 0">
+    <div style="font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.02em">Klausurfuchs</div>
+    <div style="font-size:14px;font-weight:600;color:#1B2A41;opacity:0.7">Creator werden</div>
+  </div>
+
+  <!-- HERO -->
+  <section style="padding:56px 0 72px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:24px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#EAF4F1;border:1px solid rgba(45,125,111,0.25);color:#2D7D6F;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px">
+      <span>Für Studierende</span>
+    </div>
+    <h1 style="font-size:clamp(32px,5.5vw,56px);line-height:1.08;font-weight:800;letter-spacing:-0.02em;max-width:760px;margin:0">
+      Verdiene Geld mit dem Wissen, das du sowieso schon hast
+    </h1>
+    <p style="font-size:clamp(16px,2vw,19px);line-height:1.6;color:rgba(27,42,65,0.72);max-width:600px;margin:0">
+      Lade deine Klausurvorbereitung als geführten Kurs hoch — Klausurfuchs kümmert sich um Verkauf, Qualität und Auszahlung. Du verdienst bei jedem Kauf mit.
+    </p>
+    <a href="index.html?goto=view-creator-intro" style="background:#2D7D6F;color:#FAFAF7;border:none;font-family:Sora,sans-serif;font-weight:700;font-size:17px;padding:16px 32px;border-radius:12px;cursor:pointer;box-shadow:0 8px 20px rgba(45,125,111,0.25);transition:transform .15s ease;text-decoration:none;display:inline-block" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+      Jetzt Creator werden →
+    </a>
+  </section>
+
+  <!-- WARUM -->
+  <section style="padding:64px 0">
+    <h2 style="font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-0.02em;text-align:center;margin:0 0 12px">Warum sich das lohnt</h2>
+    <p style="text-align:center;color:rgba(27,42,65,0.65);max-width:520px;margin:0 auto 40px;font-size:16px;line-height:1.6">Vier Gründe, warum andere Studierende bereits Kurse veröffentlichen.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+
+      <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:44px;height:44px;border-radius:12px;background:#E8B44F;display:flex;align-items:center;justify-content:center;font-family:Sora;font-weight:800;color:#1B2A41;font-size:18px">€</div>
+        <h3 style="font-size:18px;font-weight:700;margin:0">Passives Einkommen</h3>
+        <p style="font-size:14.5px;line-height:1.6;color:rgba(27,42,65,0.65);margin:0">Du erstellst den Kurs einmal — verkauft wird er immer wieder, auch während du selbst gerade lernst oder Prüfungen schreibst.</p>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:44px;height:44px;border-radius:12px;background:#2D7D6F;display:flex;align-items:center;justify-content:center;font-size:20px">📘</div>
+        <h3 style="font-size:18px;font-weight:700;margin:0">Der Aufwand existiert schon</h3>
+        <p style="font-size:14.5px;line-height:1.6;color:rgba(27,42,65,0.65);margin:0">Du bereitest dich sowieso auf die Klausur vor. Wir helfen dir, aus deinen Notizen einen strukturierten Kurs zu machen.</p>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:44px;height:44px;border-radius:12px;background:#1B2A41;display:flex;align-items:center;justify-content:center;font-size:20px">🤝</div>
+        <h3 style="font-size:18px;font-weight:700;margin:0">Du hilfst anderen</h3>
+        <p style="font-size:14.5px;line-height:1.6;color:rgba(27,42,65,0.65);margin:0">Jüngere Semester profitieren von deinem Wissen und sparen sich Stress vor der Prüfung — eine echte Win-win-Situation.</p>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:44px;height:44px;border-radius:12px;background:#E8B44F;display:flex;align-items:center;justify-content:center;font-size:20px">🛠️</div>
+        <h3 style="font-size:18px;font-weight:700;margin:0">Wir übernehmen den Rest</h3>
+        <p style="font-size:14.5px;line-height:1.6;color:rgba(27,42,65,0.65);margin:0">Plattform, Zahlungsabwicklung, Marketing und Support — du bringst nur dein Fachwissen ein.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SO LÄUFTS AB -->
+  <section style="padding:64px 0">
+    <h2 style="font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-0.02em;text-align:center;margin:0 0 12px">So läuft's ab</h2>
+    <p style="text-align:center;color:rgba(27,42,65,0.65);max-width:520px;margin:0 auto 48px;font-size:16px;line-height:1.6">Sechs Schritte von der Anmeldung bis zur ersten Auszahlung.</p>
+
+    <div style="display:flex;flex-direction:column;gap:0;max-width:680px;margin:0 auto">
+      <sc-for list="{{ steps }}" as="step" hint-placeholder-count="6">
+        <div style="display:flex;gap:20px;position:relative">
+          <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+            <div style="width:40px;height:40px;border-radius:50%;background:{{ step.color }};color:{{ step.textColor }};font-family:Sora;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:1">{{ step.num }}</div>
+            <sc-if value="{{ step.showLine }}"><div style="width:2px;flex:1;background:rgba(27,42,65,0.12);min-height:32px"></div></sc-if>
+          </div>
+          <div style="padding-bottom:36px;flex:1">
+            <h3 style="font-size:18px;font-weight:700;margin:0 0 6px">{{ step.title }}</h3>
+            <p style="font-size:14.5px;line-height:1.6;color:rgba(27,42,65,0.65);margin:0">{{ step.desc }}</p>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- WAS VERDIENE ICH -->
+  <section style="padding:64px 0">
+    <div class="earnings-grid" style="background:#1B2A41;border-radius:24px;padding:48px 40px;color:#FAFAF7;display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center">
+      <div>
+        <h2 style="font-size:clamp(22px,2.8vw,30px);font-weight:800;letter-spacing:-0.02em;margin:0 0 16px">Was verdiene ich?</h2>
+        <p style="font-size:15.5px;line-height:1.7;color:rgba(250,250,247,0.75);margin:0 0 16px">
+          Du erhältst einen festen Anteil pro Verkauf deines Kurses. Der Rest deckt Plattform, Zahlungsabwicklung und redaktionelle Prüfung ab.
+        </p>
+        <p style="font-size:15.5px;line-height:1.7;color:rgba(250,250,247,0.75);margin:0">
+          Alle Zahlen unten sind Platzhalter — final legen wir die Konditionen gemeinsam fest.
+        </p>
+      </div>
+      <div style="background:rgba(250,250,247,0.06);border:1px solid rgba(250,250,247,0.14);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:rgba(250,250,247,0.6)">
+          <span>Kurspreis</span><span style="font-family:Sora;font-weight:700;color:#E8B44F">49,99€</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:rgba(250,250,247,0.6)">
+          <span>Dein Anteil (50 %)</span><span style="font-family:Sora;font-weight:700;color:#FAFAF7">24,99</span>
+        </div>
+        <div style="height:1px;background:rgba(250,250,247,0.14)"></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:rgba(250,250,247,0.6)">
+          <span>Verkäufe</span><span style="font-family:Sora;font-weight:700;color:#FAFAF7">× 40</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:8px;border-top:1px dashed rgba(250,250,247,0.2)">
+          <span style="font-size:14px;color:rgba(250,250,247,0.75)">Dein Gewinn</span>
+          <span style="font-family:Sora;font-weight:800;font-size:24px;color:#2D7D6F;background:#FAFAF7;padding:2px 10px;border-radius:8px">1000 €</span>
+        </div>
+        <p style="font-size:11.5px;color:rgba(250,250,247,0.45);margin:0">Hierbei handelt es sich um eine Beispielrechnung die je nach Verkaufszahlen variieren kann</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section style="padding:64px 0">
+    <h2 style="font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-0.02em;text-align:center;margin:0 0 40px">Häufige Fragen</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:720px;margin:0 auto">
+      <sc-for list="{{ faqs }}" as="faq" hint-placeholder-count="4">
+        <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;overflow:hidden">
+          <button onclick="{{ faq.toggle }}" style="width:100%;text-align:left;background:none;border:none;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:#1B2A41">
+            <span>{{ faq.q }}</span>
+            <span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#FAFAF7;border:1px solid rgba(27,42,65,0.12);display:flex;align-items:center;justify-content:center;font-size:14px;transform:{{ faq.iconRotate }};transition:transform .2s ease">+</span>
+          </button>
+          <div style="max-height:{{ faq.maxHeight }};overflow:hidden;transition:max-height .25s ease">
+            <div style="box-sizing: border-box; display: flex; flex-direction: column; gap: 12px"><p style="margin: 0; padding: 0 24px 20px; font-size: 14.5px; line-height: 1.65; color: rgba(27,42,65,0.65)">{{ faq.a }}</p></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section style="padding:72px 0 88px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px">
+    <h2 style="font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-0.02em;margin:0;max-width:520px">Bereit, dein Wissen zu Geld zu machen?</h2>
+    <p style="font-size:16px;color:rgba(27,42,65,0.65);max-width:460px;margin:0">Der Einstieg dauert wenige Minuten. Wir begleiten dich durch jeden Schritt.</p>
+    <a href="index.html?goto=view-creator-intro" style="background:#2D7D6F;color:#FAFAF7;border:none;font-family:Sora,sans-serif;font-weight:700;font-size:17px;padding:16px 32px;border-radius:12px;cursor:pointer;box-shadow:0 8px 20px rgba(45,125,111,0.25);transition:transform .15s ease;text-decoration:none;display:inline-block" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+      Jetzt Creator werden →
+    </a>
+  </section>
+
+  <div style="padding:32px 0 48px;text-align:center;font-size:13px;color:rgba(27,42,65,0.4)">© 2026 Klausurfuchs</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    openFaq: 0
+  };
+
+  stepsData = [
+    { num: 1, title: "Notennachweis hochladen", desc: "Lade einen Nachweis deiner Note hoch, damit wir sicherstellen, dass dein Kurs auf echtem Wissen basiert.", color: "#1B2A41", textColor: "#FAFAF7" },
+    { num: 2, title: "Kursstruktur anlegen", desc: "Lege Titel, Fach und ein grobes Kapitelgerüst für deinen Kurs an — wir schlagen dir eine sinnvolle Struktur vor.", color: "#1B2A41", textColor: "#FAFAF7" },
+    { num: 3, title: "Kapitel befüllen mit geführter Vorlage", desc: "Fülle jedes Kapitel mit unserer Vorlage — Textfelder, Beispielaufgaben und Zusammenfassungen führen dich durch den Prozess.", color: "#2D7D6F", textColor: "#FAFAF7" },
+    { num: 4, title: "Redaktionelle Prüfung pro Kapitel", desc: "Unser Redaktionsteam prüft jedes Kapitel auf Qualität und Verständlichkeit und gibt dir Feedback.", color: "#2D7D6F", textColor: "#FAFAF7" },
+    { num: 5, title: "Kurs geht live", desc: "Nach der Freigabe wird dein Kurs im Katalog veröffentlicht und ist für alle Studierenden sichtbar und kaufbar.", color: "#E8B44F", textColor: "#1B2A41" },
+    { num: 6, title: "Verdienst an jedem Verkauf", desc: "Bei jedem Kauf erhältst du automatisch deinen Anteil — transparent einsehbar in deinem Creator-Dashboard.", color: "#E8B44F", textColor: "#1B2A41" }
+  ];
+
+  faqData = [
+    { q: "Wie viel Aufwand ist das wirklich?", a: "Die meisten Creator investieren nach erfolgreichem Semester wenige Stunden, da sie ohnehin schon für die Klausur gelernt haben und lediglich ihre eigenen Unterlagen in unserem Kursformat zusammenfassen. Die geführte Vorlage reduziert den Aufwand zusätzlich." },
+    { q: "Was, wenn mein Fach schon vergeben ist?", a: "Sollte für dein Fach bereits ein Kurs bestehen beiden wir dir die Möglichkeit, dich als Tutor für ein Fach zu bewerben und den Studierenden als Tutor zur Verfügung zu stehen und den Kurs zu betreuen." },
+    { q: "Wie und wann werde ich bezahlt?", a: "Auszahlungen erfolgen monatlich auf dein hinterlegtes Konto, sobald ein Mindestbetrag erreicht ist. Alle Verkäufe siehst du live in deinem Dashboard." },
+    { q: "Kann ich mehrere Kurse anlegen?", a: "Ja, als Creator hast du die Möglichkeit unbegrenzte neue Kurse hinzuzufügen um deinen persönlichen Zusatzverdienst mit jedem Kurs zu erhöhen. " }
+  ];
+
+  toggleFaq(i) {
+    this.setState(s => ({ openFaq: s.openFaq === i ? -1 : i }));
+  }
+
+  renderVals() {
+    const steps = this.stepsData.map((s, i) => ({ ...s, showLine: i < this.stepsData.length - 1 }));
+    const faqs = this.faqData.map((f, i) => ({
+      ...f,
+      toggle: () => this.toggleFaq(i),
+      maxHeight: this.state.openFaq === i ? "200px" : "0px",
+      iconRotate: this.state.openFaq === i ? "rotate(45deg)" : "rotate(0deg)"
+    }));
+    return { steps, faqs };
+  }
+}
+
+</script>
+</body>
+</html>
