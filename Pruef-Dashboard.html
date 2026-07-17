@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prüf-Dashboard – Klausurfuchs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2A41; --accent:#2D7D6F; --accent-soft:#E4F1EE; --amber:#E8B44F;
+  --paper:#FAFAF7; --card:#FFFFFF; --line:#E3E1DA; --muted:#6B7280;
+  --danger:#C0442E; --danger-soft:#F9E9E5; --ok-soft:#EAF3DE; --warn-soft:#FAF0DA;
+  --radius:10px;
+}
+*{box-sizing:border-box; margin:0;}
+body{font-family:'Inter',sans-serif; background:var(--paper); color:var(--ink); font-size:15px; line-height:1.6;}
+h1,h2,h3{font-family:'Sora',sans-serif; line-height:1.25;}
+a{color:var(--accent);}
+
+.topbar{background:var(--ink); color:#E9EDF2; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px;}
+.topbar .brand{font-family:'Sora',sans-serif; font-weight:700; font-size:17px;}
+.topbar .brand span{color:var(--amber);}
+.topbar .role{font-size:12px; color:#9AA7B5; border:1px solid rgba(255,255,255,.2); padding:4px 12px; border-radius:20px;}
+
+.wrap{max-width:1160px; margin:0 auto; padding:28px clamp(16px,4vw,32px);}
+.head{margin-bottom:22px;}
+.head h1{font-size:24px; font-weight:700; margin-bottom:4px;}
+.head p{font-size:14px; color:var(--muted);}
+
+.filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;}
+.filter-chip{font:inherit; font-size:13px; border:1px solid var(--line); background:var(--card); color:var(--muted); padding:7px 14px; border-radius:20px; cursor:pointer;}
+.filter-chip.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;}
+.filter-chip .count{font-weight:700; margin-left:5px;}
+
+.layout{display:grid; grid-template-columns:minmax(280px,380px) 1fr; gap:20px; align-items:start;}
+
+.queue{display:flex; flex-direction:column; gap:10px;}
+.queue-item{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:15px 16px; cursor:pointer; transition:border-color .15s;}
+.queue-item:hover{border-color:var(--accent);}
+.queue-item.selected{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+.queue-item .qi-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:4px;}
+.queue-item h3{font-size:14px; font-weight:600;}
+.queue-item .qi-course{font-size:12.5px; color:var(--muted);}
+.queue-item .qi-time{font-size:11px; color:var(--muted); margin-top:6px;}
+.queue-empty{background:var(--card); border:1px dashed var(--line); border-radius:var(--radius); padding:28px 20px; text-align:center; color:var(--muted); font-size:14px;}
+
+.status-pill{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap; flex-shrink:0;}
+.status-pill.pruefung{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber);}
+.status-pill.freigegeben{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
+.status-pill.ueberarbeitung{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
+
+.detail{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; position:sticky; top:20px;}
+.detail-empty{color:var(--muted); text-align:center; padding:50px 20px;}
+.detail-crumb{font-size:12px; color:var(--muted); margin-bottom:6px;}
+.detail h2{font-size:20px; font-weight:700; margin-bottom:4px;}
+.detail .d-course{font-size:14px; color:var(--muted); margin-bottom:20px;}
+
+.content-preview{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:24px;}
+.content-preview .cp-label{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:8px;}
+.content-preview .cp-item{font-size:13.5px; color:var(--ink); padding:6px 0; border-bottom:1px solid var(--line);}
+.content-preview .cp-item:last-child{border-bottom:none;}
+.content-preview .cp-item span{color:var(--muted); font-size:12px;}
+
+.section-label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink); margin-bottom:12px;}
+
+.thread{display:flex; flex-direction:column; gap:10px; margin-bottom:22px;}
+.comment{border-radius:var(--radius); padding:12px 14px; font-size:13.5px;}
+.comment.reviewer{background:var(--accent-soft); border:1px solid #BFDDD5;}
+.comment.creator{background:var(--paper); border:1px solid var(--line);}
+.comment .c-meta{font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; display:flex; justify-content:space-between; gap:10px;}
+.comment .c-role{color:var(--accent);}
+.comment.creator .c-role{color:#854F0B;}
+.thread-empty{font-size:13px; color:var(--muted); font-style:italic; padding:4px 0 10px;}
+
+.reviewer-box{border-top:1px solid var(--line); padding-top:20px;}
+.reviewer-box label{display:block; font-size:13px; font-weight:600; margin-bottom:7px;}
+.reviewer-box textarea{width:100%; min-height:90px; font:inherit; font-size:14px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--radius); resize:vertical; background:var(--card); color:var(--ink);}
+.reviewer-box textarea:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+.action-row{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+.btn{font:inherit; font-weight:600; font-size:14px; padding:11px 20px; border-radius:8px; cursor:pointer; border:1px solid transparent;}
+.btn-approve{background:var(--accent); color:#fff; border-color:var(--accent);}
+.btn-approve:hover{background:#256A5E;}
+.btn-revise{background:#fff; color:var(--danger); border-color:var(--danger);}
+.btn-revise:hover{background:var(--danger-soft);}
+.btn:disabled{opacity:.5; cursor:not-allowed;}
+.hint{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5;}
+
+.resolved-note{background:var(--ok-soft); border:1px solid #97C459; color:#3B6D11; border-radius:var(--radius); padding:14px 16px; font-size:13.5px;}
+.resolved-note.revise{background:var(--danger-soft); border-color:var(--danger); color:var(--danger);}
+
+.toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:13px 22px; border-radius:10px; font-size:14px; opacity:0; pointer-events:none; transition:all .25s ease; z-index:50; max-width:90vw; box-shadow:0 8px 24px rgba(27,42,65,.25);}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+.demo-banner{background:var(--warn-soft); border:1px solid var(--amber); color:#854F0B; border-radius:var(--radius); padding:12px 16px; font-size:13px; margin-bottom:20px; line-height:1.5;}
+
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr;}
+  .detail{position:static;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Klausur<span>fuchs</span> · Prüf-Dashboard</div>
+  <div class="role">Angemeldet als Prüfer</div>
+</div>
+
+<div class="wrap">
+  <div class="head">
+    <h1>Eingereichte Kapitel</h1>
+    <p>Prüfe eingereichte Kapitel, gib Anmerkungen und entscheide über die Freigabe. Creator sehen dein Feedback direkt in ihrem Kursbau.</p>
+  </div>
+
+  <div class="demo-banner">
+    <strong>Prototyp-Hinweis:</strong> Dieses Dashboard und der Creator-Kursbau teilen sich aktuell denselben Browser-Speicher. Reiche im Kursbau ein Kapitel ein und lade diese Seite neu – es erscheint hier zur Prüfung. Später übernimmt das eine echte Datenbank.
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="layout">
+    <div class="queue" id="queue"></div>
+    <div id="detailPanel">
+      <div class="detail"><div class="detail-empty">Wähle links ein Kapitel aus, um es zu prüfen.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== Store (kompatibel mit index.html / window.KFStore) ===== */
+var SUBMISSIONS_KEY = 'klausurfuchs_submissions';
+function readAll(){ try{ return JSON.parse(localStorage.getItem(SUBMISSIONS_KEY)) || []; }catch(e){ return []; } }
+function writeAll(list){ try{ localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(list)); }catch(e){} }
+function nowISO(){ return new Date().toISOString(); }
+
+/* Demo-Einreichungen anlegen, falls noch keine existieren (rein zur Veranschaulichung) */
+function seedDemo(){
+  var list = readAll();
+  var hasDemo = list.some(function(s){ return s.courseId && s.courseId.indexOf('demo_') === 0; });
+  if(hasDemo) return;
+  var t = Date.now();
+  list.push({
+    id:'demo_stat_ch0', courseId:'demo_stat', courseTitle:'Mathematik mit Statistik A', courseProf:'Prof. Weber', hochschule:'HWG Ludwigshafen',
+    chapterIndex:0, chapterTitle:'Kapitel 1 – Deskriptive Statistik', status:'pruefung', comments:[],
+    submittedAt:new Date(t-3600000).toISOString(), updatedAt:new Date(t-3600000).toISOString(),
+    demoContent:{ zusammenfassung:'Lagemaße, Streuungsmaße, Häufigkeitsverteilungen', karten:12, uebungen:5 }
+  });
+  list.push({
+    id:'demo_ifrs_ch0', courseId:'demo_ifrs', courseTitle:'IFRS / Bilanzierung', courseProf:'Prof. Schmidt', hochschule:'HWG Ludwigshafen',
+    chapterIndex:0, chapterTitle:'Kapitel 1 – Ansatz & Bewertung', status:'pruefung', comments:[],
+    submittedAt:new Date(t-7200000).toISOString(), updatedAt:new Date(t-7200000).toISOString(),
+    demoContent:{ zusammenfassung:'Aktivierung, Erstbewertung, Folgebewertung nach IFRS', karten:9, uebungen:4 }
+  });
+  writeAll(list);
+}
+seedDemo();
+
+/* ===== State ===== */
+var activeFilter = 'pruefung';
+var selectedId = null;
+
+var FILTERS = [
+  { key:'pruefung', label:'Wartet auf Prüfung' },
+  { key:'ueberarbeitung', label:'In Überarbeitung' },
+  { key:'freigegeben', label:'Freigegeben' },
+  { key:'alle', label:'Alle' }
+];
+var STATUS_LABEL = { pruefung:'Wartet auf Prüfung', freigegeben:'Freigegeben ✓', ueberarbeitung:'Überarbeitung nötig' };
+
+function fmtDate(iso){
+  try{ var d=new Date(iso); function p(n){return n<10?'0'+n:''+n;} return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; }
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._to); t._to=setTimeout(function(){ t.classList.remove('show'); }, 3400);
+}
+
+/* ===== Render ===== */
+function renderFilters(){
+  var all = readAll();
+  var counts = { pruefung:0, ueberarbeitung:0, freigegeben:0, alle:all.length };
+  all.forEach(function(s){ if(counts[s.status]!=null) counts[s.status]++; });
+  document.getElementById('filters').innerHTML = FILTERS.map(function(f){
+    return '<button class="filter-chip'+(f.key===activeFilter?' active':'')+'" data-filter="'+f.key+'">'+f.label+'<span class="count">'+counts[f.key]+'</span></button>';
+  }).join('');
+  document.querySelectorAll('[data-filter]').forEach(function(b){
+    b.addEventListener('click', function(){ activeFilter=b.dataset.filter; render(); });
+  });
+}
+
+function renderQueue(){
+  var all = readAll();
+  var items = all.filter(function(s){ return activeFilter==='alle' || s.status===activeFilter; });
+  items.sort(function(a,b){ return new Date(b.updatedAt) - new Date(a.updatedAt); });
+  var q = document.getElementById('queue');
+  if(!items.length){
+    q.innerHTML = '<div class="queue-empty">Keine Kapitel in dieser Ansicht.</div>';
+    return;
+  }
+  q.innerHTML = items.map(function(s){
+    return '<div class="queue-item'+(s.id===selectedId?' selected':'')+'" data-id="'+esc(s.id)+'">'+
+      '<div class="qi-top"><h3>'+esc(s.chapterTitle)+'</h3><span class="status-pill '+s.status+'">'+esc(STATUS_LABEL[s.status]||s.status)+'</span></div>'+
+      '<div class="qi-course">'+esc(s.courseTitle)+' · '+esc(s.courseProf||'')+'</div>'+
+      '<div class="qi-time">Zuletzt aktualisiert: '+fmtDate(s.updatedAt)+'</div>'+
+    '</div>';
+  }).join('');
+  document.querySelectorAll('[data-id]').forEach(function(el){
+    el.addEventListener('click', function(){ selectedId=el.dataset.id; render(); });
+  });
+}
+
+function renderDetail(){
+  var panel = document.getElementById('detailPanel');
+  var sub = readAll().filter(function(s){ return s.id===selectedId; })[0];
+  if(!sub){
+    panel.innerHTML = '<div class="detail"><div class="detail-empty">Wähle links ein Kapitel aus, um es zu prüfen.</div></div>';
+    return;
+  }
+
+  var contentHtml = '';
+  if(sub.demoContent){
+    contentHtml = '<div class="content-preview"><div class="cp-label">Eingereichter Inhalt</div>'+
+      '<div class="cp-item">Zusammenfassung <span>'+esc(sub.demoContent.zusammenfassung)+'</span></div>'+
+      '<div class="cp-item">Karteikarten <span>'+sub.demoContent.karten+' Karten</span></div>'+
+      '<div class="cp-item">Übungsaufgaben <span>'+sub.demoContent.uebungen+' Aufgaben</span></div>'+
+    '</div>';
+  } else {
+    contentHtml = '<div class="content-preview"><div class="cp-label">Eingereichter Inhalt</div>'+
+      '<div class="cp-item">Kapitelpaket <span>Zusammenfassung, Karteikarten &amp; Übungsaufgaben</span></div>'+
+      '<div class="cp-item" style="color:var(--muted);font-size:12px">In der finalen Version öffnet sich hier der vollständige Kapitelinhalt zur Durchsicht.</div>'+
+    '</div>';
+  }
+
+  var comments = sub.comments || [];
+  var threadHtml = comments.length
+    ? comments.map(function(c){
+        return '<div class="comment '+(c.role==='reviewer'?'reviewer':'creator')+'">'+
+          '<div class="c-meta"><span class="c-role">'+esc(c.author||(c.role==='reviewer'?'Prüfer':'Creator'))+'</span><span>'+fmtDate(c.date)+'</span></div>'+
+          '<div>'+esc(c.text)+'</div>'+
+        '</div>';
+      }).join('')
+    : '<div class="thread-empty">Noch keine Anmerkungen zu diesem Kapitel.</div>';
+
+  var actionsHtml;
+  if(sub.status === 'freigegeben'){
+    actionsHtml = '<div class="resolved-note">Dieses Kapitel ist freigegeben. Das nächste Kapitel des Kurses ist für den Creator entsperrt.</div>';
+  } else {
+    var reviseNote = sub.status === 'ueberarbeitung'
+      ? '<div class="resolved-note revise" style="margin-bottom:16px">Zur Überarbeitung an den Creator zurückgeschickt. Sobald er erneut einreicht, erscheint das Kapitel wieder mit Status „Wartet auf Prüfung".</div>'
+      : '';
+    actionsHtml = reviseNote +
+      '<div class="reviewer-box">'+
+        '<label for="revComment">Anmerkung an den Creator</label>'+
+        '<textarea id="revComment" placeholder="Was soll der Creator anpassen? Konkret formulieren hilft am meisten."></textarea>'+
+        '<div class="action-row">'+
+          '<button class="btn btn-approve" id="approveBtn">Kapitel freigeben</button>'+
+          '<button class="btn btn-revise" id="reviseBtn">Zur Überarbeitung zurückschicken</button>'+
+        '</div>'+
+        '<p class="hint">Beim Freigeben ist die Anmerkung optional. Beim Zurückschicken bitte mindestens eine Anmerkung schreiben, damit der Creator weiß, was zu tun ist.</p>'+
+      '</div>';
+  }
+
+  panel.innerHTML = '<div class="detail">'+
+    '<div class="detail-crumb">'+esc(sub.hochschule||'')+'</div>'+
+    '<h2>'+esc(sub.chapterTitle)+'</h2>'+
+    '<div class="d-course">'+esc(sub.courseTitle)+' · '+esc(sub.courseProf||'')+' · eingereicht '+fmtDate(sub.submittedAt)+'</div>'+
+    contentHtml+
+    '<div class="section-label">Verlauf &amp; Anmerkungen</div>'+
+    '<div class="thread">'+threadHtml+'</div>'+
+    actionsHtml+
+  '</div>';
+
+  var approveBtn = document.getElementById('approveBtn');
+  var reviseBtn = document.getElementById('reviseBtn');
+  if(approveBtn){
+    approveBtn.addEventListener('click', function(){
+      var note = (document.getElementById('revComment')||{}).value || '';
+      approve(sub.id, note);
+      showToast('Kapitel freigegeben. Der Creator wird informiert.');
+    });
+  }
+  if(reviseBtn){
+    reviseBtn.addEventListener('click', function(){
+      var note = (document.getElementById('revComment')||{}).value || '';
+      if(!note.trim()){
+        showToast('Bitte zuerst eine Anmerkung schreiben, bevor du das Kapitel zurückschickst.');
+        var ta=document.getElementById('revComment'); if(ta){ ta.focus(); }
+        return;
+      }
+      requestChanges(sub.id, note.trim());
+      showToast('Zur Überarbeitung zurückgeschickt. Der Creator sieht deine Anmerkung im Kursbau.');
+    });
+  }
+}
+
+function approve(id, note){
+  var list = readAll();
+  list.forEach(function(s){
+    if(s.id===id){
+      s.status='freigegeben'; s.updatedAt=nowISO();
+      if(note && note.trim()){ s.comments=s.comments||[]; s.comments.push({author:'Prüfer', role:'reviewer', text:note.trim(), date:nowISO()}); }
+    }
+  });
+  writeAll(list); render();
+}
+function requestChanges(id, comment){
+  var list = readAll();
+  list.forEach(function(s){
+    if(s.id===id){
+      s.status='ueberarbeitung'; s.updatedAt=nowISO();
+      s.comments=s.comments||[]; s.comments.push({author:'Prüfer', role:'reviewer', text:comment, date:nowISO()});
+    }
+  });
+  writeAll(list); render();
+}
+
+function render(){ renderFilters(); renderQueue(); renderDetail(); }
+render();
+
+/* Bei Rückkehr auf den Tab neu laden (Creator hat evtl. inzwischen eingereicht) */
+document.addEventListener('visibilitychange', function(){ if(!document.hidden){ render(); } });
+window.addEventListener('focus', render);
+</script>
+</body>
+</html>

@@ -234,6 +234,41 @@ ul.plain li{margin-bottom:5px;}
 .pack-status.open{background:var(--paper); border:1px solid var(--line); color:var(--muted);}
 .pack-status.review{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber);}
 .pack-status.done{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
+.pack-status.revise{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
+
+/* Login / Auth */
+.auth-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:26px 24px;}
+.auth-card .field{margin-bottom:16px;}
+.auth-error{background:var(--danger-soft); border:1px solid var(--danger); color:var(--danger); font-size:13px; padding:10px 14px; border-radius:8px; margin-bottom:14px;}
+.auth-hint{font-size:12px; color:var(--muted); background:var(--paper); border:1px dashed var(--line); border-radius:8px; padding:10px 12px; margin-top:16px; line-height:1.5;}
+.auth-alt{font-size:13px; color:var(--muted); text-align:center; margin-top:16px;}
+
+/* Meine Kurse */
+.mycourse-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:14px;}
+.mycourse-head{display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:14px;}
+.mycourse-head h3{font-size:16px; margin-bottom:2px;}
+.mycourse-head p{font-size:13px; color:var(--muted);}
+.mycourse-badge{font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; white-space:nowrap;}
+.mycourse-badge.live{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
+.mycourse-badge.draft{background:var(--paper); color:var(--muted); border:1px solid var(--line);}
+.mycourse-chapters{display:flex; flex-direction:column; gap:6px;}
+.mycourse-chapter{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; padding:8px 12px; background:var(--paper); border:1px solid var(--line); border-radius:8px;}
+.mini-status{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap;}
+.mini-status.open{background:#fff; border:1px solid var(--line); color:var(--muted);}
+.mini-status.review{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber);}
+.mini-status.done{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
+.mini-status.revise{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
+
+/* Feedback-Schleife: Prüfer-Kommentare im Einreichen-Schritt */
+.review-feedback{background:var(--danger-soft); border:1px solid var(--danger); border-radius:0 var(--radius) var(--radius) 0; border-left:4px solid var(--danger); padding:14px 16px; margin:10px 0; }
+.review-feedback .rf-title{font-size:12px; font-weight:700; color:var(--danger); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;}
+.review-feedback .rf-comment{background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px;}
+.review-feedback .rf-comment:last-of-type{margin-bottom:10px;}
+.review-feedback .rf-meta{font-size:11px; color:var(--muted); margin-bottom:3px;}
+.review-feedback .rf-text{font-size:13.5px; color:var(--ink); line-height:1.5;}
+.chapter-pack-wrap{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; overflow:hidden;}
+.chapter-pack-wrap .chapter-pack{border:none; border-radius:0; margin-bottom:0;}
+.chapter-pack-wrap .review-feedback{margin:0 18px 16px;}
 .copyright-box{background:#FCF3F1; border-left:4px solid var(--danger); border-radius:0 var(--radius) var(--radius) 0; padding:14px 18px; font-size:13px; color:#7A2E1E; margin-bottom:20px;}
 .copyright-box strong{display:block; margin-bottom:3px; color:var(--danger);}
 .dup-check{background:var(--warn-soft); border:1px solid var(--amber); border-radius:var(--radius); padding:14px 18px; margin-bottom:20px; font-size:13px; color:#854F0B;}
@@ -334,6 +369,43 @@ ul.plain li{margin-bottom:5px;}
       <div class="uni-card soon"><span class="badge">Bald</span><h3>FH Frankfurt</h3><p>Frankfurt University of Applied Sciences</p></div>
       <div class="uni-card soon"><span class="badge">Bald</span><h3>Hochschule Mainz</h3><p>Hochschule Mainz</p></div>
       <div class="uni-card soon"><span class="badge">Bald</span><h3>Deine Hochschule?</h3><p>Werde selbst Creator und starte den ersten Kurs.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANSICHT: LOGIN -->
+<div class="view" id="view-login">
+  <div class="portal" style="max-width:440px">
+    <a href="Klausurfuchs_Landingpage_dc.html" class="back-link" style="display:inline-block;text-decoration:none">‹ Zurück zur Startseite</a>
+    <div class="portal-brand">Klausur<span>fuchs</span></div>
+    <h1 style="margin-bottom:6px">Willkommen zurück</h1>
+    <p class="lede" style="margin-bottom:24px">Melde dich an, um deine Kurse zu verwalten oder weiter am Kursbau zu arbeiten.</p>
+    <div class="auth-card">
+      <div class="field"><label>E-Mail</label><input type="email" id="loginEmail" placeholder="dein.name@hochschule.de" autocomplete="username"></div>
+      <div class="field"><label>Passwort</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
+      <div id="loginError" class="auth-error" style="display:none"></div>
+      <button class="cta" id="loginSubmitBtn" style="width:100%; justify-content:center; margin-top:4px">Anmelden</button>
+      <div class="auth-hint">Prototyp: Melde dich mit einer beliebigen E-Mail und einem beliebigen Passwort an, um die Ansicht „Meine Kurse" zu sehen.</div>
+      <div class="auth-alt">Noch kein Konto? <a href="index.html?goto=view-creator-intro">Als Creator starten ›</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANSICHT: MEINE KURSE -->
+<div class="view" id="view-my-courses">
+  <div class="portal">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap">
+      <div class="portal-brand" style="margin-bottom:0">Klausur<span>fuchs</span></div>
+      <div style="display:flex; align-items:center; gap:14px">
+        <span id="myCoursesUser" style="font-size:13px; color:var(--muted)"></span>
+        <button class="ghost" id="logoutBtn" style="padding:7px 14px; font-size:13px">Abmelden</button>
+      </div>
+    </div>
+    <h1 style="margin-bottom:6px">Meine Kurse</h1>
+    <p class="lede" style="margin-bottom:24px">Alle Kurse, die du erstellst oder bereits veröffentlicht hast – mit aktuellem Prüfstatus je Kapitel.</p>
+    <div id="myCoursesList"></div>
+    <div style="margin-top:26px">
+      <a href="index.html?goto=view-creator-intro" class="cta" style="display:inline-block; text-decoration:none">+ Neuen Kurs erstellen</a>
     </div>
   </div>
 </div>
@@ -1971,14 +2043,176 @@ function showView(id){
   window.scrollTo(0,0);
   if(id === 'view-subjects' && typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
   if(id === 'view-creator-wizard' && typeof window.markCreatorSeen === 'function'){ window.markCreatorSeen(); }
+  if(id === 'view-my-courses' && typeof window.renderMyCourses === 'function'){ window.renderMyCourses(); }
 }
 document.querySelectorAll('[data-goto-view]').forEach(function(el){
   el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
 });
+
+/* =========================================================
+   GETEILTER PRÜF-STORE (Mockup einer späteren Datenbank)
+   Wird von diesem Wizard UND vom Prüf-Dashboard genutzt.
+   Kommuniziert über localStorage (gleiche Origin).
+   ========================================================= */
+window.KFStore = (function(){
+  var SUBMISSIONS_KEY = 'klausurfuchs_submissions';
+  var SESSION_KEY = 'klausurfuchs_session';
+  function readAll(){
+    try{ return JSON.parse(localStorage.getItem(SUBMISSIONS_KEY)) || []; }catch(e){ return []; }
+  }
+  function writeAll(list){
+    try{ localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(list)); }catch(e){}
+  }
+  function nowISO(){ return new Date().toISOString(); }
+  return {
+    getSubmissions: readAll,
+    getForCourse: function(courseId){
+      return readAll().filter(function(s){ return s.courseId === courseId; });
+    },
+    getOne: function(id){
+      return readAll().filter(function(s){ return s.id === id; })[0] || null;
+    },
+    /* Creator reicht Kapitel ein (neu oder nach Überarbeitung) */
+    submit: function(sub){
+      var list = readAll();
+      var idx = -1;
+      for(var i=0;i<list.length;i++){ if(list[i].id === sub.id){ idx = i; break; } }
+      if(idx === -1){
+        list.push({
+          id: sub.id, courseId: sub.courseId, courseTitle: sub.courseTitle,
+          courseProf: sub.courseProf, hochschule: sub.hochschule,
+          chapterIndex: sub.chapterIndex, chapterTitle: sub.chapterTitle,
+          status: 'pruefung', comments: [], submittedAt: nowISO(), updatedAt: nowISO()
+        });
+      } else {
+        list[idx].status = 'pruefung';
+        list[idx].chapterTitle = sub.chapterTitle;
+        list[idx].updatedAt = nowISO();
+        list[idx].comments = list[idx].comments || [];
+        list[idx].comments.push({ author: sub.courseProf || 'Creator', role: 'creator', text: 'Kapitel überarbeitet und erneut eingereicht.', date: nowISO() });
+      }
+      writeAll(list);
+      return true;
+    },
+    /* Prüfer gibt frei */
+    approve: function(id, note){
+      var list = readAll();
+      list.forEach(function(s){
+        if(s.id === id){
+          s.status = 'freigegeben'; s.updatedAt = nowISO();
+          if(note && note.trim()){ s.comments.push({ author: 'Prüfer', role: 'reviewer', text: note.trim(), date: nowISO() }); }
+        }
+      });
+      writeAll(list);
+    },
+    /* Prüfer schickt zur Überarbeitung zurück (mit Kommentaren) */
+    requestChanges: function(id, comment){
+      var list = readAll();
+      list.forEach(function(s){
+        if(s.id === id){
+          s.status = 'ueberarbeitung'; s.updatedAt = nowISO();
+          s.comments = s.comments || [];
+          s.comments.push({ author: 'Prüfer', role: 'reviewer', text: comment, date: nowISO() });
+        }
+      });
+      writeAll(list);
+    },
+    /* Session (Login-Mockup) */
+    setSession: function(email){
+      try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email, since: nowISO() })); }catch(e){}
+    },
+    getSession: function(){
+      try{ return JSON.parse(localStorage.getItem(SESSION_KEY)); }catch(e){ return null; }
+    },
+    clearSession: function(){
+      try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+    }
+  };
+})();
+
+/* ---- Login / Logout ---- */
+(function(){
+  var loginBtn = document.getElementById('loginSubmitBtn');
+  if(loginBtn){
+    loginBtn.addEventListener('click', function(){
+      var email = (document.getElementById('loginEmail')||{}).value || '';
+      var pw = (document.getElementById('loginPassword')||{}).value || '';
+      var err = document.getElementById('loginError');
+      if(!email.trim() || !pw.trim()){
+        if(err){ err.style.display='block'; err.textContent = 'Bitte E-Mail und Passwort eingeben.'; }
+        return;
+      }
+      if(err){ err.style.display='none'; }
+      window.KFStore.setSession(email.trim());
+      showView('view-my-courses');
+    });
+  }
+  var logoutBtn = document.getElementById('logoutBtn');
+  if(logoutBtn){
+    logoutBtn.addEventListener('click', function(){
+      window.KFStore.clearSession();
+      showView('view-login');
+    });
+  }
+})();
+
+/* ---- Meine Kurse ---- */
+window.renderMyCourses = function(){
+  var list = document.getElementById('myCoursesList');
+  var userEl = document.getElementById('myCoursesUser');
+  if(!list){ return; }
+  var session = window.KFStore.getSession();
+  if(userEl){ userEl.textContent = session ? session.email : ''; }
+
+  var STATUS_LABEL = { pruefung:'In Prüfung', freigegeben:'Freigegeben ✓', ueberarbeitung:'Überarbeitung nötig', offen:'In Arbeit' };
+  var STATUS_CLASS = { pruefung:'review', freigegeben:'done', ueberarbeitung:'revise', offen:'open' };
+
+  var cards = '';
+
+  /* 1) Aktueller eigener Entwurf aus dem Wizard */
+  var draft = null;
+  try{ draft = JSON.parse(localStorage.getItem('klausurfuchs_creator_draft')); }catch(e){}
+  if(draft && (draft.fach || (draft.chapters && draft.chapters.length))){
+    var courseId = 'draft_' + (draft.fach || 'kurs').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    var subs = window.KFStore.getForCourse(courseId);
+    var chapterTitles = (draft.chapters || []).map(function(c, i){
+      return (c && c[0] && String(c[0]).trim()) ? String(c[0]).trim() : ('Kapitel ' + (i+1));
+    });
+    if(!chapterTitles.length){ chapterTitles = ['Kapitel 1']; }
+    var anyApproved = subs.some(function(s){ return s.status === 'freigegeben'; });
+    var chaptersHtml = chapterTitles.map(function(t, i){
+      var sub = subs.filter(function(s){ return s.chapterIndex === i; })[0];
+      var st = sub ? sub.status : 'offen';
+      return '<div class="mycourse-chapter"><span>Kapitel ' + (i+1) + ' – ' + escapeHtmlMy(t) + '</span>' +
+        '<span class="mini-status ' + (STATUS_CLASS[st]||'open') + '">' + (STATUS_LABEL[st]||'In Arbeit') + '</span></div>';
+    }).join('');
+    cards += '<div class="mycourse-card">' +
+      '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(draft.fach || 'Unbenannter Kurs') + (draft.prof ? ' — ' + escapeHtmlMy(draft.prof) : '') + '</h3>' +
+      '<p>' + escapeHtmlMy(draft.hochschule || 'HWG Ludwigshafen') + '</p></div>' +
+      '<span class="mycourse-badge ' + (anyApproved ? 'live' : 'draft') + '">' + (anyApproved ? 'Teilweise live' : 'Entwurf') + '</span></div>' +
+      '<div class="mycourse-chapters">' + chaptersHtml + '</div>' +
+      '<div style="margin-top:14px"><a href="index.html?goto=view-creator-wizard" class="cta" style="display:inline-block;text-decoration:none;padding:8px 16px;font-size:13px">Weiter bearbeiten →</a></div>' +
+      '</div>';
+  }
+
+  /* 2) Beispiel-Kurs (bereits live) zur Veranschaulichung */
+  cards += '<div class="mycourse-card">' +
+    '<div class="mycourse-head"><div><h3>Projektmanagement — Prof. Koch</h3><p>HWG Ludwigshafen</p></div>' +
+    '<span class="mycourse-badge live">Live</span></div>' +
+    '<div class="mycourse-chapters">' +
+      '<div class="mycourse-chapter"><span>Kapitel 1 – Grundlagen</span><span class="mini-status done">Freigegeben ✓</span></div>' +
+      '<div class="mycourse-chapter"><span>Kapitel 2 – Netzplantechnik</span><span class="mini-status done">Freigegeben ✓</span></div>' +
+      '<div class="mycourse-chapter"><span>Kapitel 3 – Risiko &amp; Kalkulation</span><span class="mini-status done">Freigegeben ✓</span></div>' +
+    '</div></div>';
+
+  list.innerHTML = cards;
+};
+function escapeHtmlMy(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 (function(){
   var params = new URLSearchParams(window.location.search);
   var goto = params.get('goto');
-  var allowedViews = ['view-landing','view-subjects','view-creator-intro','view-creator-setup','view-creator-wizard','view-course'];
+  var allowedViews = ['view-landing','view-login','view-my-courses','view-subjects','view-creator-intro','view-creator-setup','view-creator-wizard','view-course'];
   if(goto && allowedViews.indexOf(goto) !== -1){
     showView(goto);
   }
@@ -2596,6 +2830,7 @@ initAskBoxes();
     if(step === 'zusammenfassung' && typeof renderZfStep === 'function'){ renderZfStep(); }
     if(step === 'karteikarten' && typeof filterRowsByContext === 'function'){ filterRowsByContext('cardRows', 'kkKapitelSelect'); }
     if(step === 'uebungen' && typeof filterRowsByContext === 'function'){ filterRowsByContext('uebungRows', 'uebKapitelSelect'); }
+    if(step === 'einreichen' && typeof renderChapterPackList === 'function'){ renderChapterPackList(); }
   }
   document.querySelectorAll('.step-item').forEach(function(item){
     item.addEventListener('click', function(){ showCreatorStep(item.dataset.step); });
@@ -3192,30 +3427,61 @@ initAskBoxes();
 
   /* ---- Kapitel-Freigabestatus (beliebig viele Kapitel) ---- */
   var chapterStatuses = ['offen'];
+
+  /* Kurs-Identität aus den Wizard-Feldern (muss zu renderMyCourses passen) */
+  function courseIdentity(){
+    var fach = (document.getElementById('cFach')||{}).value || '';
+    var prof = (document.getElementById('cProf')||{}).value || '';
+    var hochschule = (document.getElementById('cHochschule')||{}).value || 'HWG Ludwigshafen';
+    var courseId = 'draft_' + (fach || 'kurs').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    return { courseId: courseId, courseTitle: fach || 'Unbenannter Kurs', courseProf: prof, hochschule: hochschule };
+  }
+  function fmtDate(iso){
+    try{ var d = new Date(iso); return pad2(d.getDate())+'.'+pad2(d.getMonth()+1)+'.'+d.getFullYear()+' '+pad2(d.getHours())+':'+pad2(d.getMinutes()); }catch(e){ return ''; }
+  }
+  function submissionFor(i){
+    var ident = courseIdentity();
+    return window.KFStore.getOne(ident.courseId + '_ch' + i);
+  }
+
   function renderChapterPackList(){
     var titles = chapterTitles();
     var list = document.getElementById('chapterPackList');
     if(!list){ return; }
-    while(chapterStatuses.length < titles.length){ chapterStatuses.push('gesperrt'); }
     chapterStatuses.length = titles.length || 1;
     var html = '';
     titles.forEach(function(title, i){
-      var unlocked = (i === 0) || (chapterStatuses[i-1] === 'freigegeben');
-      if(unlocked && chapterStatuses[i] === 'gesperrt'){ chapterStatuses[i] = 'offen'; }
-      var st = unlocked ? chapterStatuses[i] : 'gesperrt';
+      var sub = submissionFor(i);
+      var prevApproved = (i === 0) || (chapterStatuses[i-1] === 'freigegeben');
+      var st;
+      if(!prevApproved){ st = 'gesperrt'; }
+      else if(sub){ st = sub.status; }            /* pruefung | freigegeben | ueberarbeitung */
+      else { st = 'offen'; }
       chapterStatuses[i] = st;
-      var statusHtml, btnHtml = '';
+
+      var statusHtml, btnHtml = '', feedbackHtml = '';
       if(st === 'gesperrt'){
         statusHtml = '<span class="pack-status open" style="opacity:.5">Gesperrt</span>';
       } else if(st === 'pruefung'){
         statusHtml = '<span class="pack-status review">In Prüfung durch Klausurfuchs</span>';
       } else if(st === 'freigegeben'){
         statusHtml = '<span class="pack-status done">Freigegeben ✓</span>';
+      } else if(st === 'ueberarbeitung'){
+        statusHtml = '<span class="pack-status revise">Überarbeitung nötig</span>';
+        btnHtml = '<button class="cta" style="padding:8px 16px; font-size:13px" data-submit-idx="' + i + '">Erneut einreichen</button>';
+        var reviewerComments = (sub.comments||[]).filter(function(c){ return c.role === 'reviewer'; });
+        if(reviewerComments.length){
+          feedbackHtml = '<div class="review-feedback"><div class="rf-title">Anmerkungen des Prüfers</div>' +
+            reviewerComments.map(function(c){
+              return '<div class="rf-comment"><div class="rf-meta">' + escapeHtml(c.author||'Prüfer') + ' · ' + fmtDate(c.date) + '</div><div class="rf-text">' + escapeHtml(c.text) + '</div></div>';
+            }).join('') +
+            '<p style="font-size:12.5px;color:var(--muted);margin:0">Passe die genannten Punkte in den entsprechenden Schritten an und reiche das Kapitel danach erneut ein.</p></div>';
+        }
       } else {
         statusHtml = '<span class="pack-status open">Bereit zur Einreichung</span>';
         btnHtml = '<button class="cta" style="padding:8px 16px; font-size:13px" data-submit-idx="' + i + '">Einreichen</button>';
       }
-      html += '<div class="chapter-pack"><div class="info"><h3>' + title + '</h3><p>Zusammenfassung, Karteikarten &amp; Übungsaufgaben</p></div>' + btnHtml + statusHtml + '</div>';
+      html += '<div class="chapter-pack-wrap"><div class="chapter-pack"><div class="info"><h3>' + title + '</h3><p>Zusammenfassung, Karteikarten &amp; Übungsaufgaben</p></div>' + btnHtml + statusHtml + '</div>' + feedbackHtml + '</div>';
     });
     list.innerHTML = html;
     list.querySelectorAll('[data-submit-idx]').forEach(function(btn){
@@ -3235,9 +3501,12 @@ initAskBoxes();
   function updateEinreichenBadge(){
     var badge = document.getElementById('einreichenBadge');
     if(!badge){ return; }
+    var hasRevise = chapterStatuses.indexOf('ueberarbeitung') >= 0;
     var hasReview = chapterStatuses.indexOf('pruefung') >= 0;
     var hasApproved = chapterStatuses.indexOf('freigegeben') >= 0;
-    if(hasReview){
+    if(hasRevise){
+      badge.style.display = 'block'; badge.className = 'nav-badge revise'; badge.title = 'Überarbeitung nötig';
+    } else if(hasReview){
       badge.style.display = 'block'; badge.className = 'nav-badge'; badge.title = 'In Prüfung';
     } else if(hasApproved && newsUnseen){
       badge.style.display = 'block'; badge.className = 'nav-badge done'; badge.title = 'Neuigkeiten – Kapitel freigegeben';
@@ -3246,19 +3515,23 @@ initAskBoxes();
     }
   }
   function submitChapter(idx){
+    var ident = courseIdentity();
+    var titles = chapterTitles();
+    window.KFStore.submit({
+      id: ident.courseId + '_ch' + idx,
+      courseId: ident.courseId,
+      courseTitle: ident.courseTitle,
+      courseProf: ident.courseProf,
+      hochschule: ident.hochschule,
+      chapterIndex: idx,
+      chapterTitle: titles[idx] || ('Kapitel ' + (idx+1))
+    });
     chapterStatuses[idx] = 'pruefung';
+    newsUnseen = true;
     renderChapterPackList();
-    showToast('Kapitel ' + (idx + 1) + ' eingereicht. Du bekommst Bescheid, sobald die Prüfung abgeschlossen ist.');
+    showToast('Kapitel ' + (idx + 1) + ' eingereicht. Es liegt jetzt beim Prüfteam – du siehst hier, sobald es freigegeben oder mit Anmerkungen zurückgeschickt wird.');
     saveDraft(true);
-    setTimeout(function(){
-      chapterStatuses[idx] = 'freigegeben';
-      newsUnseen = true;
-      renderChapterPackList();
-      var next = idx + 2 <= chapterStatuses.length ? ' – Kapitel ' + (idx + 2) + ' ist jetzt entsperrt.' : ' – geschafft, alle bisherigen Kapitel sind freigegeben!';
-      showToast('Kapitel ' + (idx + 1) + ' freigegeben' + next + ' Klick links auf „Kapitel einreichen", um den Status jederzeit zu sehen.');
-      saveDraft(true);
-      if(typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
-    }, 2600);
+    if(typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
   }
 
   /* ---- Speichern & Laden (Zwischenstand) ---- */
