@@ -234,6 +234,30 @@ ul.plain li{margin-bottom:5px;}
 .pack-status.done{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
 .copyright-box{background:#FCF3F1; border-left:4px solid var(--danger); border-radius:0 var(--radius) var(--radius) 0; padding:14px 18px; font-size:13px; color:#7A2E1E; margin-bottom:20px;}
 .copyright-box strong{display:block; margin-bottom:3px; color:var(--danger);}
+.dup-check{background:var(--warn-soft); border:1px solid var(--amber); border-radius:var(--radius); padding:14px 18px; margin-bottom:20px; font-size:13px; color:#854F0B;}
+.dup-check p{margin:0;}
+.dup-check .cta, .dup-check .ghost{font-size:13px;}
+
+/* Überblick (Drag & Drop Kapitelstruktur) */
+.ueb-chapter{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; cursor:grab;}
+.ueb-chapter.dragging{opacity:.4;}
+.ueb-chapter-head{display:flex; align-items:center; gap:10px; padding:14px 16px;}
+.ueb-drag-handle{color:var(--muted); cursor:grab; font-size:14px; user-select:none; flex-shrink:0;}
+.ueb-toggle{background:none; border:none; cursor:pointer; font-size:12px; color:var(--muted); padding:4px 6px; flex-shrink:0;}
+.ueb-toggle:hover{color:var(--accent);}
+.ueb-chapter-num{font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap; flex-shrink:0;}
+.ueb-chapter-input{flex:1; border:1px solid transparent; background:none; font:inherit; font-size:15px; font-weight:600; color:var(--ink); padding:6px 8px; border-radius:6px; min-width:0;}
+.ueb-chapter-input:hover{border-color:var(--line);}
+.ueb-chapter-input:focus{border-color:var(--accent); background:#fff; outline:none;}
+.ueb-subs{padding:2px 16px 14px 48px; display:flex; flex-direction:column; gap:8px;}
+.ueb-chapter.collapsed .ueb-subs{display:none;}
+.ueb-empty-hint{font-size:12px; color:var(--muted); margin:0; padding:4px 0;}
+.ueb-sub{display:flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px; cursor:grab;}
+.ueb-sub.dragging{opacity:.4;}
+.ueb-sub-num{font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap; min-width:30px; flex-shrink:0;}
+.ueb-sub-input{flex:1; border:1px solid transparent; background:none; font:inherit; font-size:13px; color:var(--ink); padding:4px 7px; border-radius:6px; min-width:0;}
+.ueb-sub-input:hover{border-color:var(--line);}
+.ueb-sub-input:focus{border-color:var(--accent); background:#fff; outline:none;}
 .step-intro{font-size:13px; color:var(--muted); margin-bottom:20px; max-width:520px;}
 
 /* Speichern (inline in Fußzeile) */
@@ -254,7 +278,8 @@ ul.plain li{margin-bottom:5px;}
 .kapitel-context select{font:inherit; font-size:13px; font-weight:600; color:var(--accent); background:#fff; border:1px solid #BFDAD3; border-radius:6px; padding:5px 8px;}
 
 /* Toggle „Fertig" / Zusammenfassen */
-.row-actions{position:absolute; top:10px; right:10px; display:flex; gap:6px;}
+.row-actions{position:absolute; top:10px; right:10px; display:flex; align-items:center; gap:6px;}
+.row-actions .rm{position:static; font-size:13px;}
 .toggle-fertig{background:none; border:1px solid var(--line); color:var(--muted); font:inherit; font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; cursor:pointer;}
 .toggle-fertig.on{background:var(--ok-soft); border-color:#97C459; color:#3B6D11;}
 .summary-line{display:none; font-size:14px; font-weight:600; padding-right:120px;}
@@ -382,7 +407,7 @@ ul.plain li{margin-bottom:5px;}
 
     <div class="field">
       <label>Hochschule</label>
-      <select disabled><option>HWG Ludwigshafen</option></select>
+      <input type="text" id="cHochschule" value="HWG Ludwigshafen" placeholder="z. B. HWG Ludwigshafen">
     </div>
     <div class="field-row">
       <div class="field">
@@ -394,6 +419,7 @@ ul.plain li{margin-bottom:5px;}
         <input type="text" id="cProf" placeholder="z. B. Prof. Weber">
       </div>
     </div>
+    <div id="duplicateCheckBox" style="display:none"></div>
     <div class="field-row">
       <div class="field">
         <label>Studiengang</label>
@@ -437,13 +463,14 @@ ul.plain li{margin-bottom:5px;}
       <div class="brand-sub">Creator-Modus<br><span id="wizardFachLabel">Neues Fach</span></div>
       <div class="nav-label">Kursbau nach Kursschema v1</div>
       <div class="step-item cur" data-step="struktur"><span class="num">1</span><span>Struktur (Kapitel)</span></div>
-      <div class="step-item" data-step="zusammenfassung"><span class="num">2</span><span>Zusammenfassung</span></div>
-      <div class="step-item" data-step="karteikarten"><span class="num">3</span><span>Karteikarten</span></div>
-      <div class="step-item" data-step="uebungen"><span class="num">4</span><span>Übungsaufgaben</span></div>
-      <div class="step-item" data-step="altklausuren"><span class="num">5</span><span>Altklausuren</span></div>
-      <div class="step-item" data-step="tutorien"><span class="num">6</span><span>Tutorien</span></div>
-      <div class="step-item" data-step="zusatz"><span class="num">7</span><span>Zusatzmodule</span></div>
-      <div class="step-item" data-step="einreichen"><span class="num">8</span><span>Kapitel einreichen</span><span class="nav-badge" id="einreichenBadge" style="display:none"></span></div>
+      <div class="step-item" data-step="ueberblick"><span class="num">2</span><span>Überblick</span></div>
+      <div class="step-item" data-step="zusammenfassung"><span class="num">3</span><span>Zusammenfassung</span></div>
+      <div class="step-item" data-step="karteikarten"><span class="num">4</span><span>Karteikarten</span></div>
+      <div class="step-item" data-step="uebungen"><span class="num">5</span><span>Übungsaufgaben</span></div>
+      <div class="step-item" data-step="altklausuren"><span class="num">6</span><span>Altklausuren</span></div>
+      <div class="step-item" data-step="tutorien"><span class="num">7</span><span>Tutorien</span></div>
+      <div class="step-item" data-step="zusatz"><span class="num">8</span><span>Zusatzmodule</span></div>
+      <div class="step-item" data-step="einreichen"><span class="num">9</span><span>Kapitel einreichen</span><span class="nav-badge" id="einreichenBadge" style="display:none"></span></div>
       <div class="side-progress">
         <p>Freigegebene Kapitel</p>
         <div class="bar"><i id="wizardOverallBar" style="width:0%"></i></div>
@@ -458,13 +485,22 @@ ul.plain li{margin-bottom:5px;}
         <p class="step-intro">Lege zuerst dein komplettes Inhaltsverzeichnis fest – Kapitel und Unterkapitel im Schema 1, 1.1, 1.2 … Danach reichst du jedes Kapitel einzeln ein und arbeitest dich Stück für Stück durch. Du kannst jederzeit zwischenspeichern und später weitermachen.</p>
         <div id="chapterRows">
           <div class="repeat-row">
-            <button class="rm" type="button">✕</button>
+            <div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>
+            <div class="summary-line"></div>
             <div class="field"><label>Kapitel 1 – Titel</label><input type="text" placeholder="z. B. Grundlagen"></div>
             <div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="1.1 Projektmerkmale&#10;1.2 Projektarten&#10;1.3 Magisches Dreieck"></textarea></div>
           </div>
         </div>
         <button class="add-row-btn" id="addChapterBtn" type="button">+ Weiteres Kapitel hinzufügen</button>
-        <div class="wizard-foot"><span></span><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="zusammenfassung">Weiter →</button></div>
+        <div class="wizard-foot"><span></span><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="ueberblick">Weiter →</button></div>
+      </section>
+
+      <!-- SCHRITT 2: ÜBERBLICK -->
+      <section class="cstep" id="cstep-ueberblick">
+        <h1 style="margin-bottom:6px">Überblick &amp; Reihenfolge prüfen</h1>
+        <p class="step-intro">Alle Kapitel und Unterkapitel auf einen Blick. Titel direkt anklicken und umbenennen. Per Ziehen am Griff (⠿) lässt sich sowohl die Reihenfolge der Unterkapitel innerhalb eines Kapitels als auch die Reihenfolge ganzer Kapitel ändern – die Nummerierung passt sich automatisch an. Mit dem Pfeil links lässt sich ein Kapitel einklappen.</p>
+        <div id="ueberblickList"></div>
+        <div class="wizard-foot"><button class="ghost" data-next="struktur">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="zusammenfassung">Weiter →</button></div>
       </section>
 
       <!-- SCHRITT 2: ZUSAMMENFASSUNG -->
@@ -484,7 +520,7 @@ ul.plain li{margin-bottom:5px;}
           <label>„Tipps für die Klausur"</label>
           <textarea id="zfTipps" placeholder="Konkrete Hinweise, worauf dieser Professor bei dieser Klausur besonders achtet …"></textarea>
         </div>
-        <div class="wizard-foot"><button class="ghost" data-next="struktur">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="karteikarten">Weiter →</button></div>
+        <div class="wizard-foot"><button class="ghost" data-next="ueberblick">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="karteikarten">Weiter →</button></div>
       </section>
 
       <!-- SCHRITT 3: KARTEIKARTEN -->
@@ -600,7 +636,8 @@ ul.plain li{margin-bottom:5px;}
         <p class="step-intro">Lösungswege zu den offiziellen Tutoriumsblättern – auch hier ausschließlich dein eigener, nachvollziehbarer Lösungsweg.</p>
         <div id="tutRows">
           <div class="repeat-row">
-            <button class="rm" type="button">✕</button>
+            <div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>
+            <div class="summary-line"></div>
             <div class="field"><label>Tutoriumsblatt</label><input type="text" placeholder="z. B. Tutorium 1 – Projektorganisation"></div>
             <div class="field"><label>Lösungsweg</label><textarea placeholder="Eigener Lösungsweg zu den Aufgaben dieses Blatts …"></textarea></div>
           </div>
@@ -2313,6 +2350,74 @@ initAskBoxes();
 /* ===== CREATOR-WIZARD ===== */
 (function(){
 
+  // Vorhandene Kurse (Prototyp-Datenbasis, entspricht der Fächerliste)
+  var existingCourses = [
+    { name: 'Projektmanagement', professor: 'Koch', hochschule: 'HWG Ludwigshafen' },
+    { name: 'Mathematik mit Statistik A', professor: 'Weber', hochschule: 'HWG Ludwigshafen' },
+    { name: 'IFRS / Bilanzierung', professor: 'Schmidt', hochschule: 'HWG Ludwigshafen' },
+    { name: 'Datenbanken', professor: 'Wagner', hochschule: 'HWG Ludwigshafen' },
+    { name: 'Technische Mechanik', professor: 'Hartung', hochschule: 'HWG Ludwigshafen' }
+  ];
+
+  function normalize(s){ return (s || '').toLowerCase().trim().replace(/^prof\.?\s*/, ''); }
+
+  function namesSimilar(a, b){
+    a = normalize(a); b = normalize(b);
+    if(!a || !b){ return false; }
+    if(a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1){ return true; }
+    var at = a.split(/\s+/).filter(function(t){ return t.length > 3; });
+    var bt = b.split(/\s+/).filter(function(t){ return t.length > 3; });
+    return at.some(function(t){ return bt.indexOf(t) !== -1; });
+  }
+
+  function setSubmitBlocked(blocked){
+    var submitBtn = document.querySelector('#view-creator-setup .wizard-foot .cta');
+    if(!submitBtn){ return; }
+    submitBtn.disabled = blocked;
+    submitBtn.style.opacity = blocked ? '.5' : '';
+    submitBtn.style.cursor = blocked ? 'not-allowed' : '';
+  }
+
+  function checkDuplicateCourse(){
+    var box = document.getElementById('duplicateCheckBox');
+    if(!box){ return; }
+    var hochschule = normalize((document.getElementById('cHochschule') || {}).value);
+    var fach = (document.getElementById('cFach') || {}).value || '';
+    var prof = (document.getElementById('cProf') || {}).value || '';
+    setSubmitBlocked(false);
+    if(!hochschule || (!fach.trim() && !prof.trim())){ box.style.display = 'none'; box.innerHTML = ''; return; }
+
+    var match = existingCourses.filter(function(c){
+      if(normalize(c.hochschule) !== hochschule){ return false; }
+      return (prof.trim() && namesSimilar(c.professor, prof)) || (fach.trim() && namesSimilar(c.name, fach));
+    })[0];
+
+    if(!match){ box.style.display = 'none'; box.innerHTML = ''; return; }
+
+    box.style.display = 'block';
+    box.innerHTML = '<div class="dup-check">' +
+      '<p>Meinst du möglicherweise diesen bereits vorhandenen Kurs: <strong>' + match.name + ' — Prof. ' + match.professor + '</strong> (' + match.hochschule + ')?</p>' +
+      '<div style="display:flex; gap:10px; margin-top:12px">' +
+        '<button type="button" class="cta" id="dupYesBtn">Ja, das ist dieser Kurs</button>' +
+        '<button type="button" class="ghost" id="dupNoBtn">Nein, anderer Kurs</button>' +
+      '</div><div id="dupBlockMsg"></div></div>';
+
+    document.getElementById('dupYesBtn').addEventListener('click', function(){
+      document.getElementById('dupBlockMsg').innerHTML = '<p style="color:var(--danger); font-weight:600; margin:12px 0 0">Es kann leider kein zweiter Kurs zu diesem Fach erstellt werden, da bereits ein Kurs existiert.</p>';
+      setSubmitBlocked(true);
+    });
+    document.getElementById('dupNoBtn').addEventListener('click', function(){
+      box.style.display = 'none';
+      box.innerHTML = '';
+      setSubmitBlocked(false);
+    });
+  }
+
+  ['cHochschule', 'cFach', 'cProf'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){ el.addEventListener('blur', checkDuplicateCourse); }
+  });
+
   function updateWizardFachLabel(){
     var fach = (document.getElementById('cFach')||{}).value || '';
     var prof = (document.getElementById('cProf')||{}).value || '';
@@ -2354,7 +2459,7 @@ initAskBoxes();
   }
 
   // Step-Navigation (Sidebar-Klicks + Weiter/Zurück-Buttons)
-  var stepOrder = ['struktur','zusammenfassung','karteikarten','uebungen','altklausuren','tutorien','zusatz','einreichen'];
+  var stepOrder = ['struktur','ueberblick','zusammenfassung','karteikarten','uebungen','altklausuren','tutorien','zusatz','einreichen'];
   function showCreatorStep(step){
     document.querySelectorAll('.cstep').forEach(function(s){ s.classList.remove('active'); });
     var target = document.getElementById('cstep-' + step);
@@ -2371,6 +2476,7 @@ initAskBoxes();
     });
     var main = document.querySelector('.creator-main');
     if(main){ main.scrollTo(0,0); window.scrollTo(0,0); }
+    if(step === 'ueberblick' && typeof renderUeberblick === 'function'){ renderUeberblick(); }
     if(step === 'zusammenfassung' && typeof renderZfStep === 'function'){ renderZfStep(); }
     if(step === 'karteikarten' && typeof filterRowsByContext === 'function'){ filterRowsByContext('cardRows', 'kkKapitelSelect'); }
     if(step === 'uebungen' && typeof filterRowsByContext === 'function'){ filterRowsByContext('uebungRows', 'uebKapitelSelect'); }
@@ -2516,6 +2622,18 @@ initAskBoxes();
 
   /* ---- Generische Zeilen-Ausstattung: Entfernen, „Fertig"-Toggle, Text/Bild-Umschalter ---- */
   function buildSummary(row, containerId){
+    if(containerId === 'chapterRows'){
+      var idx = Array.prototype.indexOf.call(document.querySelectorAll('#chapterRows .repeat-row'), row);
+      var titelInp = row.querySelector('input[type=text]');
+      var ta = row.querySelector('textarea');
+      var subCount = ta ? ta.value.split(/\r?\n/).filter(function(l){ return l.trim().length > 0; }).length : 0;
+      var titel = titelInp && titelInp.value ? titelInp.value : 'ohne Titel';
+      return 'Kapitel ' + (idx + 1) + ' – ' + titel + (subCount ? '  ·  ' + subCount + (subCount === 1 ? ' Unterkapitel' : ' Unterkapitel') : '');
+    }
+    if(containerId === 'tutRows'){
+      var blatt = row.querySelector('input[type=text]');
+      return blatt && blatt.value ? blatt.value : 'Tutoriumsblatt ohne Titel';
+    }
     if(containerId === 'cardRows'){
       var frage = row.querySelector('input[type=text]');
       var kap = row.querySelector('.rowKapitelSelect');
@@ -2549,7 +2667,11 @@ initAskBoxes();
       rm._wired = true;
       rm.addEventListener('click', function(){
         var minRows = container.id === 'zusatzModuleRows' ? 0 : 1;
-        if(container.querySelectorAll('.repeat-row').length > minRows){ row.remove(); refreshAllKapitelSelects(); }
+        if(container.querySelectorAll('.repeat-row').length > minRows){
+          row.remove();
+          if(container.id === 'chapterRows'){ renumberChapterLabels(); }
+          refreshAllKapitelSelects();
+        }
       });
     }
     var tf = row.querySelector('.toggle-fertig');
@@ -2594,15 +2716,170 @@ initAskBoxes();
   function addChapterRow(){
     var container = document.getElementById('chapterRows');
     var wrap = document.createElement('div');
-    wrap.innerHTML = '<div class="repeat-row"><button class="rm" type="button">✕</button>' +
+    wrap.innerHTML = '<div class="repeat-row">' +
+      '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
+      '<div class="summary-line"></div>' +
       '<div class="field"><label>Kapitel – Titel</label><input type="text" placeholder="z. B. Projektorganisation"></div>' +
       '<div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="2.1 …&#10;2.2 …"></textarea></div></div>';
     var row = wrap.firstElementChild;
     container.appendChild(row);
     enhanceRow(row, container);
     row.querySelector('input[type=text]').addEventListener('input', refreshAllKapitelSelects);
+    renumberChapterLabels();
     refreshAllKapitelSelects();
     return row;
+  }
+  function renumberChapterLabels(){
+    document.querySelectorAll('#chapterRows .repeat-row').forEach(function(row, i){
+      var n = i + 1;
+      var label = row.querySelector('.field label');
+      if(label){ label.textContent = 'Kapitel ' + n + ' – Titel'; }
+      var ta = row.querySelector('textarea');
+      if(ta){ ta.placeholder = n + '.1 …\n' + n + '.2 …\n' + n + '.3 …'; }
+    });
+  }
+
+  /* ---- ÜBERBLICK: Kapitel/Unterkapitel als Drag&Drop-Boxen ---- */
+  function getChaptersData(){
+    return Array.prototype.map.call(document.querySelectorAll('#chapterRows .repeat-row'), function(row){
+      var titleInput = row.querySelector('input[type=text]');
+      var ta = row.querySelector('textarea');
+      var subs = ta ? ta.value.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; }) : [];
+      subs = subs.map(function(s){ return s.replace(/^\d+\.\d+\s+/, ''); });
+      return { title: titleInput ? titleInput.value : '', subs: subs };
+    });
+  }
+  function syncStructureFromOverview(chapters){
+    var rows = document.querySelectorAll('#chapterRows .repeat-row');
+    chapters.forEach(function(ch, i){
+      var row = rows[i];
+      if(!row){ return; }
+      var titleInput = row.querySelector('input[type=text]');
+      var ta = row.querySelector('textarea');
+      if(titleInput){ titleInput.value = ch.title; }
+      if(ta){ ta.value = ch.subs.map(function(s, si){ return (i + 1) + '.' + (si + 1) + ' ' + s; }).join('\n'); }
+    });
+    renumberChapterLabels();
+    refreshAllKapitelSelects();
+  }
+  function readChaptersFromOverviewDOM(){
+    return Array.prototype.map.call(document.querySelectorAll('#ueberblickList .ueb-chapter'), function(chEl){
+      var titleInput = chEl.querySelector('.ueb-chapter-input');
+      var subs = Array.prototype.map.call(chEl.querySelectorAll('.ueb-sub-input'), function(si){ return si.value; });
+      return { title: titleInput ? titleInput.value : '', subs: subs, collapsed: chEl.classList.contains('collapsed') };
+    });
+  }
+  function handleOverviewEdit(){
+    syncStructureFromOverview(readChaptersFromOverviewDOM());
+  }
+  function handleOverviewReorder(){
+    var chapters = readChaptersFromOverviewDOM();
+    syncStructureFromOverview(chapters);
+    renderUeberblick(chapters);
+  }
+  function getDragAfterElement(container, y, selector){
+    var els = Array.prototype.slice.call(container.querySelectorAll(selector + ':not(.dragging)'));
+    var closest = { offset: -Infinity, element: null };
+    els.forEach(function(child){
+      var box = child.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if(offset < 0 && offset > closest.offset){ closest = { offset: offset, element: child }; }
+    });
+    return closest.element;
+  }
+  function renderUeberblick(chapters){
+    var container = document.getElementById('ueberblickList');
+    if(!container){ return; }
+    if(!chapters){ chapters = getChaptersData(); }
+    if(!chapters.length){
+      container.innerHTML = '<p class="step-intro">Noch keine Kapitel angelegt – geh zurück zu Schritt 1 und lege mindestens ein Kapitel an.</p>';
+      return;
+    }
+    var html = chapters.map(function(ch, ci){
+      var subsHtml = ch.subs.map(function(s, si){
+        return '<div class="ueb-sub" draggable="true">' +
+          '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿</span>' +
+          '<span class="ueb-sub-num">' + (ci + 1) + '.' + (si + 1) + '</span>' +
+          '<input type="text" class="ueb-sub-input" value="' + escapeHtml(s) + '" placeholder="Unterkapitel-Titel">' +
+        '</div>';
+      }).join('') || '<p class="ueb-empty-hint">Noch keine Unterkapitel – in Schritt 1 ergänzen.</p>';
+      var collapsedClass = ch.collapsed ? ' collapsed' : '';
+      var toggleSymbol = ch.collapsed ? '▸' : '▾';
+      return '<div class="ueb-chapter' + collapsedClass + '" draggable="true">' +
+        '<div class="ueb-chapter-head">' +
+          '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿⠿</span>' +
+          '<button class="ueb-toggle" type="button">' + toggleSymbol + '</button>' +
+          '<span class="ueb-chapter-num">Kapitel ' + (ci + 1) + '</span>' +
+          '<input type="text" class="ueb-chapter-input" value="' + escapeHtml(ch.title) + '" placeholder="Kapitel-Titel">' +
+        '</div>' +
+        '<div class="ueb-subs">' + subsHtml + '</div>' +
+      '</div>';
+    }).join('');
+    container.innerHTML = html;
+    wireUeberblickEvents();
+  }
+  function wireUeberblickEvents(){
+    var listEl = document.getElementById('ueberblickList');
+    if(!listEl){ return; }
+
+    listEl.querySelectorAll('.ueb-toggle').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var chEl = btn.closest('.ueb-chapter');
+        chEl.classList.toggle('collapsed');
+        btn.textContent = chEl.classList.contains('collapsed') ? '▸' : '▾';
+      });
+    });
+
+    listEl.querySelectorAll('.ueb-chapter-input, .ueb-sub-input').forEach(function(inp){
+      inp.addEventListener('input', handleOverviewEdit);
+    });
+
+    // Ganze Kapitel per Drag&Drop umsortieren
+    listEl.querySelectorAll('.ueb-chapter').forEach(function(chEl){
+      chEl.addEventListener('dragstart', function(e){
+        chEl.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+      });
+      chEl.addEventListener('dragend', function(){
+        chEl.classList.remove('dragging');
+        handleOverviewReorder();
+      });
+    });
+    listEl.addEventListener('dragover', function(e){
+      var draggingChapter = listEl.querySelector('.ueb-chapter.dragging');
+      if(!draggingChapter){ return; }
+      e.preventDefault();
+      var after = getDragAfterElement(listEl, e.clientY, '.ueb-chapter');
+      if(after == null){ listEl.appendChild(draggingChapter); }
+      else{ listEl.insertBefore(draggingChapter, after); }
+    });
+
+    // Unterkapitel innerhalb ihres Kapitels per Drag&Drop umsortieren
+    listEl.querySelectorAll('.ueb-subs').forEach(function(subsEl){
+      subsEl.querySelectorAll('.ueb-sub').forEach(function(subEl){
+        subEl.addEventListener('dragstart', function(e){
+          e.stopPropagation();
+          subEl.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', '');
+        });
+        subEl.addEventListener('dragend', function(e){
+          e.stopPropagation();
+          subEl.classList.remove('dragging');
+          handleOverviewReorder();
+        });
+      });
+      subsEl.addEventListener('dragover', function(e){
+        var draggingSub = subsEl.querySelector('.ueb-sub.dragging');
+        if(!draggingSub){ return; }
+        e.preventDefault();
+        e.stopPropagation();
+        var after = getDragAfterElement(subsEl, e.clientY, '.ueb-sub');
+        if(after == null){ subsEl.appendChild(draggingSub); }
+        else{ subsEl.insertBefore(draggingSub, after); }
+      });
+    });
   }
   function addCardRow(frage, antwort, kapitelText){
     var container = document.getElementById('cardRows');
@@ -2663,7 +2940,9 @@ initAskBoxes();
   function addTutRow(){
     var container = document.getElementById('tutRows');
     var wrap = document.createElement('div');
-    wrap.innerHTML = '<div class="repeat-row"><button class="rm" type="button">✕</button>' +
+    wrap.innerHTML = '<div class="repeat-row">' +
+      '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
+      '<div class="summary-line"></div>' +
       '<div class="field"><label>Tutoriumsblatt</label><input type="text" placeholder="z. B. Tutorium 2 – Netzplantechnik"></div>' +
       '<div class="field"><label>Lösungsweg</label><textarea placeholder="Eigener Lösungsweg …"></textarea></div></div>';
     var row = wrap.firstElementChild;
@@ -2731,6 +3010,7 @@ initAskBoxes();
   if(addZusatzModulBtn){ addZusatzModulBtn.addEventListener('click', function(){ addZusatzModul(); }); }
 
   document.getElementById('addChapterBtn').addEventListener('click', addChapterRow);
+  renumberChapterLabels();
   document.getElementById('addCardBtn').addEventListener('click', function(){
     var ctx = document.getElementById('kkKapitelSelect');
     addCardRow('', '', ctx ? ctx.value : null);
@@ -2805,6 +3085,7 @@ initAskBoxes();
     var html = '';
     titles.forEach(function(title, i){
       var unlocked = (i === 0) || (chapterStatuses[i-1] === 'freigegeben');
+      if(unlocked && chapterStatuses[i] === 'gesperrt'){ chapterStatuses[i] = 'offen'; }
       var st = unlocked ? chapterStatuses[i] : 'gesperrt';
       chapterStatuses[i] = st;
       var statusHtml, btnHtml = '';
@@ -2937,6 +3218,7 @@ initAskBoxes();
   function collectState(){
     saveCurrentZfFields();
     return {
+      hochschule: (document.getElementById('cHochschule')||{}).value || '',
       fach: (document.getElementById('cFach')||{}).value || '',
       prof: (document.getElementById('cProf')||{}).value || '',
       studiengang: (document.getElementById('cStudiengang')||{}).value || '',
@@ -2955,6 +3237,7 @@ initAskBoxes();
   }
   function restoreState(state){
     if(!state){ return; }
+    if(document.getElementById('cHochschule') && state.hochschule){ document.getElementById('cHochschule').value = state.hochschule; }
     if(document.getElementById('cFach')){ document.getElementById('cFach').value = state.fach || ''; }
     if(document.getElementById('cProf')){ document.getElementById('cProf').value = state.prof || ''; }
     if(document.getElementById('cStudiengang') && state.studiengang){ document.getElementById('cStudiengang').value = state.studiengang; }
@@ -2963,6 +3246,7 @@ initAskBoxes();
 
     ensureRowCount('chapterRows', (state.chapters||[]).length, addChapterRow);
     fillRows('chapterRows', state.chapters);
+    renumberChapterLabels();
     refreshAllKapitelSelects();
 
     ensureRowCount('cardRows', (state.cards||[]).length, function(){ addCardRow('', '', null); });
