@@ -369,12 +369,7 @@ ul.plain li{margin-bottom:5px;}
     <div class="portal-brand">Klausur<span>fuchs</span></div>
     <h1>Für welche Hochschule lernst du?</h1>
     <p class="lede">Wähle deine Hochschule, um alle verfügbaren Fach-Kurse zu sehen – erstellt von Studierenden, die die jeweilige Klausur mit Bestnote bestanden haben.</p>
-    <div class="uni-grid">
-      <div class="uni-card" data-goto-view="view-subjects"><span class="badge">18 Fächer</span><h3>HWG Ludwigshafen</h3><p>Hochschule für Wirtschaft und Gesellschaft</p></div>
-      <div class="uni-card soon"><span class="badge">Bald</span><h3>FH Frankfurt</h3><p>Frankfurt University of Applied Sciences</p></div>
-      <div class="uni-card soon"><span class="badge">Bald</span><h3>Hochschule Mainz</h3><p>Hochschule Mainz</p></div>
-      <div class="uni-card soon"><span class="badge">Bald</span><h3>Deine Hochschule?</h3><p>Werde selbst Creator und starte den ersten Kurs.</p></div>
-    </div>
+    <div class="uni-grid" id="uniGrid"></div>
   </div>
 </div>
 
@@ -419,51 +414,21 @@ ul.plain li{margin-bottom:5px;}
   </div>
 </div>
 
-<!-- ANSICHT: FÄCHERLISTE HWG -->
+<!-- ANSICHT: FÄCHERLISTE -->
 <div class="view" id="view-subjects">
   <div class="portal">
     <button class="back-link" data-goto-view="view-landing">‹ Andere Hochschule wählen</button>
     <div class="subject-head">
       <div>
         <div class="portal-brand">Klausur<span>fuchs</span></div>
-        <h1>HWG Ludwigshafen</h1>
+        <h1 id="subjectsHochschuleTitle">HWG Ludwigshafen</h1>
       </div>
       <button class="creator-cta" id="creatorEntryBtn" data-goto-view="view-creator-intro">✦ Creator werden<span class="entry-badge" id="creatorEntryBadge" style="display:none"></span></button>
     </div>
     <p class="lede">Alle verfügbaren Fach-Kurse. Nach Name, Professor oder Studiengang suchen. Dein Fach ist noch nicht dabei? Werde Creator und bau den ersten Kurs dafür.</p>
     <div class="search-row"><input type="text" id="subjectSearch" placeholder="Fach oder Professor suchen, z. B. „Koch“ oder „Statistik“…"></div>
-    <div class="filter-chips" id="studiengangChips">
-      <button class="on" data-sg="alle">Alle Studiengänge</button>
-      <button data-sg="biw">Betriebswirtschaft</button>
-      <button data-sg="wi">Wirtschaftsinformatik</button>
-      <button data-sg="wing">Wirtschaftsingenieurwesen</button>
-    </div>
-    <div id="subjectList">
-      <div class="subject-row" data-goto-view="view-course" data-sg="biw wi wing" data-name="projektmanagement koch">
-        <div class="info">
-          <h3>Projektmanagement — Prof. Koch</h3><p>Netzplantechnik, Scrum, Risiko, Kalkulation</p>
-          <div class="fach-progress"><div class="bar" style="background:var(--line)"><i id="fachBarPM" style="width:0%"></i></div></div>
-          <p style="font-size:11px; color:var(--muted); margin-top:4px" id="fachPctPM">0 % bearbeitet</p>
-        </div>
-        <span class="meta">3. Semester</span>
-      </div>
-      <div class="subject-row" data-sg="biw wi" data-name="mathematik statistik weber">
-        <div class="info"><h3>Mathematik mit Statistik A — Prof. Weber</h3><p>Analysis, Wahrscheinlichkeitstheorie</p></div>
-        <span class="meta">1. Semester</span>
-      </div>
-      <div class="subject-row" data-sg="wi wing" data-name="ifrs schmidt buchführung">
-        <div class="info"><h3>IFRS / Bilanzierung — Prof. Schmidt</h3><p>Internationale Rechnungslegung</p></div>
-        <span class="meta">4. Semester</span>
-      </div>
-      <div class="subject-row" data-sg="wi" data-name="datenbanken wagner">
-        <div class="info"><h3>Datenbanken — Prof. Wagner</h3><p>SQL, Normalisierung, ER-Modelle</p></div>
-        <span class="meta">3. Semester</span>
-      </div>
-      <div class="subject-row" data-sg="wing" data-name="mechanik technische hartung">
-        <div class="info"><h3>Technische Mechanik — Prof. Hartung</h3><p>Statik, Festigkeitslehre</p></div>
-        <span class="meta">2. Semester</span>
-      </div>
-    </div>
+    <div class="filter-chips" id="studiengangChips"></div>
+    <div id="subjectList"></div>
     <p class="no-results" id="noResults" style="display:none">Kein Fach gefunden. <a href="#" data-goto-view="view-creator-intro" style="font-weight:600">Sei der Erste und werde Creator für dieses Fach ›</a></p>
   </div>
 </div>
@@ -514,13 +479,10 @@ ul.plain li{margin-bottom:5px;}
     </div>
     <div id="duplicateCheckBox" style="display:none"></div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" style="position:relative">
         <label>Studiengang</label>
-        <select id="cStudiengang">
-          <option>Betriebswirtschaft</option>
-          <option>Wirtschaftsinformatik</option>
-          <option>Wirtschaftsingenieurwesen</option>
-        </select>
+        <input type="text" id="cStudiengang" placeholder="z. B. Betriebswirtschaft" autocomplete="off">
+        <div id="studiengangSuggestions" class="hs-suggestions" style="display:none"></div>
       </div>
       <div class="field">
         <label>Semester der Klausur</label>
@@ -2050,7 +2012,11 @@ function showView(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
-  if(id === 'view-subjects' && typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
+  if(id === 'view-landing' && typeof window.renderUniGrid === 'function'){ window.renderUniGrid(); }
+  if(id === 'view-subjects'){
+    if(typeof window.renderSubjectsForHochschule === 'function'){ window.renderSubjectsForHochschule(); }
+    if(typeof window.refreshCreatorEntryPoint === 'function'){ window.refreshCreatorEntryPoint(); }
+  }
   if(id === 'view-creator-wizard' && typeof window.markCreatorSeen === 'function'){ window.markCreatorSeen(); }
   if(id === 'view-my-courses' && typeof window.renderMyCourses === 'function'){ window.renderMyCourses(); }
 }
@@ -2271,6 +2237,83 @@ function escapeHtmlMy(s){ return String(s==null?'':s).replace(/&/g,'&amp;').repl
     showView(goto);
   }
 })();
+/* =========================================================
+   KATALOG (Mockup einer späteren Datenbank)
+   Hält Hochschulen/Fächer/Studiengänge; generiert Hochschul-
+   Kacheln, Studiengang-Chips und Fächerliste dynamisch statt
+   aus fest codierten Listen — bereit für Supabase-Anbindung.
+   ========================================================= */
+window.KFCatalog = (function(){
+  var seedCourses = [
+    { title:'Projektmanagement', prof:'Prof. Koch', hochschule:'HWG Ludwigshafen', sg:['Betriebswirtschaft','Wirtschaftsinformatik','Wirtschaftsingenieurwesen'], semester:'3. Semester', desc:'Netzplantechnik, Scrum, Risiko, Kalkulation' },
+    { title:'Mathematik mit Statistik A', prof:'Prof. Weber', hochschule:'HWG Ludwigshafen', sg:['Betriebswirtschaft','Wirtschaftsinformatik'], semester:'1. Semester', desc:'Analysis, Wahrscheinlichkeitstheorie' },
+    { title:'IFRS / Bilanzierung', prof:'Prof. Schmidt', hochschule:'HWG Ludwigshafen', sg:['Wirtschaftsinformatik','Wirtschaftsingenieurwesen'], semester:'4. Semester', desc:'Internationale Rechnungslegung' },
+    { title:'Datenbanken', prof:'Prof. Wagner', hochschule:'HWG Ludwigshafen', sg:['Wirtschaftsinformatik'], semester:'3. Semester', desc:'SQL, Normalisierung, ER-Modelle' },
+    { title:'Technische Mechanik', prof:'Prof. Hartung', hochschule:'HWG Ludwigshafen', sg:['Wirtschaftsingenieurwesen'], semester:'2. Semester', desc:'Statik, Festigkeitslehre' }
+  ];
+  var comingSoon = [
+    { hochschule:'FH Frankfurt', full:'Frankfurt University of Applied Sciences' }
+  ];
+  function draftAsCourse(){
+    try{
+      var d = JSON.parse(localStorage.getItem('klausurfuchs_creator_draft'));
+      if(d && d.fach && d.hochschule){
+        return { title:d.fach, prof:d.prof||'', hochschule:d.hochschule, sg:d.studiengang ? [d.studiengang] : [], semester:d.semester||'', desc:'', isDraft:true };
+      }
+    }catch(e){}
+    return null;
+  }
+  function getAllCourses(){
+    var list = seedCourses.slice();
+    var d = draftAsCourse();
+    if(d && !list.some(function(c){ return c.hochschule===d.hochschule && c.title.toLowerCase()===d.title.toLowerCase(); })){ list.push(d); }
+    return list;
+  }
+  function getHochschulen(){
+    var map = {};
+    getAllCourses().forEach(function(c){
+      if(!map[c.hochschule]){ map[c.hochschule] = { name:c.hochschule, count:0 }; }
+      map[c.hochschule].count++;
+    });
+    var active = Object.keys(map).map(function(k){ return map[k]; });
+    comingSoon.forEach(function(cs){
+      if(!map[cs.hochschule]){ active.push({ name:cs.hochschule, count:0, soon:true, full:cs.full }); }
+    });
+    return active;
+  }
+  function getSubjectsFor(hochschule){
+    return getAllCourses().filter(function(c){ return c.hochschule === hochschule; });
+  }
+  function getStudiengaengeFor(hochschule){
+    var set = {};
+    getSubjectsFor(hochschule).forEach(function(c){ (c.sg||[]).forEach(function(s){ set[s]=true; }); });
+    return Object.keys(set);
+  }
+  return { getAllCourses:getAllCourses, getHochschulen:getHochschulen, getSubjectsFor:getSubjectsFor, getStudiengaengeFor:getStudiengaengeFor };
+})();
+
+window.currentHochschule = 'HWG Ludwigshafen';
+
+window.renderUniGrid = function(){
+  var grid = document.getElementById('uniGrid');
+  if(!grid){ return; }
+  var list = window.KFCatalog.getHochschulen();
+  var html = list.map(function(h){
+    if(h.soon){
+      return '<div class="uni-card soon"><span class="badge">Bald</span><h3>'+escapeHtmlMy(h.name)+'</h3><p>'+escapeHtmlMy(h.full||h.name)+'</p></div>';
+    }
+    return '<div class="uni-card" data-hochschule="'+escapeHtmlMy(h.name)+'"><span class="badge">'+h.count+' Fach'+(h.count===1?'':'-Kurse')+'</span><h3>'+escapeHtmlMy(h.name)+'</h3><p>Verfügbare Kurse ansehen</p></div>';
+  }).join('');
+  html += '<a href="index.html?goto=view-creator-intro" class="uni-card" style="text-decoration:none;color:inherit;border-style:dashed;border-color:var(--accent)"><span class="badge" style="background:var(--accent-soft);color:var(--accent)">Neu</span><h3>Deine Hochschule?</h3><p>Werde selbst Creator und starte den ersten Kurs.</p></a>';
+  grid.innerHTML = html;
+  grid.querySelectorAll('[data-hochschule]').forEach(function(card){
+    card.addEventListener('click', function(){
+      window.currentHochschule = card.dataset.hochschule;
+      showView('view-subjects');
+    });
+  });
+};
+
 var searchInput = document.getElementById('subjectSearch');
 var sgSel = 'alle';
 function filterSubjects(){
@@ -2286,12 +2329,52 @@ function filterSubjects(){
   document.getElementById('noResults').style.display = any ? 'none' : 'block';
 }
 searchInput.addEventListener('input', filterSubjects);
-document.querySelectorAll('#studiengangChips button').forEach(function(c){
-  c.addEventListener('click', function(){
-    document.querySelectorAll('#studiengangChips button').forEach(function(x){ x.classList.remove('on'); });
-    c.classList.add('on'); sgSel = c.dataset.sg; filterSubjects();
-  });
-});
+window.renderUniGrid();
+
+window.renderSubjectsForHochschule = function(){
+  var hochschule = window.currentHochschule || 'HWG Ludwigshafen';
+  var titleEl = document.getElementById('subjectsHochschuleTitle');
+  if(titleEl){ titleEl.textContent = hochschule; }
+
+  var studiengaenge = window.KFCatalog.getStudiengaengeFor(hochschule);
+  var chipsBox = document.getElementById('studiengangChips');
+  sgSel = 'alle';
+  if(chipsBox){
+    var chipHtml = '<button class="on" data-sg="alle">Alle Studiengänge</button>';
+    studiengaenge.forEach(function(sg){
+      chipHtml += '<button data-sg="'+escapeHtmlMy(sg)+'">'+escapeHtmlMy(sg)+'</button>';
+    });
+    chipsBox.innerHTML = chipHtml;
+    chipsBox.querySelectorAll('button').forEach(function(c){
+      c.addEventListener('click', function(){
+        chipsBox.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+        c.classList.add('on'); sgSel = c.dataset.sg; filterSubjects();
+      });
+    });
+  }
+
+  var subjects = window.KFCatalog.getSubjectsFor(hochschule);
+  var listBox = document.getElementById('subjectList');
+  if(listBox){
+    listBox.innerHTML = subjects.map(function(s){
+      var isPM = s.title === 'Projektmanagement' && hochschule === 'HWG Ludwigshafen';
+      var progressHtml = isPM
+        ? '<div class="fach-progress"><div class="bar" style="background:var(--line)"><i id="fachBarPM" style="width:0%"></i></div></div><p style="font-size:11px; color:var(--muted); margin-top:4px" id="fachPctPM">0 % bearbeitet</p>'
+        : '';
+      var gotoAttr = isPM ? ' data-goto-view="view-course"' : '';
+      var nameAttr = (s.title + ' ' + s.prof).toLowerCase();
+      var sgAttr = (s.sg||[]).join(' ');
+      return '<div class="subject-row"'+gotoAttr+' data-sg="'+escapeHtmlMy(sgAttr)+'" data-name="'+escapeHtmlMy(nameAttr)+'">'+
+        '<div class="info"><h3>'+escapeHtmlMy(s.title)+(s.prof ? ' — '+escapeHtmlMy(s.prof) : '')+'</h3><p>'+escapeHtmlMy(s.desc||(s.isDraft ? 'Im Aufbau durch einen Creator' : ''))+'</p>'+progressHtml+'</div>'+
+        '<span class="meta">'+escapeHtmlMy(s.semester||'')+'</span></div>';
+    }).join('');
+    listBox.querySelectorAll('[data-goto-view]').forEach(function(el){
+      el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
+    });
+  }
+  filterSubjects();
+};
+
 document.querySelectorAll('.nav-btn').forEach(function(btn){
   btn.addEventListener('click', function(){ showPage(btn.dataset.page); });
 });
@@ -2817,6 +2900,74 @@ initAskBoxes();
     hsInput.addEventListener('blur', function(){
       setTimeout(function(){
         var box = document.getElementById('hochschuleSuggestions');
+        if(box){ box.style.display = 'none'; }
+      }, 150);
+    });
+  }
+
+  /* ---- Studiengang-Autocomplete (verhindert BWL vs. Betriebswirtschaft als getrennte Studiengänge) ---- */
+  var studiengaengeDB = [
+    { name: 'Betriebswirtschaft', aliases: ['BWL', 'Betriebswirtschaftslehre'] },
+    { name: 'Wirtschaftsinformatik', aliases: ['WI'] },
+    { name: 'Wirtschaftsingenieurwesen', aliases: ['WING'] },
+    { name: 'Maschinenbau', aliases: [] },
+    { name: 'Elektrotechnik', aliases: ['E-Technik'] },
+    { name: 'Informatik', aliases: ['Angewandte Informatik'] },
+    { name: 'International Business', aliases: ['IB'] },
+    { name: 'Marketing', aliases: [] },
+    { name: 'Wirtschaftsrecht', aliases: [] },
+    { name: 'Bauingenieurwesen', aliases: ['Bauwesen'] },
+    { name: 'Soziale Arbeit', aliases: ['Sozialwesen'] },
+    { name: 'Gesundheitsmanagement', aliases: [] },
+    { name: 'Logistikmanagement', aliases: ['Logistik'] },
+    { name: 'Controlling', aliases: [] },
+    { name: 'Finance', aliases: ['Finanzmanagement'] }
+  ];
+
+  function matchStudiengaenge(query){
+    var q = normalizeHs(query);
+    if(!q){ return []; }
+    var scored = [];
+    studiengaengeDB.forEach(function(s){
+      var candidates = [s.name].concat(s.aliases || []);
+      var bestIdx = -1;
+      candidates.forEach(function(c){
+        var idx = normalizeHs(c).indexOf(q);
+        if(idx !== -1 && (bestIdx === -1 || idx < bestIdx)){ bestIdx = idx; }
+      });
+      if(bestIdx !== -1){ scored.push({ s: s, score: bestIdx }); }
+    });
+    scored.sort(function(a, b){ return a.score - b.score; });
+    return scored.map(function(x){ return x.s; }).slice(0, 6);
+  }
+
+  function renderSgSuggestions(matches){
+    var box = document.getElementById('studiengangSuggestions');
+    if(!box){ return; }
+    if(!matches.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.innerHTML = matches.map(function(s){
+      var aliasHtml = s.aliases && s.aliases.length ? '<span class="hs-alias">' + escapeHtml(s.aliases[0]) + '</span>' : '';
+      return '<div class="hs-suggestion" data-name="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + aliasHtml + '</div>';
+    }).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('.hs-suggestion').forEach(function(item){
+      item.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        var inp = document.getElementById('cStudiengang');
+        if(inp){ inp.value = item.dataset.name; }
+        box.style.display = 'none';
+        box.innerHTML = '';
+      });
+    });
+  }
+
+  var sgInput = document.getElementById('cStudiengang');
+  if(sgInput){
+    sgInput.addEventListener('input', function(){ renderSgSuggestions(matchStudiengaenge(sgInput.value)); });
+    sgInput.addEventListener('focus', function(){ renderSgSuggestions(matchStudiengaenge(sgInput.value)); });
+    sgInput.addEventListener('blur', function(){
+      setTimeout(function(){
+        var box = document.getElementById('studiengangSuggestions');
         if(box){ box.style.display = 'none'; }
       }, 150);
     });
