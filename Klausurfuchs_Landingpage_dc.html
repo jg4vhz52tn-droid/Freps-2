@@ -27,7 +27,8 @@ a:hover{color:#256A5E}
   .quality-grid{grid-template-columns:1fr !important}
   .creator-grid{grid-template-columns:1fr !important;gap:32px !important}
   .section-pad{padding-top:44px !important;padding-bottom:44px !important}
-  .tabs-row{flex-wrap:wrap !important}
+  .demo-layout{flex-direction:column !important}
+  .demo-layout > div:first-child{width:100% !important;flex-direction:row !important;flex-wrap:wrap !important}
   h2{font-size:23px !important}
 }
 @media (max-width:420px){
@@ -211,46 +212,176 @@ a:hover{color:#256A5E}
 
 <div style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,44px)">
 
-<!-- EXAMPLE PREVIEW -->
+<!-- DEMO PREVIEW -->
 <section class="section-pad" style="padding:88px 0">
-  <div style="margin-bottom:36px;max-width:640px">
-    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Der erste Kurs</div>
-    <h2 style="font-size:28px;font-weight:700;margin-bottom:10px">Projektmanagement &mdash; Prof. Koch, HWG Ludwigshafen</h2>
-    <p style="font-size:15px;color:#6B7280">Der Pilotkurs zeigt, wie es funktioniert: Netzplantechnik, Scrum, Risiko und Kalkulation &mdash; in Kapitel gegliedert und mit allen sieben Bausteinen.</p>
+  <div style="margin-bottom:32px;max-width:640px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2D7D6F;margin-bottom:8px">Zum Ausprobieren</div>
+    <h2 style="font-size:28px;font-weight:700;margin-bottom:10px">So sieht's im Kurs aus</h2>
+    <p style="font-size:15px;color:#6B7280">Ein Ausschnitt aus dem Pilotkurs Projektmanagement bei Prof. Koch — klick dich durch die Bausteine.</p>
   </div>
 
   <div style="background:#fff;border:1px solid #E3E1DA;border-radius:14px;overflow:hidden">
-    <div class="tabs-row" style="display:flex;gap:4px;padding:14px 20px 0;border-bottom:1px solid #E3E1DA">
-      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
-        <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+    <div class="demo-layout" style="display:flex;align-items:stretch">
+    <div style="width:190px;flex-shrink:0;background:#1B2A41;padding:20px 12px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ sidebarNav }}" as="n" hint-placeholder-count="8">
+        <button onClick="{{ n.onClick }}" style="{{ n.style }}">{{ n.label }}</button>
       </sc-for>
     </div>
-    <div style="padding:26px">
-      <sc-if value="{{ showZsf }}" hint-placeholder-val="{{ true }}">
-        <div style="border-left:4px solid #2D7D6F;padding:14px 18px;background:#fff;border-radius:0 10px 10px 0;border:1px solid #E3E1DA;border-left-width:4px;margin-bottom:10px">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#2D7D6F;margin-bottom:6px">Merke</div>
-          <p style="font-size:14px;color:#1B2A41">Das magische Dreieck (Zeit, Kosten, Qualität) beschreibt die zentrale Zielspannung jedes Projekts &mdash; jede Änderung an einer Ecke wirkt auf die anderen beiden.</p>
+    <div style="flex:1;min-width:0;padding:26px">
+      <sc-if value="{{ showUebersicht }}" hint-placeholder-val="{{ true }}">
+        <p style="font-size:13px;color:#6B7280;margin-bottom:16px">Jeder Kurs zeigt dir auf einen Blick, wo du stehst — und wie viel von jedem Baustein du schon bearbeitet hast.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+          <sc-for list="{{ moduleOverview }}" as="m" hint-placeholder-count="4">
+            <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <div style="width:24px;height:24px;border-radius:6px;background:#2D7D6F;color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ m.letter }}</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">{{ m.title }}</div>
+                  <div style="font-size:11px;color:#6B7280">{{ m.meta }}</div>
+                </div>
+              </div>
+              <div style="height:6px;background:#E3E1DA;border-radius:3px;overflow:hidden;margin-bottom:5px"><div style="{{ m.barStyle }}"></div></div>
+              <div style="font-size:11px;color:#6B7280">{{ m.pct }} % bearbeitet</div>
+            </div>
+          </sc-for>
         </div>
-        <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">
-          <button onClick="{{ setAmpelBad }}" style="{{ ampelBadStyle }}">nicht verstanden</button>
-          <button onClick="{{ setAmpelMid }}" style="{{ ampelMidStyle }}">geht so</button>
-          <button onClick="{{ setAmpelOk }}" style="{{ ampelOkStyle }}">verstanden</button>
+        <div style="background:#E4F1EE;border-radius:8px;padding:10px 14px;font-size:12px;color:#256A5E">Alle Bausteine greifen ineinander: der Lernplan verweist auf konkrete Kapitel der Zusammenfassung, Karteikarten und Altklausuren — du musst dir nichts selbst zusammensuchen.</div>
+      </sc-if>
+      <sc-if value="{{ showLernplan }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#E4F1EE;border-radius:8px;padding:10px 14px;font-size:12px;color:#256A5E;margin-bottom:18px">📅 Jede Aufgabe kannst du dir direkt in deinen Kalender ziehen (Google, Outlook, Apple Kalender) — oder den ganzen Plan auf einmal exportieren.</div>
+        <sc-for list="{{ planWeeks }}" as="w" hint-placeholder-count="2">
+          <div style="margin-bottom:26px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:12px;flex-wrap:wrap">
+              <h3 style="font-size:16px;font-weight:600">{{ w.label }}</h3>
+              <span style="font-size:12px;color:#6B7280;background:#FAFAF7;border:1px solid #E3E1DA;padding:3px 10px;border-radius:20px;white-space:nowrap">{{ w.done }}/{{ w.total }} erledigt</span>
+            </div>
+            <p style="font-size:12px;color:#6B7280;margin-bottom:12px">{{ w.range }}</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ w.tasks }}" as="p" hint-placeholder-count="5">
+                <div onClick="{{ p.onClick }}" style="{{ p.rowStyle }}">
+                  <input type="checkbox" checked="{{ p.checked }}" readonly="{{ true }}" style="width:16px;height:16px;accent-color:#2D7D6F;flex-shrink:0;pointer-events:none">
+                  <span title="In den Kalender ziehen" style="cursor:grab;font-size:14px;flex-shrink:0">📅</span>
+                  <span style="font-size:12px;font-weight:600;color:#6B7280;min-width:60px;flex-shrink:0">{{ p.day }} {{ p.date }}</span>
+                  <span style="{{ p.taskStyle }}">{{ p.task }}</span>
+                  <span style="{{ p.tagStyle }}">{{ p.tag }}</span>
+                  <span style="font-size:12px;color:#6B7280;white-space:nowrap;flex-shrink:0">{{ p.dur }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ showZsf }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12px;color:#6B7280;margin-bottom:6px">Zusammenfassung / Kapitel 1</div>
+        <h3 style="font-size:20px;font-weight:700;margin-bottom:18px">Kapitel 1: Grundlagen <span style="font-weight:400;font-size:14px;color:#C0442E">— definitiv in der Klausur</span></h3>
+
+        <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">1.1 Projekt-Merkmale (DIN 69901)</p>
+        <div style="border-left:4px solid #2D7D6F;padding:14px 18px;background:#fff;border:1px solid #E3E1DA;border-left-width:4px;border-radius:0 10px 10px 0;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#2D7D6F;margin-bottom:6px">Definition</div>
+          <p style="font-size:14px;color:#1B2A41">Ein Projekt ist ein Vorhaben, das im Wesentlichen durch die Einmaligkeit der Bedingungen gekennzeichnet ist — mindestens 4 von 5 Merkmalen müssen zutreffen: Zielvorgabe, zeitliche Begrenzung, Einmaligkeit, projektspezifische Organisation, Komplexität.</p>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:22px">
+          <button onClick="{{ defBlock.setBad }}" style="{{ defBlock.badStyle }}">nicht verstanden</button>
+          <button onClick="{{ defBlock.setMid }}" style="{{ defBlock.midStyle }}">geht so</button>
+          <button onClick="{{ defBlock.setOk }}" style="{{ defBlock.okStyle }}">verstanden</button>
+        </div>
+
+        <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">1.2 Projektarten (Klassifizierung)</p>
+        <div style="background:#fff;border:1px solid #E3E1DA;border-radius:10px;padding:6px 16px;margin-bottom:10px;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <tr><th style="text-align:left;padding:8px 6px;color:#6B7280;font-weight:600;border-bottom:1px solid #E3E1DA">Kriterium</th><th style="text-align:left;padding:8px 6px;color:#6B7280;font-weight:600;border-bottom:1px solid #E3E1DA">Ausprägungen</th></tr>
+            <tr><td style="padding:8px 6px;border-bottom:1px solid #E3E1DA">Projektinhalt</td><td style="padding:8px 6px;border-bottom:1px solid #E3E1DA">Entwicklungs-, Forschungs-, Infrastrukturprojekt</td></tr>
+            <tr><td style="padding:8px 6px;border-bottom:1px solid #E3E1DA">Aufgabe</td><td style="padding:8px 6px;border-bottom:1px solid #E3E1DA">operativ (kurzfristig) vs. strategisch (langfristig)</td></tr>
+            <tr><td style="padding:8px 6px">International</td><td style="padding:8px 6px">Transfer-, Expansions-, Gemeinschaftsprojekte</td></tr>
+          </table>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button onClick="{{ tableBlock.setBad }}" style="{{ tableBlock.badStyle }}">nicht verstanden</button>
+          <button onClick="{{ tableBlock.setMid }}" style="{{ tableBlock.midStyle }}">geht so</button>
+          <button onClick="{{ tableBlock.setOk }}" style="{{ tableBlock.okStyle }}">verstanden</button>
         </div>
       </sc-if>
+      <sc-if value="{{ showTutorien }}" hint-placeholder-val="{{ false }}">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:14px">Tutorium 3 — Risikomanagement</h3>
+        <sc-for list="{{ tutorienItems }}" as="it" hint-placeholder-count="2">
+          <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:16px 18px;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:5px">{{ it.title }}</div>
+            <p style="font-size:14px;color:#1B2A41">{{ it.text }}</p>
+          </div>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ showUebungsaufgaben }}" hint-placeholder-val="{{ false }}">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:14px">Übungsaufgaben — Netzplantechnik</h3>
+        <sc-for list="{{ uebungsaufgabenItems }}" as="it" hint-placeholder-count="2">
+          <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:16px 18px;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:5px">{{ it.title }}</div>
+            <p style="font-size:14px;color:#1B2A41">{{ it.text }}</p>
+          </div>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ showMindmap }}" hint-placeholder-val="{{ false }}">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:14px">Mindmap — Projektmanagement</h3>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:#E4F1EE">
+            <span style="width:18px;height:18px;border-radius:5px;background:#2D7D6F;color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">M</span>
+            <span style="font-size:14px;font-weight:600">Projektorganisation</span>
+            <span style="font-size:11px;color:#6B7280;margin-left:auto">3 Unterpunkte</span>
+          </div>
+          <div style="margin-left:26px;border-left:2px solid #E3E1DA;padding-left:10px;display:flex;flex-direction:column;gap:4px">
+            <div style="padding:6px 10px;font-size:13px;color:#374151">Linienorganisation</div>
+            <div style="padding:6px 10px;font-size:13px;color:#374151">Matrixorganisation</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;margin-top:6px">
+            <span style="width:18px;height:18px;border-radius:5px;background:#E3E1DA;color:#6B7280;font-family:'Sora',sans-serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">M</span>
+            <span style="font-size:14px;font-weight:600;color:#1B2A41">Risikomanagement</span>
+            <span style="font-size:11px;color:#6B7280;margin-left:auto">4 Unterpunkte</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px">
+            <span style="width:18px;height:18px;border-radius:5px;background:#E3E1DA;color:#6B7280;font-family:'Sora',sans-serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">M</span>
+            <span style="font-size:14px;font-weight:600;color:#1B2A41">Projekterfolg</span>
+            <span style="font-size:11px;color:#6B7280;margin-left:auto">2 Unterpunkte</span>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#6B7280;margin-top:12px">Zum Aufklappen der Zweige anklicken — der gesamte Stoff auf einen Blick.</p>
+      </sc-if>
       <sc-if value="{{ showKk }}" hint-placeholder-val="{{ false }}">
-        <div onClick="{{ toggleFlip }}" style="{{ flashcardStyle }}">{{ flashcardText }}</div>
-        <p style="text-align:center;font-size:12px;color:#6B7280">Zum Umdrehen klicken</p>
+        <p style="font-size:13px;color:#6B7280;margin-bottom:14px">Beispielkarten aus dem Kurs — umdrehen, dann direkt bewerten. Deine Bewertung steuert, wie oft dir die Karte wieder vorgelegt wird.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ kkChips }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <button onClick="{{ exportAnki }}" style="font:inherit;font-size:12px;font-weight:600;border:1.5px dashed #2D7D6F;background:none;color:#2D7D6F;padding:6px 14px;border-radius:20px;cursor:pointer;white-space:nowrap">{{ ankiLabel }}</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+          <sc-for list="{{ flashcards }}" as="f" hint-placeholder-count="3">
+            <div>
+              <div onClick="{{ f.onClick }}" style="{{ f.cardStyle }}">{{ f.text }}</div>
+              <sc-if value="{{ f.showRating }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:5px;margin-top:8px">
+                  <button onClick="{{ f.setBad }}" style="{{ f.badStyle }}flex:1;padding:6px 4px">schlecht</button>
+                  <button onClick="{{ f.setMid }}" style="{{ f.midStyle }}flex:1;padding:6px 4px">geht so</button>
+                  <button onClick="{{ f.setOk }}" style="{{ f.okStyle }}flex:1;padding:6px 4px">gut</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
       </sc-if>
       <sc-if value="{{ showAk }}" hint-placeholder-val="{{ false }}">
         <div style="border-left:4px solid #C0442E;padding:12px 16px;background:#FCF3F1;border-radius:0 10px 10px 0;font-size:13px;color:#7A2E1E;margin-bottom:14px">
           <strong style="display:block;margin-bottom:3px;color:#C0442E">Original-Aufgabentexte nicht enthalten</strong>
           Nur der eigene Lösungsweg der Creator wird gezeigt.
         </div>
-        <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:16px 18px">
-          <div style="font-size:12px;color:#6B7280;margin-bottom:6px">Sommersemester 2024 &middot; Aufgabe 2 &middot; Netzplantechnik</div>
-          <p style="font-size:14px;color:#1B2A41">Eigener Lösungsweg: Vorwärts- und Rückwärtsrechnung zur Ermittlung des kritischen Pfads, inkl. Pufferzeiten je Vorgang.</p>
-        </div>
+        <sc-for list="{{ altklausurenItems }}" as="it" hint-placeholder-count="2">
+          <div style="background:#FAFAF7;border:1px solid #E3E1DA;border-radius:10px;padding:16px 18px;margin-bottom:10px">
+            <div style="font-size:12px;color:#6B7280;margin-bottom:6px">{{ it.meta }}</div>
+            <p style="font-size:14px;color:#1B2A41">{{ it.text }}</p>
+          </div>
+        </sc-for>
       </sc-if>
+    </div>
     </div>
   </div>
 </section>
@@ -302,7 +433,7 @@ a:hover{color:#256A5E}
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { openFaq: 0, activeTab: 'zsf', flipped: false, ampel: null };
+  state = { openFaq: 0, activeTab: 'uebersicht', planChecked: {}, flashState: {}, ampelMap: {}, kkChapter: 'alle', ankiExported: false };
 
   bausteine = [
     { letter: 'Z', title: 'Zusammenfassung', desc: 'In Kapitel gegliedert, mit Merke-Boxen.' },
@@ -329,25 +460,83 @@ class Component extends DCLogic {
     { q: 'Für welche Hochschulen gibt es das schon?', a: 'Aktuell HWG Ludwigshafen, weitere Hochschulen folgen — auch deine Hochschule kann als Nächstes dazukommen, wenn sich jemand als Creator meldet.' },
   ];
 
-  tabDefs = [
-    { key: 'zsf', label: 'Zusammenfassung' },
-    { key: 'kk', label: 'Karteikarten' },
-    { key: 'ak', label: 'Altklausuren' },
+  planWeeksData = [
+    {
+      label: 'Woche 1 — Grundlagen & Organisation', range: '25.08. – 29.08.',
+      tasks: [
+        { id: 'w1-di', day: 'Di', date: '25.08.', task: 'Kapitel 1 Grundlagen lesen (1.1–1.5)', dur: '40 min', tag: 'Zusammenfassung' },
+        { id: 'w1-mi', day: 'Mi', date: '26.08.', task: 'Karteikarten Kapitel 1 durchgehen', dur: '20 min', tag: 'Karteikarten' },
+        { id: 'w1-do', day: 'Do', date: '27.08.', task: 'Kapitel 2 Projektorganisation lesen', dur: '25 min', tag: 'Zusammenfassung' },
+        { id: 'w1-fr', day: 'Fr', date: '28.08.', task: 'Tutorium 1 – Projektorganisation durchgehen', dur: '30 min', tag: 'Tutorien' },
+        { id: 'w1-sa', day: 'Sa', date: '29.08.', task: 'Mindmap: Zweige 1 & 2 durchklicken', dur: '15 min', tag: 'Mindmap' },
+      ],
+    },
+    {
+      label: 'Woche 2 — Projektphasen (Kern der Klausur!)', range: '30.08. – 03.09.',
+      tasks: [
+        { id: 'w2-mo', day: 'Mo', date: '30.08.', task: 'Kapitel 3 Projektphasen lesen (3.1–3.3)', dur: '35 min', tag: 'Zusammenfassung' },
+        { id: 'w2-di', day: 'Di', date: '31.08.', task: 'Karteikarten Kapitel 2–3 wiederholen', dur: '20 min', tag: 'Karteikarten' },
+        { id: 'w2-mi', day: 'Mi', date: '01.09.', task: 'Übungsaufgabe zur Netzplantechnik lösen', dur: '30 min', tag: 'Übungsaufgaben' },
+        { id: 'w2-do', day: 'Do', date: '02.09.', task: 'Altklausur SoSe 2024 – Aufgabe 2 durcharbeiten', dur: '25 min', tag: 'Altklausuren' },
+        { id: 'w2-fr', day: 'Fr', date: '03.09.', task: 'Tutorium 2 – Scrum durchgehen', dur: '20 min', tag: 'Tutorien' },
+      ],
+    },
+  ];
+
+  flashcardsData = [
+    { id: 'f1', chapter: 'Kapitel 1', front: 'Was sind die vier DIN-69901-Kriterien für ein Projekt?', back: 'Zielvorgabe, zeitliche Begrenzung, Einmaligkeit, projektspezifische Organisation.' },
+    { id: 'f2', chapter: 'Kapitel 1', front: 'Was beschreibt das magische Dreieck im Projektmanagement?', back: 'Die Zielspannung zwischen Zeit, Kosten und Qualität — jede Änderung an einer Ecke wirkt auf die anderen beiden.' },
+    { id: 'f3', chapter: 'Kapitel 3', front: 'Was ist der kritische Pfad in der Netzplantechnik?', back: 'Die längste Kette zeitkritischer Vorgänge ohne Puffer — verzögert sich einer, verzögert sich das ganze Projekt.' },
+  ];
+
+  kkChapterDefs = ['alle', 'Kapitel 1', 'Kapitel 2', 'Kapitel 3'];
+
+  sidebarNavDefs = [
+    { label: 'Kursübersicht', tab: 'uebersicht' },
+    { label: 'Zusammenfassung', tab: 'zsf' },
+    { label: 'Tutorien', tab: 'tutorien' },
+    { label: 'Übungsaufgaben', tab: 'uebungsaufgaben' },
+    { label: 'Altklausuren', tab: 'ak' },
+    { label: 'Mindmap', tab: 'mindmap' },
+    { label: 'Karteikarten', tab: 'kk' },
+    { label: 'Lernpläne', tab: 'lernplan' },
+  ];
+
+  tutorienItems = [
+    { title: 'Aufgabe 1: Risikomatrix', text: 'Eigene Lösung: Risiken nach Eintrittswahrscheinlichkeit × Tragweite einordnen, z. B. Lieferverzug als "mittel/hoch".' },
+    { title: 'Aufgabe 2: Risikostrategien', text: 'Eigene Lösung: Vermeidung, Verminderung, Überwälzung, Selbsttragung – je mit Beispiel aus der Tutoriumsaufgabe zugeordnet.' },
+  ];
+
+  uebungsaufgabenItems = [
+    { title: 'Aufgabe 1: Vorwärtsrechnung', text: 'Eigener Lösungsweg: frühester Start/Ende je Vorgang von links nach rechts durch den Netzplan berechnet.' },
+    { title: 'Aufgabe 2: Pufferzeiten', text: 'Eigener Lösungsweg: Gesamt- und freien Puffer je Vorgang aus Vorwärts- und Rückwärtsrechnung ermittelt.' },
+  ];
+
+  altklausurenItems = [
+    { meta: 'Sommersemester 2024 · Aufgabe 2 · Netzplantechnik', text: 'Eigener Lösungsweg: Vorwärts- und Rückwärtsrechnung zur Ermittlung des kritischen Pfads, inkl. Pufferzeiten je Vorgang.' },
+    { meta: 'Wintersemester 2023/24 · Aufgabe 4 · Risikomanagement', text: 'Eigener Lösungsweg: Risiken identifiziert, in der Risikomatrix eingeordnet und je eine passende Strategie begründet.' },
+  ];
+
+  moduleOverview = [
+    { letter: 'Z', title: 'Zusammenfassung', meta: '12 Kapitel', pct: 60 },
+    { letter: 'K', title: 'Karteikarten', meta: '184 Karten', pct: 35 },
+    { letter: 'A', title: 'Altklausuren', meta: '7 Termine', pct: 15 },
+    { letter: 'L', title: 'Lernplan', meta: 'bis Klausurtermin', pct: 40 },
   ];
 
   toggleFaq(i) { this.setState(s => ({ openFaq: s.openFaq === i ? null : i })); }
   setTab(k) { this.setState({ activeTab: k }); }
+  togglePlan(id) { this.setState(s => ({ planChecked: { ...s.planChecked, [id]: !s.planChecked[id] } })); }
+  toggleFlash(id) { this.setState(s => ({ flashState: { ...s.flashState, [id]: { ...s.flashState[id], flipped: !(s.flashState[id] && s.flashState[id].flipped) } } })); }
+  setFlashRating(id, rating) { this.setState(s => ({ flashState: { ...s.flashState, [id]: { ...s.flashState[id], rating } } })); }
+  setAmpel(blockId, kind) { this.setState(s => ({ ampelMap: { ...s.ampelMap, [blockId]: kind } })); }
+  setKkChapter(c) { this.setState({ kkChapter: c }); }
+  exportAnki() { this.setState({ ankiExported: true }); }
 
   renderVals() {
     const active = this.state.activeTab;
-    const tabStyle = (k) => ({
-      background: k === active ? '#E4F1EE' : 'transparent',
-      color: k === active ? '#2D7D6F' : '#6B7280',
-      border: 'none', fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
-      padding: '10px 16px', borderRadius: '8px 8px 0 0', cursor: 'pointer',
-    });
-    const ampelStyle = (kind) => {
-      const sel = this.state.ampel === kind;
+    const ampelStyle = (blockId, kind) => {
+      const sel = (this.state.ampelMap[blockId]) === kind;
       const map = {
         ok: { bg: '#EAF3DE', border: '#97C459', color: '#3B6D11' },
         mid: { bg: '#FAF0DA', border: '#E8B44F', color: '#854F0B' },
@@ -358,6 +547,10 @@ class Component extends DCLogic {
         ? { background: c.bg, border: '1px solid ' + c.border, color: c.color, fontFamily: 'inherit', fontSize: '12px', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer' }
         : { background: '#fff', border: '1px solid #E3E1DA', color: '#6B7280', fontFamily: 'inherit', fontSize: '12px', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer' };
     };
+    const ampelRow = (blockId) => ({
+      okStyle: ampelStyle(blockId, 'ok'), midStyle: ampelStyle(blockId, 'mid'), badStyle: ampelStyle(blockId, 'bad'),
+      setOk: () => this.setAmpel(blockId, 'ok'), setMid: () => this.setAmpel(blockId, 'mid'), setBad: () => this.setAmpel(blockId, 'bad'),
+    });
 
     return {
       bausteine: this.bausteine,
@@ -366,26 +559,76 @@ class Component extends DCLogic {
         q: f.q, a: f.a, isOpen: this.state.openFaq === i, symbol: this.state.openFaq === i ? '–' : '+',
         onClick: () => this.toggleFaq(i),
       })),
-      tabs: this.tabDefs.map(t => ({ key: t.key, label: t.label, onClick: () => this.setTab(t.key), style: tabStyle(t.key) })),
+      moduleOverview: this.moduleOverview.map(m => ({ ...m, barStyle: { width: m.pct + '%', height: '100%', background: '#2D7D6F', borderRadius: '3px' } })),
+      sidebarNav: this.sidebarNavDefs.map(n => ({
+        label: n.label,
+        onClick: () => this.setTab(n.tab),
+        style: {
+          textAlign: 'left', width: '100%', font: 'inherit', fontSize: '13px', padding: '8px 10px', borderRadius: '7px',
+          border: 'none', cursor: 'pointer',
+          background: n.tab === active ? '#E4F1EE' : 'transparent',
+          color: n.tab === active ? '#2D7D6F' : '#D7DEE6',
+          fontWeight: n.tab === active ? 600 : 400,
+        },
+      })),
+      showUebersicht: active === 'uebersicht',
+      showLernplan: active === 'lernplan',
       showZsf: active === 'zsf',
       showKk: active === 'kk',
       showAk: active === 'ak',
-      flashcardStyle: {
-        background: this.state.flipped ? '#E4F1EE' : '#fff',
-        border: '1px solid ' + (this.state.flipped ? '#2D7D6F' : '#E3E1DA'),
-        borderRadius: '14px', minHeight: '140px', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', textAlign: 'center', padding: '28px', cursor: 'pointer',
-        fontSize: this.state.flipped ? '14px' : '16px', fontWeight: this.state.flipped ? 400 : 500,
-        marginBottom: '8px', userSelect: 'none',
-      },
-      flashcardText: this.state.flipped
-        ? 'Zielvorgabe, zeitliche Begrenzung, Einmaligkeit, projektspezifische Organisation.'
-        : 'Was sind die vier DIN-69901-Kriterien für ein Projekt?',
-      toggleFlip: () => this.setState(s => ({ flipped: !s.flipped })),
-      ampelOkStyle: ampelStyle('ok'), ampelMidStyle: ampelStyle('mid'), ampelBadStyle: ampelStyle('bad'),
-      setAmpelOk: () => this.setState({ ampel: 'ok' }),
-      setAmpelMid: () => this.setState({ ampel: 'mid' }),
-      setAmpelBad: () => this.setState({ ampel: 'bad' }),
+      showTutorien: active === 'tutorien',
+      showUebungsaufgaben: active === 'uebungsaufgaben',
+      showMindmap: active === 'mindmap',
+      tutorienItems: this.tutorienItems,
+      uebungsaufgabenItems: this.uebungsaufgabenItems,
+      altklausurenItems: this.altklausurenItems,
+      defBlock: ampelRow('def'),
+      tableBlock: ampelRow('table'),
+      planWeeks: this.planWeeksData.map(w => {
+        const tasks = w.tasks.map(t => {
+          const checked = !!this.state.planChecked[t.id];
+          return {
+            id: t.id, day: t.day, date: t.date, task: t.task, dur: t.dur, tag: t.tag, checked,
+            onClick: () => this.togglePlan(t.id),
+            rowStyle: { display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: checked ? '#EAF3DE' : '#fff', border: '1px solid ' + (checked ? '#97C459' : '#E3E1DA'), borderRadius: '12px', padding: '13px 16px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(27,42,65,.04)' },
+            taskStyle: { flex: 1, fontSize: '14px', textDecoration: checked ? 'line-through' : 'none', color: checked ? '#6B7280' : '#1B2A41' },
+            tagStyle: { fontSize: '11px', fontWeight: 600, color: '#2D7D6F', background: '#E4F1EE', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap', flexShrink: 0 },
+          };
+        });
+        const done = tasks.filter(t => t.checked).length;
+        return { label: w.label, range: w.range, tasks, done, total: tasks.length };
+      }),
+      kkChips: this.kkChapterDefs.map(c => ({
+        label: c === 'alle' ? 'Alle Kapitel' : c, key: c,
+        onClick: () => this.setKkChapter(c),
+        style: {
+          font: 'inherit', fontSize: '12px', border: '1px solid ' + (c === this.state.kkChapter ? '#2D7D6F' : '#E3E1DA'),
+          background: c === this.state.kkChapter ? '#2D7D6F' : '#fff', color: c === this.state.kkChapter ? '#fff' : '#6B7280',
+          padding: '5px 12px', borderRadius: '20px', cursor: 'pointer', fontWeight: c === this.state.kkChapter ? 600 : 400,
+        },
+      })),
+      ankiLabel: this.state.ankiExported ? '✓ Export bereit' : '⇩ Anki-Export',
+      exportAnki: () => this.exportAnki(),
+      flashcards: this.flashcardsData.filter(f => this.state.kkChapter === 'alle' || f.chapter === this.state.kkChapter).map(f => {
+        const fs = this.state.flashState[f.id] || {};
+        const flipped = !!fs.flipped;
+        return {
+          id: f.id, chapter: f.chapter, flipped, rating: fs.rating,
+          text: flipped ? f.back : f.front,
+          onClick: () => this.toggleFlash(f.id),
+          cardStyle: {
+            background: flipped ? '#E4F1EE' : '#fff', border: '1px solid ' + (flipped ? '#2D7D6F' : '#E3E1DA'),
+            borderRadius: '12px', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            textAlign: 'center', padding: '20px', cursor: 'pointer', fontSize: flipped ? '13px' : '14px',
+            fontWeight: flipped ? 400 : 500, userSelect: 'none',
+          },
+          showRating: flipped,
+          okStyle: ampelStyle('f-' + f.id, 'ok'), midStyle: ampelStyle('f-' + f.id, 'mid'), badStyle: ampelStyle('f-' + f.id, 'bad'),
+          setOk: (e) => { e.stopPropagation(); this.setAmpel('f-' + f.id, 'ok'); this.setFlashRating(f.id, 'ok'); },
+          setMid: (e) => { e.stopPropagation(); this.setAmpel('f-' + f.id, 'mid'); this.setFlashRating(f.id, 'mid'); },
+          setBad: (e) => { e.stopPropagation(); this.setAmpel('f-' + f.id, 'bad'); this.setFlashRating(f.id, 'bad'); },
+        };
+      }),
     };
   }
 }
