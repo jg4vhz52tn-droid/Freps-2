@@ -69,20 +69,15 @@ input:focus{outline:2px solid #2D7D6F;outline-offset:1px}
       </div>
       <p style="font-size:13px;color:#6B7280">Alle Hochschulen mit Klausurfuchs-Kursen durchsuchen</p>
     </a>
-    <div style="flex:1;min-width:220px;background:#fff;border:1.5px solid #2D7D6F;border-radius:12px;padding:18px 20px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px">
-        <h3 style="font-size:16px;font-weight:600">HWG Ludwigshafen</h3>
-        <span style="flex-shrink:0;font-size:11px;font-weight:600;background:#E4F1EE;color:#2D7D6F;padding:3px 10px;border-radius:20px;white-space:nowrap">{{ subjectCount }} Fächer</span>
+    <sc-for list="{{ uniCards }}" as="u" hint-placeholder-count="2">
+      <div style="{{ u.style }}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px">
+          <h3 style="font-size:16px;font-weight:600">{{ u.name }}</h3>
+          <span style="{{ u.badgeStyle }}">{{ u.badgeText }}</span>
+        </div>
+        <p style="font-size:13px;color:#6B7280">{{ u.subtitle }}</p>
       </div>
-      <p style="font-size:13px;color:#6B7280">Hochschule für Wirtschaft und Gesellschaft</p>
-    </div>
-    <div style="flex:1;min-width:220px;background:#fff;border:1px solid #E3E1DA;border-radius:12px;padding:18px 20px;opacity:.55">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px">
-        <h3 style="font-size:16px;font-weight:600">FH Frankfurt</h3>
-        <span style="flex-shrink:0;font-size:11px;font-weight:600;background:#F2F1EC;color:#6B7280;padding:3px 10px;border-radius:20px;white-space:nowrap">Bald</span>
-      </div>
-      <p style="font-size:13px;color:#6B7280">Frankfurt University of Applied Sciences</p>
-    </div>
+    </sc-for>
   </div>
 </section>
 
@@ -401,6 +396,26 @@ class Component extends DCLogic {
     { key: 'wing', label: 'Wirtschaftsingenieurwesen' },
   ];
 
+  /* Basis-Hochschulen (Prototyp-Datenbasis, entspricht der Fächerliste in index.html) */
+  hochschulenBase = [
+    { name: 'HWG Ludwigshafen', subtitle: 'Hochschule für Wirtschaft und Gesellschaft', count: 5 },
+  ];
+  hochschulenSoon = [
+    { name: 'FH Frankfurt', subtitle: 'Frankfurt University of Applied Sciences' },
+  ];
+
+  /* Liest den lokalen Creator-Entwurf (localStorage), um neu angelegte Hochschulen
+     sofort mit anzuzeigen — geteilter Speicher mit index.html/KFCatalog. */
+  getDraftHochschule() {
+    try {
+      var raw = window.localStorage.getItem('klausurfuchs_creator_draft');
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (d && d.fach && d.hochschule) { return d.hochschule; }
+    } catch (e) {}
+    return null;
+  }
+
   bausteine = [
     { letter: 'Z', title: 'Zusammenfassung', how: 'Führt dich Kapitel für Kapitel durch den Stoff und markiert per Merke-Box, was wirklich klausurrelevant ist — guter Einstieg, bevor du in die Details gehst.' },
     { letter: 'T', title: 'Tutorien', how: 'Eigene Lösungswege zu den Tutoriumsblättern zeigen dir, wie man die dort behandelten Aufgabentypen tatsächlich löst — nicht nur, was am Ende rauskommt.' },
@@ -454,7 +469,26 @@ class Component extends DCLogic {
       setOk: () => this.setAmpel(blockId, 'ok'), setMid: () => this.setAmpel(blockId, 'mid'), setBad: () => this.setAmpel(blockId, 'bad'),
     });
 
+    const draftHochschule = this.getDraftHochschule();
+    const cardStyle = (soon) => 'flex:1;min-width:220px;background:#fff;border:' + (soon ? '1px solid #E3E1DA' : '1.5px solid #2D7D6F') + ';border-radius:12px;padding:18px 20px;' + (soon ? 'opacity:.55' : '');
+    const badgeStyle = (soon) => 'flex-shrink:0;font-size:11px;font-weight:600;background:' + (soon ? '#F2F1EC' : '#E4F1EE') + ';color:' + (soon ? '#6B7280' : '#2D7D6F') + ';padding:3px 10px;border-radius:20px;white-space:nowrap';
+    let uniCards = this.hochschulenBase.map(h => ({
+      name: h.name, subtitle: h.subtitle, style: cardStyle(false), badgeStyle: badgeStyle(false),
+      badgeText: h.count + ' Fächer',
+    }));
+    this.hochschulenSoon.forEach(h => {
+      const nowActive = draftHochschule === h.name;
+      uniCards.push({
+        name: h.name, subtitle: h.subtitle, style: cardStyle(!nowActive), badgeStyle: badgeStyle(!nowActive),
+        badgeText: nowActive ? '1 Fach' : 'Bald',
+      });
+    });
+    if (draftHochschule && !uniCards.some(u => u.name === draftHochschule)) {
+      uniCards.push({ name: draftHochschule, subtitle: 'Neu von einem Creator angelegt', style: cardStyle(false), badgeStyle: badgeStyle(false), badgeText: '1 Fach' });
+    }
+
     return {
+      uniCards,
       subjectCount: this.subjects.length,
       search: this.state.search,
       onSearch: (e) => this.setSearch(e.target.value),
