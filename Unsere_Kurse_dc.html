@@ -472,20 +472,29 @@ class Component extends DCLogic {
     const draftHochschule = this.getDraftHochschule();
     const cardStyle = (soon) => 'flex:1;min-width:220px;background:#fff;border:' + (soon ? '1px solid #E3E1DA' : '1.5px solid #2D7D6F') + ';border-radius:12px;padding:18px 20px;' + (soon ? 'opacity:.55' : '');
     const badgeStyle = (soon) => 'flex-shrink:0;font-size:11px;font-weight:600;background:' + (soon ? '#F2F1EC' : '#E4F1EE') + ';color:' + (soon ? '#6B7280' : '#2D7D6F') + ';padding:3px 10px;border-radius:20px;white-space:nowrap';
-    let uniCards = this.hochschulenBase.map(h => ({
-      name: h.name, subtitle: h.subtitle, style: cardStyle(false), badgeStyle: badgeStyle(false),
-      badgeText: h.count + ' Fächer',
-    }));
+
+    /* Alle bekannten Hochschulen mit ihrer aktuellen Fächer-Anzahl zusammenführen */
+    let allHochschulen = this.hochschulenBase.map(h => ({ name: h.name, subtitle: h.subtitle, count: h.count }));
     this.hochschulenSoon.forEach(h => {
-      const nowActive = draftHochschule === h.name;
-      uniCards.push({
-        name: h.name, subtitle: h.subtitle, style: cardStyle(!nowActive), badgeStyle: badgeStyle(!nowActive),
-        badgeText: nowActive ? '1 Fach' : 'Bald',
-      });
+      const count = draftHochschule === h.name ? 1 : 0;
+      allHochschulen.push({ name: h.name, subtitle: h.subtitle, count });
     });
-    if (draftHochschule && !uniCards.some(u => u.name === draftHochschule)) {
-      uniCards.push({ name: draftHochschule, subtitle: 'Neu von einem Creator angelegt', style: cardStyle(false), badgeStyle: badgeStyle(false), badgeText: '1 Fach' });
+    if (draftHochschule && !allHochschulen.some(h => h.name === draftHochschule)) {
+      allHochschulen.push({ name: draftHochschule, subtitle: 'Neu von einem Creator angelegt', count: 1 });
     }
+
+    /* Nur die drei Hochschulen mit den meisten Kursen anzeigen, absteigend sortiert */
+    const uniCards = allHochschulen
+      .slice()
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+      .map(h => {
+        const soon = h.count === 0;
+        return {
+          name: h.name, subtitle: h.subtitle, style: cardStyle(soon), badgeStyle: badgeStyle(soon),
+          badgeText: soon ? 'Bald' : (h.count + (h.count === 1 ? ' Fach' : ' Fächer')),
+        };
+      });
 
     return {
       uniCards,
