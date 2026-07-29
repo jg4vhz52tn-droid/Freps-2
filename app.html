@@ -89,14 +89,14 @@ a{color:var(--accent);}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 .app-header{display:none; position:sticky; top:0; z-index:80; background:var(--ink); color:#E9EDF2;}
 .app-header.show{display:block;}
-.app-header-inner{max-width:1160px; margin:0 auto; padding:10px 20px; min-height:var(--header-h); display:flex; align-items:center; gap:16px 20px; flex-wrap:wrap;}
+.app-header-inner{padding:10px 24px; min-height:var(--header-h); display:flex; align-items:center; gap:16px 20px; flex-wrap:wrap;}
 .app-header-logo{font-family:'Sora',sans-serif; font-weight:700; font-size:17px; color:#fff; text-decoration:none; flex-shrink:0; cursor:pointer;}
 .app-header-logo span{color:var(--amber);}
 .app-header-nav{display:flex; align-items:center; gap:16px; flex:1; flex-wrap:wrap;}
 .app-header-nav a, .app-header-nav button.hdr-link{color:#D7DEE6; font-size:13.5px; text-decoration:none; background:none; border:none; font:inherit; font-size:13.5px; cursor:pointer; padding:0;}
 .app-header-nav a:hover, .app-header-nav button.hdr-link:hover{color:#fff;}
-.app-header-nav .hdr-btn{border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.06); color:#E9EDF2; font:inherit; font-size:12.5px; padding:6px 13px; border-radius:16px; cursor:pointer;}
-.app-header-nav .hdr-btn:hover{border-color:rgba(255,255,255,.5);}
+.app-header .hdr-btn{border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.06); color:#E9EDF2; font:inherit; font-size:12.5px; padding:6px 13px; border-radius:16px; cursor:pointer; text-decoration:none; display:inline-block;}
+.app-header .hdr-btn:hover{border-color:rgba(255,255,255,.5); color:#fff;}
 .app-header-user{display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0;}
 .app-header-email{font-size:12.5px; color:#9AA7B5; white-space:nowrap;}
 .app-header-role{font-size:11px; font-weight:600; color:#E9EDF2; border:1px solid rgba(255,255,255,.25); padding:3px 11px; border-radius:20px; white-space:nowrap;}
@@ -899,8 +899,8 @@ window.renderAppHeader = async function(){
   var roleLabel = session.isAdmin ? 'Admin' : (session.isReviewer ? 'Prüfer:in' : (mode === 'creator' ? 'Creator' : 'Lernende:r'));
   var userHtml = '<span class="app-header-email">' + escapeHtmlMy(session.email) + '</span>' +
     '<span class="app-header-role">' + escapeHtmlMy(roleLabel) + '</span>';
-  if(session.isReviewer){ userHtml += '<a href="Pruef-Dashboard.html">Prüf-Dashboard</a>'; }
-  if(session.isAdmin){ userHtml += '<a href="admin-dashboard.html">Admin-Dashboard</a>'; }
+  if(session.isReviewer){ userHtml += '<a href="Pruef-Dashboard.html" class="hdr-btn">Prüf-Dashboard</a>'; }
+  if(session.isAdmin){ userHtml += '<a href="admin-dashboard.html" class="hdr-btn">Admin-Dashboard</a>'; }
   userHtml += '<button type="button" class="hdr-btn" id="appHeaderLogoutBtn">Abmelden</button>';
   userEl.innerHTML = userHtml;
   var logoutBtnEl = document.getElementById('appHeaderLogoutBtn');
