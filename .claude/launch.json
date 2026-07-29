@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /Users/timlunau/Desktop/Freps-2-main && exec python3 .dev-server.py"],
+      "port": 8743
+    }
+  ]
+}
