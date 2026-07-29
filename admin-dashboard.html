@@ -64,7 +64,10 @@ a{color:var(--accent);}
 
 <div class="topbar">
   <div class="brand">Klausur<span>fuchs</span> · Admin-Dashboard</div>
-  <div class="role" id="topbarRole">Wird geladen …</div>
+  <div style="display:flex; align-items:center; gap:14px">
+    <a href="app.html?goto=view-my-courses" style="font-size:13px; color:#9AA7B5; text-decoration:none">‹ Zurück zur App</a>
+    <div class="role" id="topbarRole">Wird geladen …</div>
+  </div>
 </div>
 
 <div class="wrap" id="accessGate" style="display:none">
@@ -72,7 +75,7 @@ a{color:var(--accent);}
     <h1>Kein Zugriff</h1>
     <p>Dieses Dashboard ist nur für Ultra-Accounts.</p>
   </div>
-  <a href="index.html?goto=view-login" class="btn btn-approve" style="display:inline-block;text-decoration:none">Zur Anmeldung</a>
+  <a href="app.html?goto=view-login" class="btn btn-approve" style="display:inline-block;text-decoration:none">Zur Anmeldung</a>
 </div>
 
 <div class="wrap" id="mainWrap" style="display:none">
@@ -152,7 +155,7 @@ async function init(){
   var gate = document.getElementById('accessGate');
   var mainWrap = document.getElementById('mainWrap');
   if(!session){
-    window.location.href = 'index.html?goto=view-login';
+    window.location.href = 'app.html?goto=view-login';
     return;
   }
   if(!session.isAdmin){

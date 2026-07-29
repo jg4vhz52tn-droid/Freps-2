@@ -11,7 +11,7 @@ const DEVICE_TOKEN_KEY = "klausurfuchs_device_token";
 const OAUTH_CLAIM_PENDING_KEY = "klausurfuchs_oauth_claim_pending";
 
 // Single source of truth for which baustein types exist and their display
-// labels -- index.html and Pruef-Dashboard.html each used to keep their own
+// labels -- app.html and Pruef-Dashboard.html each used to keep their own
 // independent copy of this list, and a new baustein (lernplan) once shipped
 // in one copy but not the other. Both pages read window.KF_BAUSTEIN_LABELS
 // instead of keeping their own now; add a new baustein here once.
@@ -176,7 +176,7 @@ window.KFStore = (function () {
     " chapter_comments ( author, role, text, content_type, created_at )";
 
   // chapter_comments.role is stored as 'pruefer' in the DB; the existing UI
-  // code (Pruef-Dashboard.html, index.html) checks for the string 'reviewer',
+  // code (Pruef-Dashboard.html, app.html) checks for the string 'reviewer',
   // so that's translated back here to avoid touching every render call site.
   function mapChapterRow(row) {
     var comments = (row.chapter_comments || []).slice().sort(function (a, b) {
@@ -374,7 +374,7 @@ window.KFStore = (function () {
   // function expects, shared by the normal (supabase-js) and keepalive (raw
   // fetch) sync paths below -- chapterTitles: resolved chapter titles in
   // order (index = position). state: the object collectState() already
-  // builds in index.html.
+  // builds in app.html.
   function buildSyncPayload(courseId, chapterTitles, state) {
     var cards = state.cards || [];
     var uebungen = state.uebungen || [];
@@ -451,7 +451,7 @@ window.KFStore = (function () {
     } catch (e) { /* best effort -- localStorage already has the same state */ }
   }
 
-  // Rebuilds an object in exactly the shape restoreState() in index.html
+  // Rebuilds an object in exactly the shape restoreState() in app.html
   // already expects, so loading a course from the DB (e.g. via ?course=)
   // can reuse that function unchanged.
   async function loadCourseState(courseId) {
