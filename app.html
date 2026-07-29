@@ -1243,6 +1243,8 @@ async function renderMyCoursesCreator(session){
   return cards;
 }
 
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+
 function fmtPurchaseDate(iso){
   try{ var d = new Date(iso); return pad2(d.getDate())+'.'+pad2(d.getMonth()+1)+'.'+d.getFullYear(); }catch(e){ return ''; }
 }
@@ -3597,9 +3599,20 @@ window.renderSubjectsForHochschule = async function(){
       if(!silent){ showToast('Fortschritt gespeichert – du kannst jederzeit hier weitermachen.'); }
     }catch(e){
       // Always surface this, even for silent/background saves -- a failed
-      // save that only logs to the console is invisible to the user.
-      updateAllSaveStatus('Speichern fehlgeschlagen – Speicher voll oder im Browser blockiert.');
-      if(!silent){ showToast('Speichern nicht möglich – Speicher voll oder im Browser blockiert.'); }
+      // save that only logs to the console is invisible to the user. Only a
+      // real DOMException (quota exceeded / storage blocked, e.g. Safari
+      // private mode) means "Speicher voll" -- anything else here is a bug
+      // in this code and must say so, not hide behind that message.
+      console.error('saveDraft: lokales Speichern fehlgeschlagen', e);
+      var isStorageError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'SecurityError' || e.code === 22 || e.code === 1014);
+      var statusMsg = isStorageError
+        ? 'Speichern fehlgeschlagen – Speicher voll oder im Browser blockiert.'
+        : 'Speichern fehlgeschlagen – technischer Fehler. Bitte Seite neu laden.';
+      var toastMsg = isStorageError
+        ? 'Speichern nicht möglich – Speicher voll oder im Browser blockiert.'
+        : 'Speichern nicht möglich – ein technischer Fehler ist aufgetreten. Bitte Seite neu laden und erneut versuchen.';
+      updateAllSaveStatus(statusMsg);
+      if(!silent){ showToast(toastMsg); }
     }
     if(state.fach && state.fach.trim()){
       try{
