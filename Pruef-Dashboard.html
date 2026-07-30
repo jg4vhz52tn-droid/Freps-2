@@ -79,6 +79,18 @@ a{color:var(--accent);}
 .baustein-note{width:100%; min-height:60px; font:inherit; font-size:13.5px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius); resize:vertical; background:var(--card); color:var(--ink); margin-top:4px;}
 .baustein-note:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
 
+.sub-item{border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px;}
+.sub-item-head{display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;}
+.sub-item-label{font-size:13px; font-weight:600; flex:1;}
+.sub-item-badge{font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--accent); border:1px solid #BFDDD5; padding:2px 9px; border-radius:20px; white-space:nowrap;}
+.sub-item-arrow{background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; padding:2px 4px; line-height:1; transition:transform .15s;}
+.sub-item.collapsed .sub-item-arrow{transform:rotate(-90deg);}
+.sub-item-body{margin-top:10px;}
+.sub-item.collapsed .sub-item-body{display:none;}
+.sub-note{width:100%; min-height:50px; font:inherit; font-size:13px; padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius); resize:vertical; background:var(--card); color:var(--ink); margin-top:8px;}
+.sub-note:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+.sub-item-thread{margin-top:8px;}
+
 .reviewer-box{border-top:1px solid var(--line); padding-top:20px;}
 .reviewer-box label{display:block; font-size:13px; font-weight:600; margin-bottom:7px;}
 .reviewer-box textarea{width:100%; min-height:90px; font:inherit; font-size:14px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--radius); resize:vertical; background:var(--card); color:var(--ink);}
@@ -212,68 +224,129 @@ function hasTutorien(t){ return !!(t && (t.items||[]).some(function(x){ return (
 function hasZusatz(z){ return !!(z && z.enabled && z.modules && z.modules.length); }
 function hasLernplan(l){ return !!(l && (l.items||[]).some(function(x){ return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim()); })); }
 
+// Each body*() function returns a list of { label, subKey, html } items --
+// one per individual entry within the baustein (one subchapter, one card,
+// one exercise, ...) -- so the reviewer can leave a separate annotation on
+// each, instead of only one note for the whole baustein. subKey is always
+// the entry's index in that baustein's content array (as a string), except
+// Zusammenfassung's two fixed "merke"/"tipps" fields -- this must stay in
+// sync with insertReviewerNotes()'s key convention in kf-supabase.js.
+// Bausteine whose rows are a sparse, always-padded array from the wizard
+// (Altklausuren/Tutorien/Lernplan) filter out never-filled rows first, but
+// keep each kept row's ORIGINAL array index as subKey via nonEmptyIndexed()
+// -- a plain .filter().map() would renumber rows and silently mismatch any
+// existing per-entry comment.
+function nonEmptyIndexed(arr, predicate){
+  var out = [];
+  (arr||[]).forEach(function(item, i){ if(predicate(item)){ out.push({ item: item, idx: i }); } });
+  return out;
+}
+
 function bodyZusammenfassung(sub, z){
   var lines = (sub.subchapters||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
-  var subsHtml = (z.subs||[]).map(function(text, i){
+  var items = (z.subs||[]).map(function(text, i){
     var label = lines[i] || ('Abschnitt ' + (i+1));
-    return '<div class="cp-item"><strong>'+esc(label)+':</strong><br>'+esc(text||'—')+'</div>';
-  }).join('');
-  return subsHtml +
-    (z.merke ? '<div class="cp-item"><strong>Merke-Box:</strong><br>'+esc(z.merke)+'</div>' : '') +
-    (z.tipps ? '<div class="cp-item"><strong>Tipps für die Klausur:</strong><br>'+esc(z.tipps)+'</div>' : '');
+    return { label: label, subKey: String(i), html: '<div class="cp-item">'+esc(text||'—')+'</div>' };
+  });
+  items.push({ label: 'Merke-Box', subKey: 'merke', html: '<div class="cp-item">'+esc(z.merke||'—')+'</div>' });
+  items.push({ label: 'Tipps für die Klausur', subKey: 'tipps', html: '<div class="cp-item">'+esc(z.tipps||'—')+'</div>' });
+  return items;
 }
 function bodyKarteikarten(k){
   return k.cards.map(function(c, i){
-    return '<div class="cp-item"><strong>Karte '+(i+1)+' — Vorderseite:</strong> '+esc(c.frage||'—')+'<br><strong>Rückseite:</strong> '+esc(c.antwort||'—')+'</div>';
-  }).join('');
+    return { label: 'Karte ' + (i+1), subKey: String(i),
+      html: '<div class="cp-item"><strong>Vorderseite:</strong> '+esc(c.frage||'—')+'<br><strong>Rückseite:</strong> '+esc(c.antwort||'—')+'</div>' };
+  });
 }
 function bodyUebungen(u){
   return u.items.map(function(it, i){
-    return '<div class="cp-item"><strong>Aufgabe '+(i+1)+' ('+esc(it.themenKuerzel||'')+(it.schwierigkeit ? ', '+esc(it.schwierigkeit) : '')+'):</strong><br>'+esc(it.aufgabe||'—')+'<br><em>Lösungsweg:</em> '+esc(it.loesung||'—')+'</div>';
-  }).join('');
+    return { label: 'Aufgabe ' + (i+1) + ' (' + (it.themenKuerzel||'') + (it.schwierigkeit ? ', '+it.schwierigkeit : '') + ')', subKey: String(i),
+      html: '<div class="cp-item">'+esc(it.aufgabe||'—')+'<br><em>Lösungsweg:</em> '+esc(it.loesung||'—')+'</div>' };
+  });
 }
 function bodyAltklausuren(a){
-  return a.items.filter(function(x){ return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim()); })
-    .map(function(x){ return '<div class="cp-item">'+esc(x.semester||'')+' '+esc(x.jahr||'')+' · '+esc(x.aufgabennummer||'')+' · '+esc(x.thema||'')+'<br>'+esc(x.loesung||'—')+'</div>'; }).join('');
+  return nonEmptyIndexed(a.items, function(x){ return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim()); })
+    .map(function(pair){
+      var x = pair.item;
+      return { label: (x.semester||'')+' '+(x.jahr||'')+' · '+(x.aufgabennummer||'')+' · '+(x.thema||''), subKey: String(pair.idx),
+        html: '<div class="cp-item">'+esc(x.loesung||'—')+'</div>' };
+    });
 }
 function bodyTutorien(t){
-  return t.items.filter(function(x){ return (x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()); })
-    .map(function(x){ return '<div class="cp-item"><strong>'+esc(x.blatt||'')+':</strong><br>'+esc(x.loesung||'—')+'</div>'; }).join('');
+  return nonEmptyIndexed(t.items, function(x){ return (x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()); })
+    .map(function(pair){
+      var x = pair.item;
+      return { label: x.blatt || 'Tutoriumsblatt', subKey: String(pair.idx), html: '<div class="cp-item">'+esc(x.loesung||'—')+'</div>' };
+    });
 }
 function bodyZusatz(z){
-  return z.modules.map(function(m){
+  return z.modules.map(function(m, i){
     var themesHtml = (m.themes||[]).map(function(t){ return '<div style="margin-left:12px">– '+esc(t.titel||'')+': '+esc(t.text||'')+'</div>'; }).join('');
-    return '<div class="cp-item"><strong>'+esc(m.art||'')+(m.titel ? ' — '+esc(m.titel) : '')+'</strong><br>'+esc(m.hinweise||'')+themesHtml+'</div>';
-  }).join('');
+    return { label: (m.art||'') + (m.titel ? ' — '+m.titel : ''), subKey: String(i),
+      html: '<div class="cp-item">'+esc(m.hinweise||'')+themesHtml+'</div>' };
+  });
 }
 function bodyLernplan(l){
-  return l.items.filter(function(x){ return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim()); })
-    .map(function(x){
-      return '<div class="cp-item"><strong>'+esc(x.tag||'')+(x.dauer ? ' · '+esc(x.dauer) : '')+'</strong>'+
-        (x.bausteinRef && x.bausteinRef !== '— kein Bezug —' ? ' <span style="color:var(--muted)">('+esc(x.bausteinRef)+')</span>' : '') +
-        '<br>'+esc(x.aufgabe||'—')+'</div>';
-    }).join('');
+  return nonEmptyIndexed(l.items, function(x){ return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim()); })
+    .map(function(pair){
+      var x = pair.item;
+      return { label: (x.tag||'') + (x.dauer ? ' · '+x.dauer : ''), subKey: String(pair.idx),
+        html: '<div class="cp-item">'+
+          (x.bausteinRef && x.bausteinRef !== '— kein Bezug —' ? '<span style="color:var(--muted)">('+esc(x.bausteinRef)+')</span><br>' : '') +
+          esc(x.aufgabe||'—')+'</div>' };
+    });
 }
 
-/* Ein eigener Kommentar-Thread + eigenes Anmerkungsfeld je Baustein, statt
-   ein einzelnes Feld für das ganze Kapitel -- nur Bausteine, die im Kapitel
-   bzw. Kurs tatsächlich Inhalt haben, werden überhaupt angezeigt. */
-function renderBausteinBlock(type, bodyHtml, comments, editable){
-  var threadHtml = comments.length
-    ? comments.map(function(c){
-        return '<div class="comment '+(c.role==='reviewer'?'reviewer':'creator')+'">'+
-          '<div class="c-meta"><span class="c-role">'+esc(c.author||(c.role==='reviewer'?'Prüfer':'Creator'))+'</span><span>'+fmtDate(c.date)+'</span></div>'+
-          '<div>'+esc(c.text)+'</div></div>';
-      }).join('')
+function commentHtml(c){
+  return '<div class="comment '+(c.role==='reviewer'?'reviewer':'creator')+'">'+
+    '<div class="c-meta"><span class="c-role">'+esc(c.author||(c.role==='reviewer'?'Prüfer':'Creator'))+'</span><span>'+fmtDate(c.date)+'</span></div>'+
+    '<div>'+esc(c.text)+'</div></div>';
+}
+
+/* Ein eigener Kommentar-Thread + eigenes Anmerkungsfeld je Einzeleintrag
+   (Unterkapitel, Karte, Aufgabe, ...) statt nur je Baustein -- nur Bausteine,
+   die im Kapitel bzw. Kurs tatsächlich Inhalt haben, werden überhaupt
+   angezeigt. commentsForType = { general: [...], bySubKey: {subKey: [...]} },
+   general = Kommentare ohne subKey (bisheriges baustein-weites Verhalten,
+   bleibt als zusätzliches Feld unterhalb aller Einzeleinträge bestehen). */
+function renderBausteinBlock(type, items, commentsForType, editable){
+  commentsForType = commentsForType || { general: [], bySubKey: {} };
+  var itemsHtml = items.map(function(item){
+    var subComments = commentsForType.bySubKey[item.subKey] || [];
+    var hasReviewerNote = subComments.some(function(c){ return c.role === 'reviewer'; });
+    var threadHtml = subComments.length
+      ? subComments.map(commentHtml).join('')
+      : '<div class="thread-empty">Noch keine Anmerkungen.</div>';
+    var noteHtml = editable
+      ? '<div class="sub-item-note-wrap"><textarea class="sub-note" data-baustein="'+type+'" data-subkey="'+esc(item.subKey)+'" placeholder="Anmerkung zu '+esc(item.label)+' …"></textarea></div>'
+      : '';
+    return '<div class="sub-item'+(hasReviewerNote ? ' collapsed' : '')+'" data-subkey="'+esc(item.subKey)+'">'+
+      '<div class="sub-item-head">'+
+        '<span class="sub-item-label">'+esc(item.label)+'</span>'+
+        (hasReviewerNote ? '<span class="sub-item-badge">Anmerkung vorhanden</span>' : '') +
+        '<button type="button" class="sub-item-arrow" aria-label="Auf-/zuklappen">▾</button>'+
+      '</div>'+
+      '<div class="sub-item-body">'+
+        '<div class="sub-item-content">'+item.html+'</div>'+
+        '<div class="sub-item-thread">'+threadHtml+'</div>'+
+        noteHtml+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  var generalThreadHtml = commentsForType.general.length
+    ? commentsForType.general.map(commentHtml).join('')
     : '<div class="thread-empty">Noch keine Anmerkungen.</div>';
-  var noteHtml = editable
-    ? '<textarea class="baustein-note" data-baustein="'+type+'" placeholder="Anmerkung zu '+esc(window.KF_BAUSTEIN_LABELS[type])+' …"></textarea>'
+  var generalNoteHtml = editable
+    ? '<textarea class="baustein-note" data-baustein="'+type+'" placeholder="Allgemeine Anmerkung zu '+esc(window.KF_BAUSTEIN_LABELS[type])+' …"></textarea>'
     : '';
+
   return '<div class="content-preview">'+
     '<div class="cp-label">'+esc(window.KF_BAUSTEIN_LABELS[type])+'</div>'+
-    bodyHtml+
-    '<div class="baustein-thread">'+threadHtml+'</div>'+
-    noteHtml+
+    itemsHtml+
+    '<div class="section-label" style="margin-top:16px">Allgemeine Anmerkung</div>'+
+    '<div class="baustein-thread">'+generalThreadHtml+'</div>'+
+    generalNoteHtml+
   '</div>';
 }
 
@@ -292,46 +365,49 @@ async function renderDetail(){
   var courseRow = allCourses.filter(function(c){ return c.id === sub.courseId; })[0];
 
   var editable = sub.status !== 'freigegeben';
+  // Grouped per baustein, and within that per individual entry (subKey) vs.
+  // baustein-wide (no subKey) -- see renderBausteinBlock().
   var commentsByType = {};
   (sub.comments||[]).forEach(function(c){
     var key = c.contentType || 'allgemein';
-    (commentsByType[key] = commentsByType[key] || []).push(c);
+    if(!commentsByType[key]){ commentsByType[key] = { general: [], bySubKey: {} }; }
+    if(c.subKey){
+      (commentsByType[key].bySubKey[c.subKey] = commentsByType[key].bySubKey[c.subKey] || []).push(c);
+    } else {
+      commentsByType[key].general.push(c);
+    }
   });
 
   var blocks = '';
   if(hasZusammenfassung(chapterContent.zusammenfassung)){
-    blocks += renderBausteinBlock('zusammenfassung', bodyZusammenfassung(sub, chapterContent.zusammenfassung), commentsByType.zusammenfassung||[], editable);
+    blocks += renderBausteinBlock('zusammenfassung', bodyZusammenfassung(sub, chapterContent.zusammenfassung), commentsByType.zusammenfassung, editable);
   }
   if(hasKarteikarten(chapterContent.karteikarten)){
-    blocks += renderBausteinBlock('karteikarten', bodyKarteikarten(chapterContent.karteikarten), commentsByType.karteikarten||[], editable);
+    blocks += renderBausteinBlock('karteikarten', bodyKarteikarten(chapterContent.karteikarten), commentsByType.karteikarten, editable);
   }
   if(hasUebungen(chapterContent.uebungen)){
-    blocks += renderBausteinBlock('uebungen', bodyUebungen(chapterContent.uebungen), commentsByType.uebungen||[], editable);
+    blocks += renderBausteinBlock('uebungen', bodyUebungen(chapterContent.uebungen), commentsByType.uebungen, editable);
   }
   if(hasAltklausuren(courseContent.altklausuren)){
-    blocks += renderBausteinBlock('altklausuren', bodyAltklausuren(courseContent.altklausuren), commentsByType.altklausuren||[], editable);
+    blocks += renderBausteinBlock('altklausuren', bodyAltklausuren(courseContent.altklausuren), commentsByType.altklausuren, editable);
   }
   if(hasTutorien(courseContent.tutorien)){
-    blocks += renderBausteinBlock('tutorien', bodyTutorien(courseContent.tutorien), commentsByType.tutorien||[], editable);
+    blocks += renderBausteinBlock('tutorien', bodyTutorien(courseContent.tutorien), commentsByType.tutorien, editable);
   }
   if(hasZusatz(courseContent.zusatz)){
-    blocks += renderBausteinBlock('zusatz', bodyZusatz(courseContent.zusatz), commentsByType.zusatz||[], editable);
+    blocks += renderBausteinBlock('zusatz', bodyZusatz(courseContent.zusatz), commentsByType.zusatz, editable);
   }
   if(hasLernplan(courseContent.lernplan)){
-    blocks += renderBausteinBlock('lernplan', bodyLernplan(courseContent.lernplan), commentsByType.lernplan||[], editable);
+    blocks += renderBausteinBlock('lernplan', bodyLernplan(courseContent.lernplan), commentsByType.lernplan, editable);
   }
   if(!blocks){
     blocks = '<div class="content-preview"><p style="font-size:13px;color:var(--muted)">Für dieses Kapitel wurde noch kein Inhalt hinterlegt.</p></div>';
   }
 
   var generalHtml = '';
-  if(commentsByType.allgemein && commentsByType.allgemein.length){
+  if(commentsByType.allgemein && commentsByType.allgemein.general.length){
     generalHtml = '<div class="content-preview"><div class="cp-label">Allgemein</div>' +
-      commentsByType.allgemein.map(function(c){
-        return '<div class="comment '+(c.role==='reviewer'?'reviewer':'creator')+'">'+
-          '<div class="c-meta"><span class="c-role">'+esc(c.author||(c.role==='reviewer'?'Prüfer':'Creator'))+'</span><span>'+fmtDate(c.date)+'</span></div>'+
-          '<div>'+esc(c.text)+'</div></div>';
-      }).join('') + '</div>';
+      commentsByType.allgemein.general.map(commentHtml).join('') + '</div>';
   }
 
   var actionsHtml;
@@ -387,10 +463,15 @@ async function renderDetail(){
     });
   }
 
-  function collectNotesByType(){
+  // Key = type for a baustein-wide note, "type::subKey" for a note on one
+  // individual entry -- see insertReviewerNotes() in kf-supabase.js.
+  function collectNotesByKey(){
     var map = {};
     panel.querySelectorAll('.baustein-note').forEach(function(ta){
       map[ta.dataset.baustein] = ta.value;
+    });
+    panel.querySelectorAll('.sub-note').forEach(function(ta){
+      map[ta.dataset.baustein + '::' + ta.dataset.subkey] = ta.value;
     });
     return map;
   }
@@ -398,18 +479,32 @@ async function renderDetail(){
     return Object.keys(map).some(function(k){ return map[k] && map[k].trim(); });
   }
 
+  // Ein Einzeleintrag klappt sich automatisch ein, sobald sein Anmerkungsfeld
+  // beim Verlassen (blur) nicht-leer ist -- Klick auf den Header klappt
+  // manuell wieder auf (oder zu), zum Nachbearbeiten.
+  panel.querySelectorAll('.sub-item-head').forEach(function(head){
+    head.addEventListener('click', function(){
+      head.closest('.sub-item').classList.toggle('collapsed');
+    });
+  });
+  panel.querySelectorAll('.sub-note').forEach(function(ta){
+    ta.addEventListener('blur', function(){
+      if(ta.value && ta.value.trim()){ ta.closest('.sub-item').classList.add('collapsed'); }
+    });
+  });
+
   var approveBtn = document.getElementById('approveBtn');
   var reviseBtn = document.getElementById('reviseBtn');
   if(approveBtn){
     approveBtn.addEventListener('click', function(){
-      approve(sub.id, collectNotesByType()).then(function(){
+      approve(sub.id, collectNotesByKey()).then(function(){
         showToast('Kapitel freigegeben. Der Creator wird informiert.');
       }).catch(function(e){ showToast('Fehler: ' + ((e && e.message) || 'unbekannt')); });
     });
   }
   if(reviseBtn){
     reviseBtn.addEventListener('click', function(){
-      var notes = collectNotesByType();
+      var notes = collectNotesByKey();
       if(!anyNoteFilled(notes)){
         showToast('Bitte zuerst bei mindestens einem Baustein eine Anmerkung schreiben, bevor du das Kapitel zurückschickst.');
         return;

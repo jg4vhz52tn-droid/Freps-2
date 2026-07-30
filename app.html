@@ -233,6 +233,9 @@ ul.plain li{margin-bottom:5px;}
 .step-item.done .num{background:#639922; color:#fff;}
 .step-item.locked{opacity:.4; cursor:default;}
 .creator-main{padding:36px 44px; max-width:760px; min-width:0;}
+.course-context-banner{background:var(--ink); color:#E9EDF2; border-radius:var(--radius); padding:13px 18px; margin-bottom:26px; font-size:15px; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;}
+.course-context-banner strong{font-family:'Sora',sans-serif; font-weight:700;}
+.course-context-banner span{color:#9AA7B5; font-size:13.5px;}
 .cstep{display:none;}
 .cstep.active{display:block; animation:fade .2s ease;}
 .field{margin-bottom:16px;}
@@ -595,6 +598,10 @@ ul.plain li{margin-bottom:5px;}
     </aside>
 
     <main class="creator-main">
+      <div class="course-context-banner" id="courseContextBanner">
+        <strong id="courseContextFach">Neues Fach</strong>
+        <span id="courseContextMeta"></span>
+      </div>
 
       <section class="cstep active" id="cstep-struktur">
         <h1 style="margin-bottom:6px">Kapitel &amp; Unterkapitel anlegen</h1>
@@ -2268,10 +2275,24 @@ window.renderSubjectsForHochschule = async function(){
   function updateWizardFachLabel(){
     var fach = (document.getElementById('cFach')||{}).value || '';
     var prof = (document.getElementById('cProf')||{}).value || '';
+    var hochschule = (document.getElementById('cHochschule')||{}).value || '';
     var label = document.getElementById('wizardFachLabel');
     if(label){ label.textContent = (fach.trim() || 'Neues Fach') + (prof.trim() ? ' — ' + prof.trim() : ''); }
+
+    // Selbe Quelle, zusätzlich prominent oben im Hauptbereich statt nur klein
+    // in der Sidebar -- damit auf einen Blick klar ist, an welchem Kurs man
+    // gerade baut, ohne erst zu Schritt 1 zurückzuscrollen.
+    var bannerFach = document.getElementById('courseContextFach');
+    var bannerMeta = document.getElementById('courseContextMeta');
+    if(bannerFach){ bannerFach.textContent = fach.trim() || 'Neues Fach'; }
+    if(bannerMeta){
+      var metaParts = [];
+      if(prof.trim()){ metaParts.push(prof.trim()); }
+      if(hochschule.trim()){ metaParts.push(hochschule.trim()); }
+      bannerMeta.textContent = metaParts.length ? '— ' + metaParts.join(' · ') : '';
+    }
   }
-  ['cFach','cProf'].forEach(function(id){
+  ['cFach','cProf','cHochschule'].forEach(function(id){
     var el = document.getElementById(id);
     if(el){ el.addEventListener('input', updateWizardFachLabel); }
   });
@@ -3210,6 +3231,7 @@ window.renderSubjectsForHochschule = async function(){
       var hadNoId = !resolvedCourseId;
       resolvedCourseId = await window.KFStore.getOrCreateDraftCourse(meta);
       resolvedCourseKey = key;
+      rememberLastCourseId(resolvedCourseId);
       // A brand-new draft's storage/tab-warning key just changed from the
       // shared "_new" bucket to this course's own id -- re-announce so a
       // second tab on the exact same new course still finds this one.
@@ -3445,6 +3467,19 @@ window.renderSubjectsForHochschule = async function(){
   function currentStorageKey(){
     return 'klausurfuchs_creator_draft_' + (storageUserId || 'anon') + '_' + (resolvedCourseId || 'new');
   }
+  // resolvedCourseId itself only ever lives in this in-memory variable, so a
+  // plain page reload (no ?course= in the URL, e.g. the tab was discarded and
+  // silently reloaded in the background, or the user just hit refresh)
+  // forgets it and falls back to the "_new" bucket above -- even though the
+  // real draft is sitting safely under the real course id's key. Mirroring
+  // resolvedCourseId into its own small per-account entry lets a plain reload
+  // recover it before the very first localStorage lookup below.
+  function lastCourseIdKey(){
+    return 'klausurfuchs_last_course_' + (storageUserId || 'anon');
+  }
+  function rememberLastCourseId(id){
+    try{ localStorage.setItem(lastCourseIdKey(), id); }catch(e){}
+  }
   var newsUnseen = false;
   function rowsData(containerId){
     var container = document.getElementById(containerId);
@@ -3665,6 +3700,7 @@ window.renderSubjectsForHochschule = async function(){
       window.KFStore.loadCourseState(courseParam).then(function(state){
         resolvedCourseId = courseParam;
         resolvedCourseKey = (state.hochschule || '') + '|' + (state.fach || '');
+        rememberLastCourseId(resolvedCourseId);
         state.currentStep = 'einreichen';
         restoreState(state);
         updateAllSaveStatus('Kurs aus der Cloud geladen.');
@@ -3674,6 +3710,9 @@ window.renderSubjectsForHochschule = async function(){
         renderChapterPackList();
       });
       return;
+    }
+    if(!resolvedCourseId){
+      try{ resolvedCourseId = localStorage.getItem(lastCourseIdKey()) || null; }catch(e){}
     }
     try{
       var raw = localStorage.getItem(currentStorageKey());
@@ -3704,32 +3743,57 @@ window.renderSubjectsForHochschule = async function(){
     }
   });
 
-  /* ---- Wieder-Einstieg in den Creator-Modus aus der Fächerliste ---- */
+  /* ---- Wieder-Einstieg in den Creator-Modus aus der Fächerliste ----
+     Basiert auf den eigenen Kursen in der DB statt nur auf dem lokalen
+     Draft -- ein lokaler Draft existiert nur auf dem Gerät/Browser, auf dem
+     zuletzt gearbeitet wurde, während die eigenen Kurse überall sichtbar
+     sind. "Aktiv" = entwurf/in_arbeit (noch im Bau); ein bereits live
+     geschalteter Kurs zählt hier bewusst nicht mehr als "in Bau befindlich". */
   window.refreshCreatorEntryPoint = async function(){
     await storageUserIdReady;
     var btn = document.getElementById('creatorEntryBtn');
     var badge = document.getElementById('creatorEntryBadge');
     if(!btn){ return; }
-    var hasDraft = false;
+
+    var activeCourses = [];
     try{
-      var raw = localStorage.getItem(currentStorageKey());
-      if(raw){
-        var state = JSON.parse(raw);
-        var hasFach = !!(state.fach && state.fach.trim());
-        var hasProf = !!(state.prof && state.prof.trim());
-        var hasChapterTitle = !!(state.chapters && state.chapters.some(function(c){
-          return c && c[0] && String(c[0]).trim();
-        }));
-        hasDraft = hasFach || hasProf || hasChapterTitle;
+      var session = await window.KFAuth.getSession();
+      if(session){
+        var allCourses = await window.KFCatalog.getAllCourses();
+        activeCourses = allCourses.filter(function(c){
+          return c.creatorId === session.id && (c.status === 'entwurf' || c.status === 'in_arbeit');
+        });
       }
     }catch(e){}
-    if(hasDraft){
-      btn.childNodes[0].nodeValue = '→ Weiter am Kurs bauen';
-      btn.dataset.gotoView = 'view-creator-wizard';
-      if(badge){ badge.style.display = newsUnseen ? 'inline-block' : 'none'; }
-    } else {
+
+    // Bei genau einem aktiven Kurs: echter Link mit ?course=, nicht nur der
+    // lokale-Draft-Fallback -- der greift nicht, wenn zuletzt auf einem
+    // anderen Gerät/Browser weitergebaut wurde. data-goto-view bleibt als
+    // harmloser Fallback-Wert stehen (falls dieser Listener aus irgendeinem
+    // Grund nicht greift), wird hier aber durch die echte Navigation ersetzt.
+    if(!btn._entryWired){
+      btn._entryWired = true;
+      btn.addEventListener('click', function(){
+        if(btn.dataset.directCourseId){
+          window.location.href = 'app.html?goto=view-creator-wizard&course=' + encodeURIComponent(btn.dataset.directCourseId);
+        }
+      });
+    }
+
+    if(activeCourses.length === 0){
       btn.childNodes[0].nodeValue = '✦ Creator werden';
       btn.dataset.gotoView = 'view-creator-intro';
+      delete btn.dataset.directCourseId;
+      if(badge){ badge.style.display = 'none'; }
+    } else if(activeCourses.length === 1){
+      btn.childNodes[0].nodeValue = '→ Weiter am Kurs bauen';
+      btn.dataset.gotoView = 'view-my-courses';
+      btn.dataset.directCourseId = activeCourses[0].id;
+      if(badge){ badge.style.display = newsUnseen ? 'inline-block' : 'none'; }
+    } else {
+      btn.childNodes[0].nodeValue = '→ Kurs auswählen';
+      btn.dataset.gotoView = 'view-my-courses';
+      delete btn.dataset.directCourseId;
       if(badge){ badge.style.display = 'none'; }
     }
   };

@@ -173,7 +173,7 @@ window.KFAuth = (function () {
 window.KFStore = (function () {
   var CHAPTER_SELECT = "id, position, title, subchapters, status, is_free_preview, created_at, updated_at, course_id," +
     " course:courses ( title, professor, hochschule:hochschulen ( name ) )," +
-    " chapter_comments ( author, role, text, content_type, created_at )";
+    " chapter_comments ( author, role, text, content_type, sub_key, created_at )";
 
   // chapter_comments.role is stored as 'pruefer' in the DB; the existing UI
   // code (Pruef-Dashboard.html, app.html) checks for the string 'reviewer',
@@ -182,7 +182,7 @@ window.KFStore = (function () {
     var comments = (row.chapter_comments || []).slice().sort(function (a, b) {
       return new Date(a.created_at) - new Date(b.created_at);
     }).map(function (c) {
-      return { author: c.author, role: c.role === "pruefer" ? "reviewer" : c.role, text: c.text, date: c.created_at, contentType: c.content_type };
+      return { author: c.author, role: c.role === "pruefer" ? "reviewer" : c.role, text: c.text, date: c.created_at, contentType: c.content_type, subKey: c.sub_key };
     });
     return {
       id: row.id,
@@ -251,16 +251,21 @@ window.KFStore = (function () {
     return true;
   }
 
-  // Inserts one comment row per non-empty { content_type: text } entry --
-  // lets a reviewer leave a separate note per baustein instead of one
-  // combined note for the whole chapter.
-  async function insertReviewerNotes(chapterId, notesByType) {
-    var rows = Object.keys(notesByType || {})
-      .filter(function (type) { return notesByType[type] && notesByType[type].trim(); })
-      .map(function (type) {
+  // Inserts one comment row per non-empty { key: text } entry -- lets a
+  // reviewer leave a separate note per baustein, or per single entry within a
+  // baustein. key is either "type" (baustein-wide) or "type::subKey" (one
+  // entry within that baustein, e.g. one subchapter or one flashcard) -- see
+  // Pruef-Dashboard.html's collectNotesByKey().
+  async function insertReviewerNotes(chapterId, notesByKey) {
+    var rows = Object.keys(notesByKey || {})
+      .filter(function (key) { return notesByKey[key] && notesByKey[key].trim(); })
+      .map(function (key) {
+        var parts = key.split("::");
+        var type = parts[0], subKey = parts.length > 1 ? parts[1] : null;
         return {
           chapter_id: chapterId, author: "Prüfer", role: "pruefer",
-          text: notesByType[type].trim(), content_type: type === "allgemein" ? null : type
+          text: notesByKey[key].trim(), content_type: type === "allgemein" ? null : type,
+          sub_key: subKey
         };
       });
     if (rows.length) {
@@ -270,17 +275,17 @@ window.KFStore = (function () {
   }
 
   // Prüfer gibt frei
-  async function approve(id, notesByType) {
+  async function approve(id, notesByKey) {
     const { error } = await supabase.from("chapters").update({ status: "freigegeben" }).eq("id", id);
     if (error) throw error;
-    await insertReviewerNotes(id, notesByType);
+    await insertReviewerNotes(id, notesByKey);
   }
 
-  // Prüfer schickt zur Überarbeitung zurück (mit Kommentaren je Baustein)
-  async function requestChanges(id, notesByType) {
+  // Prüfer schickt zur Überarbeitung zurück (mit Kommentaren je Baustein/Eintrag)
+  async function requestChanges(id, notesByKey) {
     const { error } = await supabase.from("chapters").update({ status: "ueberarbeitung" }).eq("id", id);
     if (error) throw error;
-    await insertReviewerNotes(id, notesByType);
+    await insertReviewerNotes(id, notesByKey);
   }
 
   // Creator markiert ein Kapitel als kostenlose Vorschau (oder nimmt das zurück)
@@ -998,7 +1003,25 @@ window.KFQuestions = (function () {
 // matters: every page's startSessionWatcher() runs an immediate consistency
 // check as soon as kf-ready fires, and that check would otherwise race the
 // claim and see a stale/mismatched token right after a Google redirect.
-window.KFAuth.claimPendingOAuthSession().catch(function () {}).then(function () {
+//
+// authBootstrapped (result unused) makes kf-ready wait for the supabase-js
+// client's own initial auth check -- without it, code that calls
+// KFAuth.getSession()/getUser() right on kf-ready (e.g. app.html's
+// storageUserIdReady) can occasionally race that check on a fresh page load
+// and see "not logged in" for a moment, even though a valid session is on
+// disk. onAuthStateChange's first callback is the SDK's own signal that this
+// initial check has completed; the actual security-relevant checks still use
+// getUser() elsewhere; unaffected by this.
+var authBootstrapped = new Promise(function (resolve) {
+  var sub = supabase.auth.onAuthStateChange(function () {
+    sub.data.subscription.unsubscribe();
+    resolve();
+  });
+});
+Promise.all([
+  authBootstrapped,
+  window.KFAuth.claimPendingOAuthSession().catch(function () {})
+]).then(function () {
   window.__kfReady = true;
   window.dispatchEvent(new Event("kf-ready"));
 });
