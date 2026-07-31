@@ -20,6 +20,54 @@ window.KF_BAUSTEIN_LABELS = {
   altklausuren: "Altklausuren", tutorien: "Tutorien", zusatz: "Zusatzmodule", lernplan: "Lernplan"
 };
 
+// Same idea as KF_BAUSTEIN_LABELS, but for the label of a single entry within
+// a baustein (one subchapter, one flashcard, one exercise, ...) -- both
+// Pruef-Dashboard.html (per-item review UI) and app.html (reviewer-feedback
+// jump links) need to turn a sub_key back into the same human label, so it
+// lives here once instead of as two copies that can drift apart.
+window.KFLabels = {
+  bausteinLabel: function (type) { return window.KF_BAUSTEIN_LABELS[type] || type; },
+  // content = the baustein's content object (chapterContent.zusammenfassung,
+  // chapterContent.karteikarten, courseContent.altklausuren, ...). subchapterLines
+  // = chapter.subchapters split into trimmed non-empty lines (only used for
+  // zusammenfassung, where sub_key is an index into z.subs but the label
+  // should prefer the creator's own subchapter title line if present).
+  subLabel: function (type, subKey, content, subchapterLines) {
+    content = content || {};
+    subchapterLines = subchapterLines || [];
+    var i = parseInt(subKey, 10);
+    if (type === "zusammenfassung") {
+      if (subKey === "merke") return "Merke-Box";
+      if (subKey === "tipps") return "Tipps für die Klausur";
+      return subchapterLines[i] || ("Abschnitt " + (i + 1));
+    }
+    if (type === "karteikarten") {
+      return "Karte " + (i + 1);
+    }
+    if (type === "uebungen") {
+      var ueb = ((content.items || [])[i]) || {};
+      return "Aufgabe " + (i + 1) + " (" + (ueb.themenKuerzel || "") + (ueb.schwierigkeit ? ", " + ueb.schwierigkeit : "") + ")";
+    }
+    if (type === "altklausuren") {
+      var alt = ((content.items || [])[i]) || {};
+      return (alt.semester || "") + " " + (alt.jahr || "") + " · " + (alt.aufgabennummer || "") + " · " + (alt.thema || "");
+    }
+    if (type === "tutorien") {
+      var tut = ((content.items || [])[i]) || {};
+      return tut.blatt || "Tutoriumsblatt";
+    }
+    if (type === "zusatz") {
+      var mod = ((content.modules || [])[i]) || {};
+      return (mod.art || "") + (mod.titel ? " — " + mod.titel : "");
+    }
+    if (type === "lernplan") {
+      var lp = ((content.items || [])[i]) || {};
+      return (lp.tag || "") + (lp.dauer ? " · " + lp.dauer : "");
+    }
+    return subKey;
+  }
+};
+
 async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;

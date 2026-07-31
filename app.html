@@ -322,7 +322,10 @@ ul.plain li{margin-bottom:5px;}
 .review-feedback .rf-text{font-size:13.5px; color:var(--ink); line-height:1.5;}
 .review-feedback .rf-group{margin-bottom:14px;}
 .review-feedback .rf-group:last-child{margin-bottom:0;}
-.review-feedback .rf-group-title{font-size:11.5px; font-weight:700; color:var(--ink); margin-bottom:6px;}
+.review-feedback .rf-group-title{font-size:11.5px; font-weight:700; color:var(--ink); margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.rf-jump{background:none; border:none; color:var(--accent); font-size:11.5px; font-weight:700; cursor:pointer; padding:0; white-space:nowrap;}
+.rf-jump:hover{text-decoration:underline;}
+.jump-highlight{outline:3px solid var(--amber); outline-offset:2px; transition:outline-color .4s ease; border-radius:8px;}
 .chapter-pack-wrap{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; overflow:hidden;}
 .chapter-pack-wrap .chapter-pack{border:none; border-radius:0; margin-bottom:0;}
 .chapter-pack-wrap .review-feedback{margin:0 18px 16px;}
@@ -3310,24 +3313,106 @@ window.renderSubjectsForHochschule = async function(){
     zusammenfassung: 'Zusammenfassung', karteikarten: 'Karteikarten', uebungen: 'Übungsaufgaben',
     altklausuren: 'Altklausuren', tutorien: 'Tutorien', zusatz: 'Zusatzmodule', lernplan: 'Lernplan'
   };
-  function renderReviewerCommentsHtml(reviewerComments){
+  // Groups reviewer comments by baustein and (once Feature 1 added sub_key)
+  // by the individual entry within that baustein, so the creator sees exactly
+  // which subchapter/card/exercise a comment refers to, with a "→ Bearbeiten"
+  // jump straight to that field -- see jumpToBausteinEntry().
+  async function renderReviewerCommentsHtml(reviewerComments, chapterIdx, sub){
     var byType = {};
     var general = [];
     reviewerComments.forEach(function(c){
-      if(c.contentType && CONTENT_TYPE_LABEL[c.contentType]){ (byType[c.contentType] = byType[c.contentType] || []).push(c); }
-      else { general.push(c); }
+      if(c.contentType && CONTENT_TYPE_LABEL[c.contentType]){
+        var bucket = byType[c.contentType] = byType[c.contentType] || { general: [], bySubKey: {} };
+        if(c.subKey){ (bucket.bySubKey[c.subKey] = bucket.bySubKey[c.subKey] || []).push(c); }
+        else { bucket.general.push(c); }
+      } else {
+        general.push(c);
+      }
     });
     function commentHtml(c){
       return '<div class="rf-comment"><div class="rf-meta">' + escapeHtml(c.author||'Prüfer') + ' · ' + fmtDate(c.date) + '</div><div class="rf-text">' + escapeHtml(c.text) + '</div></div>';
     }
-    var groupsHtml = Object.keys(byType).map(function(type){
-      return '<div class="rf-group"><div class="rf-group-title">' + escapeHtml(CONTENT_TYPE_LABEL[type]) + '</div>' +
-        byType[type].map(commentHtml).join('') + '</div>';
+    var types = Object.keys(byType);
+    var chapterContent = {}, courseContent = {};
+    if(types.length){
+      try{
+        var results = await Promise.all([window.KFStore.getChapterContent(sub.id), window.KFStore.getCourseContent(sub.courseId)]);
+        chapterContent = results[0] || {};
+        courseContent = results[1] || {};
+      }catch(e){}
+    }
+    var contentByType = {
+      zusammenfassung: chapterContent.zusammenfassung, karteikarten: chapterContent.karteikarten, uebungen: chapterContent.uebungen,
+      altklausuren: courseContent.altklausuren, tutorien: courseContent.tutorien, zusatz: courseContent.zusatz, lernplan: courseContent.lernplan
+    };
+    var subchapterLines = typeof getSubchapterLines === 'function' ? getSubchapterLines(chapterIdx) : [];
+    function jumpBtn(type, subKey){
+      return '<button type="button" class="rf-jump" data-type="' + escapeHtml(type) + '" data-subkey="' + escapeHtml(subKey||'') + '" data-chapter-idx="' + chapterIdx + '">→ Bearbeiten</button>';
+    }
+    var groupsHtml = types.map(function(type){
+      var bucket = byType[type];
+      var subGroupsHtml = Object.keys(bucket.bySubKey).map(function(subKey){
+        var label = window.KFLabels.subLabel(type, subKey, contentByType[type], subchapterLines);
+        return '<div class="rf-group"><div class="rf-group-title"><span>' + escapeHtml(CONTENT_TYPE_LABEL[type]) + ' · ' + escapeHtml(label) + '</span>' + jumpBtn(type, subKey) + '</div>' +
+          bucket.bySubKey[subKey].map(commentHtml).join('') + '</div>';
+      }).join('');
+      var generalHtml = bucket.general.length
+        ? '<div class="rf-group"><div class="rf-group-title"><span>' + escapeHtml(CONTENT_TYPE_LABEL[type]) + '</span>' + jumpBtn(type, '') + '</div>' +
+          bucket.general.map(commentHtml).join('') + '</div>'
+        : '';
+      return subGroupsHtml + generalHtml;
     }).join('');
-    var generalHtml = general.length
+    var generalGroupHtml = general.length
       ? '<div class="rf-group">' + general.map(commentHtml).join('') + '</div>'
       : '';
-    return groupsHtml + generalHtml;
+    return groupsHtml + generalGroupHtml;
+  }
+
+  // Reviewer-Feedback "→ Bearbeiten": springt zum passenden Wizard-Schritt und,
+  // wenn ein subKey gegeben ist, zum konkreten Feld/Eintrag darin.
+  function jumpToBausteinEntry(type, subKey, chapterIdx){
+    if(typeof showCreatorStep === 'function'){ showCreatorStep(type); }
+    var target = null;
+    if(type === 'zusammenfassung'){
+      var select = document.getElementById('zfKapitelSelect');
+      if(select && !isNaN(chapterIdx) && chapterIdx < select.options.length){
+        select.selectedIndex = chapterIdx;
+        if(typeof renderZfStep === 'function'){ renderZfStep(); }
+      }
+      if(subKey === 'merke'){ target = document.getElementById('zfMerke'); }
+      else if(subKey === 'tipps'){ target = document.getElementById('zfTipps'); }
+      else if(subKey){ target = document.querySelectorAll('#zfDynamicFields .zf-sub-field')[parseInt(subKey, 10)] || null; }
+    } else {
+      var cfg = {
+        karteikarten: { container: 'cardRows', ctx: 'kkKapitelSelect' },
+        uebungen: { container: 'uebungRows', ctx: 'uebKapitelSelect' },
+        altklausuren: { container: 'altklausurRows' },
+        tutorien: { container: 'tutRows' },
+        zusatz: { container: 'zusatzModuleRows' },
+        lernplan: { container: 'lernplanRows' }
+      }[type];
+      if(cfg){
+        if(cfg.ctx && !isNaN(chapterIdx) && typeof chapterTitles === 'function'){
+          var ctxSelect = document.getElementById(cfg.ctx);
+          var titles = chapterTitles();
+          if(ctxSelect && titles[chapterIdx]){
+            ctxSelect.value = titles[chapterIdx];
+            if(typeof filterRowsByContext === 'function'){ filterRowsByContext(cfg.container, cfg.ctx); }
+          }
+        }
+        if(subKey){
+          var container = document.getElementById(cfg.container);
+          if(container){ target = container.querySelectorAll('.repeat-row')[parseInt(subKey, 10)] || null; }
+        }
+      }
+    }
+    if(target){
+      target.classList.remove('collapsed');
+      target.style.display = '';
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('jump-highlight');
+      setTimeout(function(){ target.classList.remove('jump-highlight'); }, 2000);
+    }
   }
   async function renderChapterPackList(){
     var titles = chapterTitles();
@@ -3339,7 +3424,8 @@ window.renderSubjectsForHochschule = async function(){
       var subs = await window.KFStore.getForCourse(courseId);
       function submissionForIdx(i){ return subs.filter(function(s){ return s.chapterIndex === i; })[0] || null; }
       var html = '';
-      titles.forEach(function(title, i){
+      for(var i = 0; i < titles.length; i++){
+        var title = titles[i];
         var sub = submissionForIdx(i);
         var st;
         if(sub && sub.status !== 'offen'){
@@ -3368,7 +3454,7 @@ window.renderSubjectsForHochschule = async function(){
           var reviewerComments = (sub.comments||[]).filter(function(c){ return c.role === 'reviewer'; });
           if(reviewerComments.length){
             feedbackHtml = '<div class="review-feedback"><div class="rf-title">Anmerkungen des Prüfers</div>' +
-              renderReviewerCommentsHtml(reviewerComments) +
+              (await renderReviewerCommentsHtml(reviewerComments, i, sub)) +
               '<p style="font-size:12.5px;color:var(--muted);margin:0">Passe die genannten Punkte in den entsprechenden Schritten an und reiche das Kapitel danach erneut ein.</p></div>';
           }
         } else {
@@ -3381,7 +3467,7 @@ window.renderSubjectsForHochschule = async function(){
             '<input type="checkbox" data-free-preview-chapter="' + sub.id + '"' + (sub.isFreePreview ? ' checked' : '') + '> Kostenlose Vorschau</label>';
         }
         html += '<div class="chapter-pack-wrap"><div class="chapter-pack"><div class="info"><h3>' + escapeHtmlMy(title) + '</h3><p>Zusammenfassung, Karteikarten &amp; Übungsaufgaben</p>' + freePreviewHtml + '</div>' + btnHtml + statusHtml + '</div>' + feedbackHtml + '</div>';
-      });
+      }
       list.innerHTML = html;
       list.querySelectorAll('[data-submit-idx]').forEach(function(btn){
         btn.addEventListener('click', function(){
@@ -3390,6 +3476,11 @@ window.renderSubjectsForHochschule = async function(){
             btn.disabled = false;
             showToast('Einreichen fehlgeschlagen: ' + ((e && e.message) || 'unbekannter Fehler') + ' – bitte erneut versuchen.');
           });
+        });
+      });
+      list.querySelectorAll('.rf-jump').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          jumpToBausteinEntry(btn.dataset.type, btn.dataset.subkey, parseInt(btn.dataset.chapterIdx, 10));
         });
       });
       list.querySelectorAll('[data-free-preview-chapter]').forEach(function(cb){

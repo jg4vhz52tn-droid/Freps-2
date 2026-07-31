@@ -245,22 +245,21 @@ function nonEmptyIndexed(arr, predicate){
 function bodyZusammenfassung(sub, z){
   var lines = (sub.subchapters||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
   var items = (z.subs||[]).map(function(text, i){
-    var label = lines[i] || ('Abschnitt ' + (i+1));
-    return { label: label, subKey: String(i), html: '<div class="cp-item">'+esc(text||'—')+'</div>' };
+    return { label: window.KFLabels.subLabel('zusammenfassung', String(i), z, lines), subKey: String(i), html: '<div class="cp-item">'+esc(text||'—')+'</div>' };
   });
-  items.push({ label: 'Merke-Box', subKey: 'merke', html: '<div class="cp-item">'+esc(z.merke||'—')+'</div>' });
-  items.push({ label: 'Tipps für die Klausur', subKey: 'tipps', html: '<div class="cp-item">'+esc(z.tipps||'—')+'</div>' });
+  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'merke', z, lines), subKey: 'merke', html: '<div class="cp-item">'+esc(z.merke||'—')+'</div>' });
+  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'tipps', z, lines), subKey: 'tipps', html: '<div class="cp-item">'+esc(z.tipps||'—')+'</div>' });
   return items;
 }
 function bodyKarteikarten(k){
   return k.cards.map(function(c, i){
-    return { label: 'Karte ' + (i+1), subKey: String(i),
+    return { label: window.KFLabels.subLabel('karteikarten', String(i)), subKey: String(i),
       html: '<div class="cp-item"><strong>Vorderseite:</strong> '+esc(c.frage||'—')+'<br><strong>Rückseite:</strong> '+esc(c.antwort||'—')+'</div>' };
   });
 }
 function bodyUebungen(u){
   return u.items.map(function(it, i){
-    return { label: 'Aufgabe ' + (i+1) + ' (' + (it.themenKuerzel||'') + (it.schwierigkeit ? ', '+it.schwierigkeit : '') + ')', subKey: String(i),
+    return { label: window.KFLabels.subLabel('uebungen', String(i), u), subKey: String(i),
       html: '<div class="cp-item">'+esc(it.aufgabe||'—')+'<br><em>Lösungsweg:</em> '+esc(it.loesung||'—')+'</div>' };
   });
 }
@@ -268,7 +267,7 @@ function bodyAltklausuren(a){
   return nonEmptyIndexed(a.items, function(x){ return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim()); })
     .map(function(pair){
       var x = pair.item;
-      return { label: (x.semester||'')+' '+(x.jahr||'')+' · '+(x.aufgabennummer||'')+' · '+(x.thema||''), subKey: String(pair.idx),
+      return { label: window.KFLabels.subLabel('altklausuren', String(pair.idx), a), subKey: String(pair.idx),
         html: '<div class="cp-item">'+esc(x.loesung||'—')+'</div>' };
     });
 }
@@ -276,13 +275,13 @@ function bodyTutorien(t){
   return nonEmptyIndexed(t.items, function(x){ return (x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()); })
     .map(function(pair){
       var x = pair.item;
-      return { label: x.blatt || 'Tutoriumsblatt', subKey: String(pair.idx), html: '<div class="cp-item">'+esc(x.loesung||'—')+'</div>' };
+      return { label: window.KFLabels.subLabel('tutorien', String(pair.idx), t), subKey: String(pair.idx), html: '<div class="cp-item">'+esc(x.loesung||'—')+'</div>' };
     });
 }
 function bodyZusatz(z){
   return z.modules.map(function(m, i){
     var themesHtml = (m.themes||[]).map(function(t){ return '<div style="margin-left:12px">– '+esc(t.titel||'')+': '+esc(t.text||'')+'</div>'; }).join('');
-    return { label: (m.art||'') + (m.titel ? ' — '+m.titel : ''), subKey: String(i),
+    return { label: window.KFLabels.subLabel('zusatz', String(i), z), subKey: String(i),
       html: '<div class="cp-item">'+esc(m.hinweise||'')+themesHtml+'</div>' };
   });
 }
@@ -290,7 +289,7 @@ function bodyLernplan(l){
   return nonEmptyIndexed(l.items, function(x){ return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim()); })
     .map(function(pair){
       var x = pair.item;
-      return { label: (x.tag||'') + (x.dauer ? ' · '+x.dauer : ''), subKey: String(pair.idx),
+      return { label: window.KFLabels.subLabel('lernplan', String(pair.idx), l), subKey: String(pair.idx),
         html: '<div class="cp-item">'+
           (x.bausteinRef && x.bausteinRef !== '— kein Bezug —' ? '<span style="color:var(--muted)">('+esc(x.bausteinRef)+')</span><br>' : '') +
           esc(x.aufgabe||'—')+'</div>' };
