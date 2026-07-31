@@ -11,13 +11,61 @@ const DEVICE_TOKEN_KEY = "klausurfuchs_device_token";
 const OAUTH_CLAIM_PENDING_KEY = "klausurfuchs_oauth_claim_pending";
 
 // Single source of truth for which baustein types exist and their display
-// labels -- index.html and Pruef-Dashboard.html each used to keep their own
+// labels -- app.html and Pruef-Dashboard.html each used to keep their own
 // independent copy of this list, and a new baustein (lernplan) once shipped
 // in one copy but not the other. Both pages read window.KF_BAUSTEIN_LABELS
 // instead of keeping their own now; add a new baustein here once.
 window.KF_BAUSTEIN_LABELS = {
   zusammenfassung: "Zusammenfassung", karteikarten: "Karteikarten", uebungen: "Übungsaufgaben",
   altklausuren: "Altklausuren", tutorien: "Tutorien", zusatz: "Zusatzmodule", lernplan: "Lernplan"
+};
+
+// Same idea as KF_BAUSTEIN_LABELS, but for the label of a single entry within
+// a baustein (one subchapter, one flashcard, one exercise, ...) -- both
+// Pruef-Dashboard.html (per-item review UI) and app.html (reviewer-feedback
+// jump links) need to turn a sub_key back into the same human label, so it
+// lives here once instead of as two copies that can drift apart.
+window.KFLabels = {
+  bausteinLabel: function (type) { return window.KF_BAUSTEIN_LABELS[type] || type; },
+  // content = the baustein's content object (chapterContent.zusammenfassung,
+  // chapterContent.karteikarten, courseContent.altklausuren, ...). subchapterLines
+  // = chapter.subchapters split into trimmed non-empty lines (only used for
+  // zusammenfassung, where sub_key is an index into z.subs but the label
+  // should prefer the creator's own subchapter title line if present).
+  subLabel: function (type, subKey, content, subchapterLines) {
+    content = content || {};
+    subchapterLines = subchapterLines || [];
+    var i = parseInt(subKey, 10);
+    if (type === "zusammenfassung") {
+      if (subKey === "merke") return "Merke-Box";
+      if (subKey === "tipps") return "Tipps für die Klausur";
+      return subchapterLines[i] || ("Abschnitt " + (i + 1));
+    }
+    if (type === "karteikarten") {
+      return "Karte " + (i + 1);
+    }
+    if (type === "uebungen") {
+      var ueb = ((content.items || [])[i]) || {};
+      return "Aufgabe " + (i + 1) + " (" + (ueb.themenKuerzel || "") + (ueb.schwierigkeit ? ", " + ueb.schwierigkeit : "") + ")";
+    }
+    if (type === "altklausuren") {
+      var alt = ((content.items || [])[i]) || {};
+      return (alt.semester || "") + " " + (alt.jahr || "") + " · " + (alt.aufgabennummer || "") + " · " + (alt.thema || "");
+    }
+    if (type === "tutorien") {
+      var tut = ((content.items || [])[i]) || {};
+      return tut.blatt || "Tutoriumsblatt";
+    }
+    if (type === "zusatz") {
+      var mod = ((content.modules || [])[i]) || {};
+      return (mod.art || "") + (mod.titel ? " — " + mod.titel : "");
+    }
+    if (type === "lernplan") {
+      var lp = ((content.items || [])[i]) || {};
+      return (lp.tag || "") + (lp.dauer ? " · " + lp.dauer : "");
+    }
+    return subKey;
+  }
 };
 
 async function getMyProfile() {
@@ -171,24 +219,25 @@ window.KFAuth = (function () {
 // KFStore — chapter submissions / review comments
 // ---------------------------------------------------------------------------
 window.KFStore = (function () {
-  var CHAPTER_SELECT = "id, position, title, subchapters, status, is_free_preview, created_at, updated_at, course_id," +
-    " course:courses ( title, professor, hochschule:hochschulen ( name ) )," +
-    " chapter_comments ( author, role, text, content_type, created_at )";
+  var CHAPTER_SELECT = "id, position, title, subchapters, status, is_free_preview, created_at, updated_at, course_id, current_round," +
+    " course:courses ( title, professor, creator:profiles ( email ), hochschule:hochschulen ( name ) )," +
+    " chapter_comments ( author, role, text, content_type, sub_key, round_no, created_at )";
 
   // chapter_comments.role is stored as 'pruefer' in the DB; the existing UI
-  // code (Pruef-Dashboard.html, index.html) checks for the string 'reviewer',
+  // code (Pruef-Dashboard.html, app.html) checks for the string 'reviewer',
   // so that's translated back here to avoid touching every render call site.
   function mapChapterRow(row) {
     var comments = (row.chapter_comments || []).slice().sort(function (a, b) {
       return new Date(a.created_at) - new Date(b.created_at);
     }).map(function (c) {
-      return { author: c.author, role: c.role === "pruefer" ? "reviewer" : c.role, text: c.text, date: c.created_at, contentType: c.content_type };
+      return { author: c.author, role: c.role === "pruefer" ? "reviewer" : c.role, text: c.text, date: c.created_at, contentType: c.content_type, subKey: c.sub_key, roundNo: c.round_no };
     });
     return {
       id: row.id,
       courseId: row.course_id,
       courseTitle: row.course ? row.course.title : "",
       courseProf: row.course ? row.course.professor : "",
+      courseCreatorEmail: row.course && row.course.creator ? row.course.creator.email : "",
       hochschule: row.course && row.course.hochschule ? row.course.hochschule.name : "",
       chapterIndex: row.position,
       chapterTitle: row.title,
@@ -196,6 +245,7 @@ window.KFStore = (function () {
       status: row.status,
       isFreePreview: !!row.is_free_preview,
       comments: comments,
+      currentRound: row.current_round,
       submittedAt: row.created_at,
       updatedAt: row.updated_at
     };
@@ -251,36 +301,49 @@ window.KFStore = (function () {
     return true;
   }
 
-  // Inserts one comment row per non-empty { content_type: text } entry --
-  // lets a reviewer leave a separate note per baustein instead of one
-  // combined note for the whole chapter.
-  async function insertReviewerNotes(chapterId, notesByType) {
-    var rows = Object.keys(notesByType || {})
-      .filter(function (type) { return notesByType[type] && notesByType[type].trim(); })
-      .map(function (type) {
+  // Inserts one comment row per non-empty { key: text } entry -- lets a
+  // reviewer leave a separate note per baustein, or per single entry within a
+  // baustein. key is either "type" (baustein-wide) or "type::subKey" (one
+  // entry within that baustein, e.g. one subchapter or one flashcard) -- see
+  // Pruef-Dashboard.html's collectNotesByKey().
+  async function insertReviewerNotes(chapterId, notesByKey) {
+    var rows = Object.keys(notesByKey || {})
+      .filter(function (key) { return notesByKey[key] && notesByKey[key].trim(); })
+      .map(function (key) {
+        var parts = key.split("::");
+        var type = parts[0], subKey = parts.length > 1 ? parts[1] : null;
         return {
           chapter_id: chapterId, author: "Prüfer", role: "pruefer",
-          text: notesByType[type].trim(), content_type: type === "allgemein" ? null : type
+          text: notesByKey[key].trim(), content_type: type === "allgemein" ? null : type,
+          sub_key: subKey
         };
       });
     if (rows.length) {
+      // chapters.current_round already points at the round the NEXT
+      // resubmission will get (it's bumped by the snapshot trigger at submit
+      // time, before any reviewer ever sees it) -- so the round the reviewer
+      // currently has open in front of them is always current_round - 1.
+      const { data: chapterRow, error: chErr } = await supabase.from("chapters").select("current_round").eq("id", chapterId).single();
+      if (chErr) throw chErr;
+      var roundNo = (chapterRow.current_round || 1) - 1;
+      rows.forEach(function (row) { row.round_no = roundNo; });
       const { error } = await supabase.from("chapter_comments").insert(rows);
       if (error) throw error;
     }
   }
 
   // Prüfer gibt frei
-  async function approve(id, notesByType) {
+  async function approve(id, notesByKey) {
     const { error } = await supabase.from("chapters").update({ status: "freigegeben" }).eq("id", id);
     if (error) throw error;
-    await insertReviewerNotes(id, notesByType);
+    await insertReviewerNotes(id, notesByKey);
   }
 
-  // Prüfer schickt zur Überarbeitung zurück (mit Kommentaren je Baustein)
-  async function requestChanges(id, notesByType) {
+  // Prüfer schickt zur Überarbeitung zurück (mit Kommentaren je Baustein/Eintrag)
+  async function requestChanges(id, notesByKey) {
     const { error } = await supabase.from("chapters").update({ status: "ueberarbeitung" }).eq("id", id);
     if (error) throw error;
-    await insertReviewerNotes(id, notesByType);
+    await insertReviewerNotes(id, notesByKey);
   }
 
   // Creator markiert ein Kapitel als kostenlose Vorschau (oder nimmt das zurück)
@@ -374,7 +437,7 @@ window.KFStore = (function () {
   // function expects, shared by the normal (supabase-js) and keepalive (raw
   // fetch) sync paths below -- chapterTitles: resolved chapter titles in
   // order (index = position). state: the object collectState() already
-  // builds in index.html.
+  // builds in app.html.
   function buildSyncPayload(courseId, chapterTitles, state) {
     var cards = state.cards || [];
     var uebungen = state.uebungen || [];
@@ -451,7 +514,7 @@ window.KFStore = (function () {
     } catch (e) { /* best effort -- localStorage already has the same state */ }
   }
 
-  // Rebuilds an object in exactly the shape restoreState() in index.html
+  // Rebuilds an object in exactly the shape restoreState() in app.html
   // already expects, so loading a course from the DB (e.g. via ?course=)
   // can reuse that function unchanged.
   async function loadCourseState(courseId) {
@@ -548,6 +611,21 @@ window.KFStore = (function () {
 
   async function getCourseContent(courseId) {
     const { data, error } = await supabase.from("course_content").select("type, content").eq("course_id", courseId);
+    if (error) { console.error(error); return {}; }
+    var byType = {};
+    data.forEach(function (row) { byType[row.type] = row.content; });
+    return byType;
+  }
+
+  // Content as it was frozen at the START of a given review round (see the
+  // chapters_x_snapshot_after_submit trigger) -- only exists for
+  // zusammenfassung/karteikarten/uebungen, the three per-chapter bausteine
+  // the trigger snapshots. Used by Pruef-Dashboard.html to diff the previous
+  // round's version against the current one.
+  async function getChapterContentSnapshot(chapterId, roundNo) {
+    if (roundNo == null || roundNo < 1) return {};
+    const { data, error } = await supabase.from("chapter_content_snapshots")
+      .select("type, content").eq("chapter_id", chapterId).eq("round_no", roundNo);
     if (error) { console.error(error); return {}; }
     var byType = {};
     data.forEach(function (row) { byType[row.type] = row.content; });
@@ -681,12 +759,16 @@ window.KFStore = (function () {
 
   async function getRecentCourses(limit) {
     const { data, error } = await supabase.from("courses")
-      .select("title, status, created_at, hochschule:hochschulen ( name )")
+      .select("id, title, status, created_at, creator:profiles ( email ), hochschule:hochschulen ( name )")
       .order("created_at", { ascending: false })
       .limit(limit || 10);
     if (error) { console.error(error); return []; }
     return data.map(function (r) {
-      return { title: r.title, status: r.status, createdAt: r.created_at, hochschule: r.hochschule ? r.hochschule.name : "" };
+      return {
+        id: r.id, title: r.title, status: r.status, createdAt: r.created_at,
+        hochschule: r.hochschule ? r.hochschule.name : "",
+        creatorEmail: r.creator ? r.creator.email : ""
+      };
     });
   }
 
@@ -706,6 +788,7 @@ window.KFStore = (function () {
     loadCourseState: loadCourseState,
     getChapterContent: getChapterContent,
     getCourseContent: getCourseContent,
+    getChapterContentSnapshot: getChapterContentSnapshot,
     publishCourse: publishCourse,
     uploadCardImage: uploadCardImage,
     getCardImageUrl: getCardImageUrl,
@@ -816,6 +899,24 @@ window.KFCatalog = (function () {
     if (error) throw error;
   }
 
+  // RLS only allows this for the owning creator, and only while the course
+  // isn't 'live' yet (see "courses: delete own if not live") -- the delete
+  // button is hidden client-side for live courses too, this is just the
+  // server-side backstop. Cascades to chapters/chapter_content/course_content/
+  // chapter_comments/purchases/learning_progress via existing FK constraints.
+  //
+  // A DELETE that RLS's USING clause filters out matches zero rows rather
+  // than erroring -- PostgREST reports that as success with an empty result,
+  // not as an error. Without checking the returned row, a blocked delete
+  // (live course, or not your own) would silently report "gelöscht" while
+  // the course is still there. .select("id") makes the affected row (if any)
+  // come back so that case can be told apart from a real deletion.
+  async function deleteCourse(courseId) {
+    const { data, error } = await supabase.from("courses").delete().eq("id", courseId).select("id");
+    if (error) throw error;
+    if (!data || !data.length) throw new Error("Löschen nicht möglich -- der Kurs ist bereits live oder gehört dir nicht.");
+  }
+
   // RLS already restricts rows to: status='live' (public) OR own entwurf
   // courses OR everything for reviewers — no extra filter needed here.
   async function getAllCourses() {
@@ -860,7 +961,8 @@ window.KFCatalog = (function () {
     getProgress: getProgress,
     setProgressItem: setProgressItem,
     getSettings: getSettings,
-    setBundleNote: setBundleNote
+    setBundleNote: setBundleNote,
+    deleteCourse: deleteCourse
   };
 })();
 
@@ -998,7 +1100,25 @@ window.KFQuestions = (function () {
 // matters: every page's startSessionWatcher() runs an immediate consistency
 // check as soon as kf-ready fires, and that check would otherwise race the
 // claim and see a stale/mismatched token right after a Google redirect.
-window.KFAuth.claimPendingOAuthSession().catch(function () {}).then(function () {
+//
+// authBootstrapped (result unused) makes kf-ready wait for the supabase-js
+// client's own initial auth check -- without it, code that calls
+// KFAuth.getSession()/getUser() right on kf-ready (e.g. app.html's
+// storageUserIdReady) can occasionally race that check on a fresh page load
+// and see "not logged in" for a moment, even though a valid session is on
+// disk. onAuthStateChange's first callback is the SDK's own signal that this
+// initial check has completed; the actual security-relevant checks still use
+// getUser() elsewhere; unaffected by this.
+var authBootstrapped = new Promise(function (resolve) {
+  var sub = supabase.auth.onAuthStateChange(function () {
+    sub.data.subscription.unsubscribe();
+    resolve();
+  });
+});
+Promise.all([
+  authBootstrapped,
+  window.KFAuth.claimPendingOAuthSession().catch(function () {})
+]).then(function () {
   window.__kfReady = true;
   window.dispatchEvent(new Event("kf-ready"));
 });

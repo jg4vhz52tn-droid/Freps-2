@@ -44,7 +44,8 @@ a{color:var(--accent);}
 .section-label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink); margin-bottom:12px;}
 
 .list{display:flex; flex-direction:column; gap:8px;}
-.list-item{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:13px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+.list-item{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:13px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+.list-item > *:first-child{flex:1 1 auto; min-width:0;}
 .list-item .li-main{font-size:14px; font-weight:600;}
 .list-item .li-sub{font-size:12.5px; color:var(--muted);}
 .list-item .li-time{font-size:12px; color:var(--muted); white-space:nowrap;}
@@ -64,7 +65,10 @@ a{color:var(--accent);}
 
 <div class="topbar">
   <div class="brand">Klausur<span>fuchs</span> · Admin-Dashboard</div>
-  <div class="role" id="topbarRole">Wird geladen …</div>
+  <div style="display:flex; align-items:center; gap:14px">
+    <a href="app.html?goto=view-my-courses" style="font-size:13px; color:#9AA7B5; text-decoration:none">‹ Zurück zur App</a>
+    <div class="role" id="topbarRole">Wird geladen …</div>
+  </div>
 </div>
 
 <div class="wrap" id="accessGate" style="display:none">
@@ -72,7 +76,7 @@ a{color:var(--accent);}
     <h1>Kein Zugriff</h1>
     <p>Dieses Dashboard ist nur für Ultra-Accounts.</p>
   </div>
-  <a href="index.html?goto=view-login" class="btn btn-approve" style="display:inline-block;text-decoration:none">Zur Anmeldung</a>
+  <a href="app.html?goto=view-login" class="btn btn-approve" style="display:inline-block;text-decoration:none">Zur Anmeldung</a>
 </div>
 
 <div class="wrap" id="mainWrap" style="display:none">
@@ -134,12 +138,22 @@ async function renderRecentLists(){
   }).join('') : '<div class="list-empty">Noch keine Registrierungen.</div>';
 
   coursesBox.innerHTML = courses.length ? courses.map(function(c){
-    return '<div class="list-item">'+
-      '<div><div class="li-main">'+esc(c.title)+'</div><div class="li-sub">'+esc(c.hochschule||'')+'</div></div>'+
+    return '<div class="list-item" data-course-id="'+esc(c.id)+'" style="cursor:pointer">'+
+      '<div><div class="li-main">'+esc(c.title)+'</div>'+
+      '<div class="li-sub">'+esc(c.hochschule||'')+(c.creatorEmail ? ' · '+esc(c.creatorEmail) : '')+'</div></div>'+
       '<span class="status-pill '+esc(c.status)+'">'+esc(COURSE_STATUS_LABEL[c.status]||c.status)+'</span>'+
       '<span class="li-time">'+fmtDate(c.createdAt)+'</span>'+
     '</div>';
   }).join('') : '<div class="list-empty">Noch keine Kurse.</div>';
+
+  // Admin-Vorschau: Kurs anklicken springt in die Lerner-Ansicht des Kurses,
+  // ohne dass ein echter Kauf-Eintrag nötig ist (siehe app.html
+  // renderMyCoursesLearner()'s adminPreviewCourse-Handling).
+  coursesBox.querySelectorAll('[data-course-id]').forEach(function(el){
+    el.addEventListener('click', function(){
+      window.location.href = 'app.html?goto=view-my-courses&adminPreviewCourse=' + encodeURIComponent(el.dataset.courseId);
+    });
+  });
 }
 
 async function render(){
@@ -152,7 +166,7 @@ async function init(){
   var gate = document.getElementById('accessGate');
   var mainWrap = document.getElementById('mainWrap');
   if(!session){
-    window.location.href = 'index.html?goto=view-login';
+    window.location.href = 'app.html?goto=view-login';
     return;
   }
   if(!session.isAdmin){
