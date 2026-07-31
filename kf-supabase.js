@@ -219,9 +219,9 @@ window.KFAuth = (function () {
 // KFStore — chapter submissions / review comments
 // ---------------------------------------------------------------------------
 window.KFStore = (function () {
-  var CHAPTER_SELECT = "id, position, title, subchapters, status, is_free_preview, created_at, updated_at, course_id," +
-    " course:courses ( title, professor, hochschule:hochschulen ( name ) )," +
-    " chapter_comments ( author, role, text, content_type, sub_key, created_at )";
+  var CHAPTER_SELECT = "id, position, title, subchapters, status, is_free_preview, created_at, updated_at, course_id, current_round," +
+    " course:courses ( title, professor, creator:profiles ( email ), hochschule:hochschulen ( name ) )," +
+    " chapter_comments ( author, role, text, content_type, sub_key, round_no, created_at )";
 
   // chapter_comments.role is stored as 'pruefer' in the DB; the existing UI
   // code (Pruef-Dashboard.html, app.html) checks for the string 'reviewer',
@@ -230,13 +230,14 @@ window.KFStore = (function () {
     var comments = (row.chapter_comments || []).slice().sort(function (a, b) {
       return new Date(a.created_at) - new Date(b.created_at);
     }).map(function (c) {
-      return { author: c.author, role: c.role === "pruefer" ? "reviewer" : c.role, text: c.text, date: c.created_at, contentType: c.content_type, subKey: c.sub_key };
+      return { author: c.author, role: c.role === "pruefer" ? "reviewer" : c.role, text: c.text, date: c.created_at, contentType: c.content_type, subKey: c.sub_key, roundNo: c.round_no };
     });
     return {
       id: row.id,
       courseId: row.course_id,
       courseTitle: row.course ? row.course.title : "",
       courseProf: row.course ? row.course.professor : "",
+      courseCreatorEmail: row.course && row.course.creator ? row.course.creator.email : "",
       hochschule: row.course && row.course.hochschule ? row.course.hochschule.name : "",
       chapterIndex: row.position,
       chapterTitle: row.title,
@@ -244,6 +245,7 @@ window.KFStore = (function () {
       status: row.status,
       isFreePreview: !!row.is_free_preview,
       comments: comments,
+      currentRound: row.current_round,
       submittedAt: row.created_at,
       updatedAt: row.updated_at
     };
@@ -317,6 +319,14 @@ window.KFStore = (function () {
         };
       });
     if (rows.length) {
+      // chapters.current_round already points at the round the NEXT
+      // resubmission will get (it's bumped by the snapshot trigger at submit
+      // time, before any reviewer ever sees it) -- so the round the reviewer
+      // currently has open in front of them is always current_round - 1.
+      const { data: chapterRow, error: chErr } = await supabase.from("chapters").select("current_round").eq("id", chapterId).single();
+      if (chErr) throw chErr;
+      var roundNo = (chapterRow.current_round || 1) - 1;
+      rows.forEach(function (row) { row.round_no = roundNo; });
       const { error } = await supabase.from("chapter_comments").insert(rows);
       if (error) throw error;
     }
@@ -607,6 +617,21 @@ window.KFStore = (function () {
     return byType;
   }
 
+  // Content as it was frozen at the START of a given review round (see the
+  // chapters_x_snapshot_after_submit trigger) -- only exists for
+  // zusammenfassung/karteikarten/uebungen, the three per-chapter bausteine
+  // the trigger snapshots. Used by Pruef-Dashboard.html to diff the previous
+  // round's version against the current one.
+  async function getChapterContentSnapshot(chapterId, roundNo) {
+    if (roundNo == null || roundNo < 1) return {};
+    const { data, error } = await supabase.from("chapter_content_snapshots")
+      .select("type, content").eq("chapter_id", chapterId).eq("round_no", roundNo);
+    if (error) { console.error(error); return {}; }
+    var byType = {};
+    data.forEach(function (row) { byType[row.type] = row.content; });
+    return byType;
+  }
+
   async function publishCourse(courseId) {
     const { error } = await supabase.from("courses").update({ status: "live" }).eq("id", courseId);
     if (error) throw error;
@@ -734,12 +759,16 @@ window.KFStore = (function () {
 
   async function getRecentCourses(limit) {
     const { data, error } = await supabase.from("courses")
-      .select("title, status, created_at, hochschule:hochschulen ( name )")
+      .select("id, title, status, created_at, creator:profiles ( email ), hochschule:hochschulen ( name )")
       .order("created_at", { ascending: false })
       .limit(limit || 10);
     if (error) { console.error(error); return []; }
     return data.map(function (r) {
-      return { title: r.title, status: r.status, createdAt: r.created_at, hochschule: r.hochschule ? r.hochschule.name : "" };
+      return {
+        id: r.id, title: r.title, status: r.status, createdAt: r.created_at,
+        hochschule: r.hochschule ? r.hochschule.name : "",
+        creatorEmail: r.creator ? r.creator.email : ""
+      };
     });
   }
 
@@ -759,6 +788,7 @@ window.KFStore = (function () {
     loadCourseState: loadCourseState,
     getChapterContent: getChapterContent,
     getCourseContent: getCourseContent,
+    getChapterContentSnapshot: getChapterContentSnapshot,
     publishCourse: publishCourse,
     uploadCardImage: uploadCardImage,
     getCardImageUrl: getCardImageUrl,
@@ -869,6 +899,24 @@ window.KFCatalog = (function () {
     if (error) throw error;
   }
 
+  // RLS only allows this for the owning creator, and only while the course
+  // isn't 'live' yet (see "courses: delete own if not live") -- the delete
+  // button is hidden client-side for live courses too, this is just the
+  // server-side backstop. Cascades to chapters/chapter_content/course_content/
+  // chapter_comments/purchases/learning_progress via existing FK constraints.
+  //
+  // A DELETE that RLS's USING clause filters out matches zero rows rather
+  // than erroring -- PostgREST reports that as success with an empty result,
+  // not as an error. Without checking the returned row, a blocked delete
+  // (live course, or not your own) would silently report "gelöscht" while
+  // the course is still there. .select("id") makes the affected row (if any)
+  // come back so that case can be told apart from a real deletion.
+  async function deleteCourse(courseId) {
+    const { data, error } = await supabase.from("courses").delete().eq("id", courseId).select("id");
+    if (error) throw error;
+    if (!data || !data.length) throw new Error("Löschen nicht möglich -- der Kurs ist bereits live oder gehört dir nicht.");
+  }
+
   // RLS already restricts rows to: status='live' (public) OR own entwurf
   // courses OR everything for reviewers — no extra filter needed here.
   async function getAllCourses() {
@@ -913,7 +961,8 @@ window.KFCatalog = (function () {
     getProgress: getProgress,
     setProgressItem: setProgressItem,
     getSettings: getSettings,
-    setBundleNote: setBundleNote
+    setBundleNote: setBundleNote,
+    deleteCourse: deleteCourse
   };
 })();
 

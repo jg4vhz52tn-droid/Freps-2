@@ -290,6 +290,13 @@ ul.plain li{margin-bottom:5px;}
 .mycourse-badge{font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; white-space:nowrap;}
 .mycourse-badge.live{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
 .mycourse-badge.draft{background:var(--paper); color:var(--muted); border:1px solid var(--line);}
+.btn-delete-course{background:none; border:none; color:var(--danger); font:inherit; font-size:12.5px; cursor:pointer; padding:0; text-decoration:underline;}
+.confirm-delete-overlay{position:fixed; inset:0; background:rgba(27,42,65,.55); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;}
+.confirm-delete-box{background:var(--card); border-radius:var(--radius); padding:24px 26px; max-width:420px; box-shadow:0 12px 32px rgba(27,42,65,.3);}
+.confirm-delete-box p{font-size:14px; line-height:1.55; margin-bottom:18px;}
+.confirm-delete-box .action-row{display:flex; gap:10px; flex-wrap:wrap;}
+.btn-danger{background:var(--danger); color:#fff; border:none; font:inherit; font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; cursor:pointer;}
+.btn-cancel{background:none; border:none; color:var(--muted); font:inherit; font-size:14px; cursor:pointer; padding:10px 8px;}
 .mycourse-chapters{display:flex; flex-direction:column; gap:6px;}
 .mycourse-chapter{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; padding:8px 12px; background:var(--paper); border:1px solid var(--line); border-radius:8px;}
 .mini-status{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap;}
@@ -1113,6 +1120,7 @@ window.renderMyCourses = async function(){
   wireLearnerContentToggles(list);
   wireQuestionAnswerForms(list);
   wireLearnerPurchaseSuggestions(list);
+  wireCourseDeleteButtons(list);
   notifyIfQuestionsAnswered(session);
   if(isCreator && mode === 'creator'){ notifyIfNewQuestions(session); }
 };
@@ -1143,6 +1151,36 @@ async function renderMyCoursesQuestions(){
       answerBlock +
       '</div>';
   }).join('');
+}
+
+// "Kurs löschen" braucht eine zweistufige Bestätigung (kein natives
+// confirm(), Overlay im bestehenden Design) -- erst beim expliziten
+// "Endgültig löschen"-Klick wird KFCatalog.deleteCourse() aufgerufen.
+function wireCourseDeleteButtons(container){
+  container.querySelectorAll('[data-delete-course]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var overlay = container.querySelector('[data-confirm-delete="' + btn.dataset.deleteCourse + '"]');
+      if(overlay){ overlay.style.display = 'flex'; }
+    });
+  });
+  container.querySelectorAll('[data-confirm-delete-no]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var overlay = btn.closest('.confirm-delete-overlay');
+      if(overlay){ overlay.style.display = 'none'; }
+    });
+  });
+  container.querySelectorAll('[data-confirm-delete-yes]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.disabled = true;
+      window.KFCatalog.deleteCourse(btn.dataset.confirmDeleteYes).then(function(){
+        showToast('Kurs gelöscht.');
+        window.renderMyCourses();
+      }).catch(function(e){
+        btn.disabled = false;
+        showToast('Löschen fehlgeschlagen: ' + ((e && e.message) || 'unbekannter Fehler'));
+      });
+    });
+  });
 }
 
 function wireQuestionAnswerForms(container){
@@ -1230,13 +1268,33 @@ async function renderMyCoursesCreator(session){
     var transcriptHtml = course.transcriptStatus
       ? '<div style="margin-top:10px"><span class="mini-status ' + (TRANSCRIPT_STATUS_CLASS[course.transcriptStatus]||'review') + '">' + TRANSCRIPT_STATUS_LABEL[course.transcriptStatus] + '</span></div>'
       : '';
+    // Löschen nur, solange der Kurs noch nicht live ist -- ein bereits
+    // veröffentlichter (ggf. gekaufter) Kurs darf sich nicht durch einen
+    // einfachen Klick auflösen. Die RLS-Policy lehnt das serverseitig
+    // ohnehin ab, der Button ist hier zusätzlich ausgeblendet.
+    var deleteHtml = '';
+    if(course.status !== 'live'){
+      deleteHtml = '<button type="button" class="btn-delete-course" data-delete-course="' + escapeHtmlMy(course.id) + '">Kurs löschen</button>' +
+        '<div class="confirm-delete-overlay" data-confirm-delete="' + escapeHtmlMy(course.id) + '" style="display:none">' +
+          '<div class="confirm-delete-box">' +
+            '<p>Kurs <strong>„' + escapeHtmlMy(course.title) + '"</strong> wirklich unwiderruflich löschen? Alle Kapitel und Inhalte gehen verloren.</p>' +
+            '<div class="action-row">' +
+              '<button type="button" class="btn-danger" data-confirm-delete-yes="' + escapeHtmlMy(course.id) + '">Endgültig löschen</button>' +
+              '<button type="button" class="btn-cancel" data-confirm-delete-no>Abbrechen</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
     cards += '<div class="mycourse-card">' +
       '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
       '<p>' + escapeHtmlMy(course.hochschule) + '</p></div>' +
       '<span class="mycourse-badge ' + (COURSE_STATUS_CLASS[course.status]||'draft') + '">' + (COURSE_STATUS_LABEL[course.status]||'Entwurf') + '</span></div>' +
       '<div class="mycourse-chapters">' + chaptersHtml + '</div>' +
       transcriptHtml +
-      '<div style="margin-top:14px"><a href="app.html?goto=view-creator-wizard&course=' + encodeURIComponent(course.id) + '" class="cta" style="display:inline-block;text-decoration:none;padding:8px 16px;font-size:13px">Weiter bearbeiten →</a></div>' +
+      '<div style="margin-top:14px; display:flex; align-items:center; gap:16px; flex-wrap:wrap">' +
+        '<a href="app.html?goto=view-creator-wizard&course=' + encodeURIComponent(course.id) + '" class="cta" style="display:inline-block;text-decoration:none;padding:8px 16px;font-size:13px">Weiter bearbeiten →</a>' +
+        deleteHtml +
+      '</div>' +
       '</div>';
   }
 
@@ -1265,6 +1323,30 @@ async function renderMyCoursesLearner(){
   var bundlePrice = settings.bundle_price || '49';
   var purchases = await window.KFCatalog.getMyPurchases();
 
+  // Admin-Vorschau: aus dem Admin-Dashboard heraus einen Kurs ohne echten
+  // Kauf-Eintrag ansehen können (RLS erlaubt is_reviewer()/is_admin() ohnehin
+  // Zugriff auf chapter_content/course_content -- es fehlte nur der
+  // Frontend-Weg dorthin). Nur wirksam für Admin-Sessions und nur, wenn der
+  // Kurs nicht ohnehin schon (echt) gekauft ist.
+  var params = new URLSearchParams(window.location.search);
+  var previewCourseId = params.get('adminPreviewCourse');
+  if(previewCourseId){
+    var session = await window.KFAuth.getSession();
+    if(session && session.isAdmin){
+      var alreadyOwned = purchases.some(function(c){ return c.id === previewCourseId; });
+      if(!alreadyOwned){
+        var previewCourse = (await window.KFCatalog.getAllCourses())
+          .filter(function(c){ return c.id === previewCourseId; })[0];
+        if(previewCourse){
+          purchases = [{
+            id: previewCourse.id, title: previewCourse.title, prof: previewCourse.prof,
+            hochschule: previewCourse.hochschule, purchasedAt: null, bundleNote: null, __adminPreview: true
+          }].concat(purchases);
+        }
+      }
+    }
+  }
+
   var cards = '';
   for(var i=0;i<purchases.length;i++){
     var course = purchases[i];
@@ -1276,9 +1358,12 @@ async function renderMyCoursesLearner(){
     } else if(course.bundleNote){
       bundleHtml = '<p style="font-size:12.5px;color:var(--muted);margin-top:6px">Geplant im Bundle mit: ' + escapeHtmlMy(course.bundleNote) + '</p>';
     }
+    var purchaseLineHtml = course.__adminPreview
+      ? ' · Admin-Vorschau — kein Kauf'
+      : ' · gekauft am ' + fmtPurchaseDate(course.purchasedAt);
     cards += '<div class="mycourse-card">' +
       '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
-      '<p>' + escapeHtmlMy(course.hochschule) + ' · gekauft am ' + fmtPurchaseDate(course.purchasedAt) + '</p></div></div>' +
+      '<p>' + escapeHtmlMy(course.hochschule) + purchaseLineHtml + '</p></div></div>' +
       bundleHtml +
       '<div style="margin-top:10px"><button type="button" class="linklike" data-toggle-content="' + escapeHtmlMy(course.id) + '">Kursinhalte ansehen ▾</button>' +
       '<div class="lc-content-box" data-content-box="' + escapeHtmlMy(course.id) + '" style="display:none"></div></div>' +
