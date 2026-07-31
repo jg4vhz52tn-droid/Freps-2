@@ -374,16 +374,25 @@ window.KFStore = (function () {
       // title again would silently spawn a second, orphaned course row
       // instead (the bug that left abandoned "in_arbeit" phantom courses
       // behind after a title change).
+      //
+      // No .single() here: if the referenced row no longer exists (e.g. the
+      // course was deleted, in another tab or via "Kurs löschen"), .update()
+      // just matches zero rows -- not an error -- but .single() used to throw
+      // on that ("Cannot coerce the result to a single JSON object"),
+      // crashing saveDraft() outright. Falling through to the normal
+      // create/find-by-title path below is the correct recovery: the stale
+      // id is simply discarded and a fresh course row is created instead.
       const { data: updated, error: uErr } = await supabase.from("courses")
         .update({
           hochschule_id: hochschuleRow.id, title: meta.fach,
           professor: meta.prof || null, semester: meta.semester || null
         })
         .eq("id", meta.existingCourseId).eq("creator_id", user.id)
-        .select("id").single();
+        .select("id");
       if (uErr) throw uErr;
-      courseRow = updated;
-    } else {
+      if (updated && updated.length) { courseRow = updated[0]; }
+    }
+    if (!courseRow) {
       // Atomic upsert (not select-then-insert): concurrent saves used to race
       // and create duplicate course rows for the same creator+title. status is
       // deliberately omitted so an existing course's status is never reset.

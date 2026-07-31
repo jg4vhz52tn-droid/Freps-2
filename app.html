@@ -903,7 +903,10 @@ window.renderAppHeader = async function(){
   // Parse-Zeit-Delegation weiter unten (document.querySelectorAll('[data-goto-view]'))
   // nicht erfasst -- hier bei jedem Render neu verdrahten.
   navEl.querySelectorAll('[data-goto-view]').forEach(function(el){
-    el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
+    el.addEventListener('click', function(){
+      if(el.dataset.gotoView === 'view-creator-intro' && typeof window.resetCourseDraftState === 'function'){ window.resetCourseDraftState(); }
+      showView(el.dataset.gotoView);
+    });
   });
   var modeToggleBtn = document.getElementById('appHeaderModeToggle');
   if(modeToggleBtn){
@@ -954,7 +957,10 @@ function showView(id){
   }
 })();
 document.querySelectorAll('[data-goto-view]').forEach(function(el){
-  el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
+  el.addEventListener('click', function(){
+    if(el.dataset.gotoView === 'view-creator-intro' && typeof window.resetCourseDraftState === 'function'){ window.resetCourseDraftState(); }
+    showView(el.dataset.gotoView);
+  });
 });
 
 /* kf-supabase.js is loaded as a deferred module, so it can still be running
@@ -1172,7 +1178,14 @@ function wireCourseDeleteButtons(container){
   container.querySelectorAll('[data-confirm-delete-yes]').forEach(function(btn){
     btn.addEventListener('click', function(){
       btn.disabled = true;
-      window.KFCatalog.deleteCourse(btn.dataset.confirmDeleteYes).then(function(){
+      var deletedCourseId = btn.dataset.confirmDeleteYes;
+      var deletedCourseTitle = btn.dataset.courseTitle;
+      window.KFCatalog.deleteCourse(deletedCourseId).then(function(){
+        // Sonst "spukt" der gelöschte Kurs weiter herum: lastCourseIdKey()
+        // würde seine ID beim nächsten Laden zurückholen, sein lokaler
+        // Entwurf bliebe unter seiner eigenen Kurs-ID (oder, falls er noch
+        // nie eine hatte, unter dem generischen "_new"-Bucket) liegen.
+        if(typeof window.clearLocalCourseState === 'function'){ window.clearLocalCourseState(deletedCourseId, deletedCourseTitle); }
         showToast('Kurs gelöscht.');
         window.renderMyCourses();
       }).catch(function(e){
@@ -1279,7 +1292,7 @@ async function renderMyCoursesCreator(session){
           '<div class="confirm-delete-box">' +
             '<p>Kurs <strong>„' + escapeHtmlMy(course.title) + '"</strong> wirklich unwiderruflich löschen? Alle Kapitel und Inhalte gehen verloren.</p>' +
             '<div class="action-row">' +
-              '<button type="button" class="btn-danger" data-confirm-delete-yes="' + escapeHtmlMy(course.id) + '">Endgültig löschen</button>' +
+              '<button type="button" class="btn-danger" data-confirm-delete-yes="' + escapeHtmlMy(course.id) + '" data-course-title="' + escapeHtmlMy(course.title) + '">Endgültig löschen</button>' +
               '<button type="button" class="btn-cancel" data-confirm-delete-no>Abbrechen</button>' +
             '</div>' +
           '</div>' +
@@ -3656,6 +3669,37 @@ window.renderSubjectsForHochschule = async function(){
   function rememberLastCourseId(id){
     try{ localStorage.setItem(lastCourseIdKey(), id); }catch(e){}
   }
+
+  // Called from the "Kurs löschen"-Bestätigung in renderMyCoursesCreator()
+  // (a different scope, hence exposed on window like resetCourseDraftState)
+  // right after a successful deleteCourse() -- otherwise a deleted course
+  // keeps "haunting" the browser: lastCourseIdKey() would restore its id on
+  // the next load (repopulating resolvedCourseId with a course that no
+  // longer exists), and its local draft would still be sitting under its
+  // own per-course key.
+  window.clearLocalCourseState = async function(courseId, courseTitle){
+    try{ await storageUserIdReady; }catch(e){}
+    try{
+      if(localStorage.getItem(lastCourseIdKey()) === courseId){
+        localStorage.removeItem(lastCourseIdKey());
+      }
+      localStorage.removeItem('klausurfuchs_creator_draft_' + (storageUserId || 'anon') + '_' + courseId);
+      // A course's very first autosave (before ensureCourseId() ever ran)
+      // lands in the generic "_new" bucket, not under its own id -- if that's
+      // still sitting there, it haunts the wizard on the very next plain
+      // reload (no "+ Neuen Kurs erstellen" click needed at all). Only clear
+      // it when its saved Fach still matches the deleted course, so an
+      // unrelated, genuinely still-in-progress new draft isn't wiped too.
+      if(courseTitle){
+        var newKey = 'klausurfuchs_creator_draft_' + (storageUserId || 'anon') + '_new';
+        var raw = localStorage.getItem(newKey);
+        if(raw){
+          var parsed = JSON.parse(raw);
+          if(parsed && parsed.fach === courseTitle){ localStorage.removeItem(newKey); }
+        }
+      }
+    }catch(e){}
+  };
   var newsUnseen = false;
   function rowsData(containerId){
     var container = document.getElementById(containerId);
@@ -3724,6 +3768,66 @@ window.renderSubjectsForHochschule = async function(){
       data.modules.forEach(function(m){ addZusatzModul(m); });
     }
   }
+
+  // Bringt den ganzen Kursbau-Zustand auf genau den Stand eines frischen,
+  // leeren Formulars zurück -- gebraucht, bevor ein wirklich NEUER Kurs
+  // angelegt wird (Klick auf "+ Neuen Kurs erstellen", oder ein Seitenload
+  // mit ?goto=view-creator-intro). Ohne das bleibt resolvedCourseId auf der
+  // ID des zuvor bearbeiteten Kurses stehen -- ensureCourseId() behandelt
+  // jede weitere Eingabe dann als Umbenennung DIESES alten Kurses statt als
+  // neuen Kurs, und der alte Kurs wird live zum neuen umbenannt (samt aller
+  // schon gespeicherten Kapitel/Inhalte). ensureRowCount()/fillRows() allein
+  // reichen dafür nicht: beide tun bei leeren/fehlenden Daten NICHTS (siehe
+  // ihre eigene Implementierung), sie räumen also weder überzählige Zeilen
+  // noch stehengebliebene Feldwerte weg -- deshalb hier explizit erst leeren,
+  // dann per addFn() genau eine frische Zeile anlegen.
+  function resetCourseDraftState(){
+    resolvedCourseId = null;
+    resolvedCourseKey = null;
+    currentZfIdx = null;
+    zfData = {};
+    pendingTranscriptPath = null;
+    chapterStatuses = ['offen'];
+    newsUnseen = false;
+
+    ['cHochschule','cFach','cProf','cStudiengang'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el){ el.value = ''; }
+    });
+    var semesterEl = document.getElementById('cSemester');
+    if(semesterEl){ semesterEl.selectedIndex = 0; }
+    var dupBox = document.getElementById('duplicateCheckBox');
+    if(dupBox){ dupBox.style.display = 'none'; dupBox.innerHTML = ''; }
+    if(typeof setSubmitBlocked === 'function'){ setSubmitBlocked(false); }
+    updateWizardFachLabel();
+
+    function resetToSingleRow(containerId, addFn){
+      var container = document.getElementById(containerId);
+      if(!container){ return; }
+      container.innerHTML = '';
+      addFn();
+    }
+    resetToSingleRow('chapterRows', addChapterRow);
+    resetToSingleRow('cardRows', function(){ addCardRow('', '', null); });
+    resetToSingleRow('uebungRows', function(){ addUebungRow(null); });
+    resetToSingleRow('altklausurRows', addAltklausurRow);
+    resetToSingleRow('tutRows', addTutRow);
+    resetToSingleRow('lernplanRows', function(){ addLernplanRow(); });
+    renumberChapterLabels();
+    refreshAllKapitelSelects();
+    filterRowsByContext('cardRows', 'kkKapitelSelect');
+    filterRowsByContext('uebungRows', 'uebKapitelSelect');
+
+    restoreZusatzData(null);
+
+    if(typeof showCreatorStep === 'function'){ showCreatorStep('struktur'); }
+  }
+  // Liegt in dieser IIFE, aber die data-goto-view-Klick-Delegation für
+  // "view-creator-intro" (renderAppHeader() und die globale Delegation weiter
+  // oben im Script) läuft in einem anderen, äußeren Scope -- deshalb hier
+  // zusätzlich global verfügbar machen, exakt das Muster, das auch
+  // window.renderMyCourses/window.refreshCreatorEntryPoint schon nutzen.
+  window.resetCourseDraftState = resetCourseDraftState;
   function collectState(){
     saveCurrentZfFields();
     return {
@@ -3834,6 +3938,18 @@ window.renderSubjectsForHochschule = async function(){
           pendingTranscriptPath = null;
         }
       }catch(e){
+        // ensureCourseId() only re-resolves against the DB when Fach/
+        // Hochschule changed (resolvedCourseKey !== key) -- editing anything
+        // else just returns the cached resolvedCourseId as-is. If that course
+        // was deleted meanwhile (another tab, "Kurs löschen"), syncCourseContent
+        // then fails here on every subsequent save, forever, because the same
+        // dead id keeps getting reused. Clearing it forces the next save to
+        // re-resolve for real: courseIdentity()'s upsert-by-title is safe
+        // either way -- finds the same row again if this failure was just a
+        // transient network blip, or creates a fresh one if the course is
+        // genuinely gone.
+        resolvedCourseId = null;
+        resolvedCourseKey = null;
         updateAllSaveStatus('Lokal gespeichert – Cloud-Synchronisierung fehlgeschlagen. Bitte Verbindung prüfen.');
         if(!silent){ showToast('Lokal gespeichert – die Cloud-Synchronisierung ist gerade fehlgeschlagen.'); }
       }
@@ -3885,6 +4001,18 @@ window.renderSubjectsForHochschule = async function(){
         showToast('Kurs konnte nicht geladen werden.');
         renderChapterPackList();
       });
+      return;
+    }
+    // Ein expliziter Klick auf "+ Neuen Kurs erstellen" landet hier (echter
+    // Seiten-Reload zu app.html?goto=view-creator-intro) -- das darf NIEMALS
+    // den zuletzt bearbeiteten Kurs wiederherstellen, weder über den
+    // lastCourseIdKey()-Fallback noch über dessen lokalen Entwurf. Sonst
+    // übernimmt ensureCourseId() später die alte Kurs-ID als
+    // existingCourseId und benennt den alten Kurs in den neuen um, statt
+    // einen echten zweiten Kurs anzulegen.
+    if(new URLSearchParams(window.location.search).get('goto') === 'view-creator-intro'){
+      resetCourseDraftState();
+      announceTabPresence();
       return;
     }
     if(!resolvedCourseId){
