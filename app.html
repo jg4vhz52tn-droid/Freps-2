@@ -2676,7 +2676,15 @@ window.renderSubjectsForHochschule = async function(){
   function ensureZfEntry(idx){
     if(!zfData[idx]){
       zfData[idx] = { subs: {}, merke: '', tipps: '' };
-    } else if(Array.isArray(zfData[idx].subs)){
+    } else if(!zfData[idx].subs || Array.isArray(zfData[idx].subs)){
+      // zfData[idx] kann hier auch ein bereits vorhandener Eintrag OHNE
+      // .subs sein -- z. B. ein aus der Cloud geladenes Kapitel, dessen
+      // Zusammenfassung noch nie im Wizard geöffnet wurde: kf-supabase.js
+      // synct dafür "zusammenfassung: zfData[i] || {}", also ein Objekt
+      // ganz ohne subs-Schlüssel. Ein reiner Array.isArray()-Check hätte das
+      // übersehen und entry.subs[...] wäre undefined -- renderOutlineFields()
+      // wäre dann beim ersten Knoten mit einer TypeError abgebrochen, bevor
+      // auch nur ein Feld gerendert wurde (siehe BUG A).
       zfData[idx].subs = window.KFOutline ? window.KFOutline.normalizeSubs(zfData[idx].subs, getOutlineTree(idx)) : {};
     }
     return zfData[idx];
@@ -2967,20 +2975,21 @@ window.renderSubjectsForHochschule = async function(){
     });
     return closest.element;
   }
-  // Zeigt echte Tiefe (1.1.1 unter 1.1) an -- die Drag&Drop-Liste direkt
-  // darüber bleibt bewusst flach (sie renummeriert beim Umsortieren immer neu
-  // nach Zeilenposition, siehe syncStructureFromOverview()); ein Umbau auf
-  // echte verschachtelte Drag&Drop-Bearbeitung ist hier nicht im Umfang.
-  // Nur wenn ein Kapitel wirklich mehrstufig ist, wird diese Vorschau
-  // gerendert -- bei rein zweistufigen Kursen (heute: alle) würde sie sonst
-  // genau dieselbe Liste ein zweites Mal, nur nicht editierbar, zeigen.
-  function outlineHasNesting(nodes){
-    return (nodes||[]).some(function(n){ return n.children.length > 0; });
-  }
-  function renderOutlinePreviewNode(node){
-    return '<div style="margin-left:' + (14 + node.depth*18) + 'px; font-size:12.5px; color:var(--muted); padding:3px 0">' +
-      (node.number ? node.number + ' ' : '') + escapeHtmlMy(node.title) + '</div>' +
-      node.children.map(renderOutlinePreviewNode).join('');
+  // Liefert alle Knoten eines Outline-Baums als flache Liste in
+  // Dokumentreihenfolge (Tiefe zuerst die Kinder, dann die Geschwister) --
+  // jeder Knoten trägt sein eigenes .depth, damit die editierbare Liste
+  // unten exakt dieselbe Einrückung zeigt wie die geparste Baumstruktur
+  // (KFOutline.parse), statt einer eigenen, unabhängigen Berechnung. Die
+  // Drag&Drop-Bearbeitung bleibt bewusst positionsbasiert-flach (siehe
+  // syncStructureFromOverview()); eine echte verschachtelte Drag&Drop-
+  // Bearbeitung ist hier nicht im Umfang.
+  function flattenOutlineNodes(nodes){
+    var out = [];
+    (nodes||[]).forEach(function(node){
+      out.push(node);
+      if(node.children.length){ out = out.concat(flattenOutlineNodes(node.children)); }
+    });
+    return out;
   }
   function renderUeberblick(chapters){
     var container = document.getElementById('ueberblickList');
@@ -2992,21 +3001,19 @@ window.renderSubjectsForHochschule = async function(){
     }
     var rawChapterRows = document.querySelectorAll('#chapterRows .repeat-row');
     var html = chapters.map(function(ch, ci){
-      var subsHtml = ch.subs.map(function(s, si){
-        return '<div class="ueb-sub" draggable="true">' +
+      var rawRow = rawChapterRows[ci];
+      var rawSubs = rawRow ? (rawRow.querySelector('textarea')||{}).value : '';
+      var outlineTree = window.KFOutline ? window.KFOutline.parse(rawSubs) : [];
+      var flatNodes = flattenOutlineNodes(outlineTree);
+      var subsHtml = flatNodes.map(function(node, si){
+        return '<div class="ueb-sub" draggable="true" style="margin-left:' + (node.depth * 20) + 'px">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿</span>' +
-          '<span class="ueb-sub-num">' + (ci + 1) + '.' + (si + 1) + '</span>' +
-          '<input type="text" class="ueb-sub-input" value="' + escapeHtml(s) + '" placeholder="Unterkapitel-Titel">' +
+          '<span class="ueb-sub-num">' + escapeHtml(node.number || ((ci + 1) + '.' + (si + 1))) + '</span>' +
+          '<input type="text" class="ueb-sub-input" value="' + escapeHtml(node.title) + '" placeholder="Unterkapitel-Titel">' +
         '</div>';
       }).join('') || '<p class="ueb-empty-hint">Noch keine Unterkapitel – in Schritt 1 ergänzen.</p>';
       var collapsedClass = ch.collapsed ? ' collapsed' : '';
       var toggleSymbol = ch.collapsed ? '▸' : '▾';
-      var rawRow = rawChapterRows[ci];
-      var rawSubs = rawRow ? (rawRow.querySelector('textarea')||{}).value : '';
-      var outlineTree = window.KFOutline ? window.KFOutline.parse(rawSubs) : [];
-      var outlinePreviewHtml = outlineHasNesting(outlineTree)
-        ? '<div class="ueb-outline-preview">' + outlineTree.map(renderOutlinePreviewNode).join('') + '</div>'
-        : '';
       return '<div class="ueb-chapter' + collapsedClass + '" draggable="true">' +
         '<div class="ueb-chapter-head">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿⠿</span>' +
@@ -3015,7 +3022,6 @@ window.renderSubjectsForHochschule = async function(){
           '<input type="text" class="ueb-chapter-input" value="' + escapeHtml(ch.title) + '" placeholder="Kapitel-Titel">' +
         '</div>' +
         '<div class="ueb-subs">' + subsHtml + '</div>' +
-        outlinePreviewHtml +
       '</div>';
     }).join('');
     container.innerHTML = html;
