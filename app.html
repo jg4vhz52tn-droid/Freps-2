@@ -384,8 +384,9 @@ ul.plain li{margin-bottom:5px;}
 .ueb-subs{padding:2px 16px 14px 48px; display:flex; flex-direction:column; gap:8px;}
 .ueb-chapter.collapsed .ueb-subs{display:none;}
 .ueb-empty-hint{font-size:12px; color:var(--muted); margin:0; padding:4px 0;}
-.ueb-sub{display:flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px; cursor:grab;}
+.ueb-sub{display:flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px; cursor:grab; transition:margin-left .12s;}
 .ueb-sub.dragging{opacity:.4;}
+.ueb-sub.nest-target{outline:2px dotted var(--accent); outline-offset:2px;}
 .ueb-sub-num{font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap; min-width:30px; flex-shrink:0;}
 .ueb-sub-input{flex:1; border:1px solid transparent; background:none; font:inherit; font-size:13px; color:var(--ink); padding:4px 7px; border-radius:6px; min-width:0;}
 .ueb-sub-input:hover{border-color:var(--line);}
@@ -2937,33 +2938,136 @@ window.renderSubjectsForHochschule = async function(){
       return { title: titleInput ? titleInput.value : '', subs: subs };
     });
   }
-  function syncStructureFromOverview(chapters){
-    var rows = document.querySelectorAll('#chapterRows .repeat-row');
-    chapters.forEach(function(ch, i){
-      var row = rows[i];
-      if(!row){ return; }
-      var titleInput = row.querySelector('input[type=text]');
-      var ta = row.querySelector('textarea');
-      if(titleInput){ titleInput.value = ch.title; }
-      if(ta){ ta.value = ch.subs.map(function(s, si){ return (i + 1) + '.' + (si + 1) + ' ' + s; }).join('\n'); }
+  // Liest Titel + Einklapp-Status aus der aktuell gerenderten Überblick-Liste
+  // (nicht aus getChaptersData()/chapterRows, die kein Einklapp-Wissen
+  // haben) -- so überlebt der Aufklapp-Zustand einen renderUeberblick()-
+  // Refresh nach einer Verschiebung/Verschachtelung/Umbenennung.
+  function currentOverviewChaptersMeta(){
+    var chEls = document.querySelectorAll('#ueberblickList .ueb-chapter');
+    if(!chEls.length){ return getChaptersData(); }
+    return Array.prototype.map.call(chEls, function(chEl){
+      var titleInput = chEl.querySelector('.ueb-chapter-input');
+      return { title: titleInput ? titleInput.value : '', collapsed: chEl.classList.contains('collapsed') };
     });
+  }
+  // Baut aus einer Liste von {depth} (in Dokumentreihenfolge) die passenden
+  // "X.Y.Z"-Nummern -- ein Zähler pro Ebene, der bei jedem neuen Knoten auf
+  // dieser Ebene hochgezählt und für alle tieferen Ebenen zurückgesetzt
+  // wird. depth wird dabei auf höchstens "aktuell offene Tiefe" begrenzt,
+  // damit ein aus einem Drag&Drop-Fehler resultierender Tiefensprung (z. B.
+  // Ebene 2 direkt nach Ebene 0 ohne Ebene-1-Vorfahre) nie eine kaputte
+  // Nummer erzeugt, sondern sich selbst auf die nächstmögliche Tiefe heilt.
+  function computeOutlineNumbers(items, chapterNum){
+    // KFOutline.parse() zählt depth als (Anzahl Zahlensegmente - 1) DER
+    // KOMPLETTEN Nummer inkl. Kapitelnummer -- "1.1" hat also depth 1, nicht
+    // 0 ("1.1.1" -> depth 2 usw.). levelIdx = depth-1 ist der 0-basierte
+    // Index INNERHALB von counters (counters[0] zählt die Ebene direkt
+    // unter dem Kapitel, counters[1] die nächste usw.) -- ohne dieses -1
+    // würde jeder tiefere Knoten den counters-Index des nächsten Geschwisters
+    // "verbrauchen" und dessen Nummer fälschlich eine Ebene zu tief zeigen.
+    var counters = [];
+    return items.map(function(it){
+      var depth = Math.max(1, Math.min(it.depth, counters.length + 1));
+      var levelIdx = depth - 1;
+      counters[levelIdx] = (counters[levelIdx] || 0) + 1;
+      counters.length = levelIdx + 1;
+      var segs = [chapterNum];
+      for(var i = 0; i <= levelIdx; i++){ segs.push(counters[i]); }
+      return segs.join('.');
+    });
+  }
+  // Schreibt Titel + Unterkapitel-Rohtext EINES Kapitels aus der Überblick-
+  // Liste zurück in dessen chapterRows-Zeile -- die Tiefe kommt dabei aus
+  // data-depth (nicht aus der Zeilenposition), damit Verschachtelung weder
+  // durch reines Umbenennen noch durch Verschieben verloren geht (der alte
+  // Bug: jede Änderung hier flachte die komplette Struktur auf Ebene 0 ab).
+  // Zusammenfassung-Texte (zfData[ci].subs) folgen dabei jedem Punkt über
+  // dessen stabile data-old-path-Referenz zum neu berechneten Pfad, nicht
+  // über den (sich ändernden) Textinhalt.
+  function commitOverviewChapterSubs(ci, opts){
+    opts = opts || {};
+    var chEl = document.querySelectorAll('#ueberblickList .ueb-chapter')[ci];
+    var chapterRow = document.querySelectorAll('#chapterRows .repeat-row')[ci];
+    if(!chEl || !chapterRow){ return; }
+    var rows = Array.prototype.slice.call(chEl.querySelectorAll('.ueb-subs .ueb-sub'));
+    var items = rows.map(function(r){
+      return {
+        depth: parseInt(r.dataset.depth, 10) || 0,
+        title: (r.querySelector('.ueb-sub-input') || {}).value || '',
+        oldPath: r.dataset.oldPath || ''
+      };
+    });
+    var numbers = computeOutlineNumbers(items, ci + 1);
+    var ta = chapterRow.querySelector('textarea');
+    // ensureZfEntry() normalisiert hier ein evtl. noch flaches/legacy subs
+    // (oder ein ganz fehlendes) auf das pfad-keyed Objekt, GEGEN die noch
+    // unveränderte (alte) Struktur -- vor dem Zurückschreiben der Zeile
+    // unten, sonst würden alte Array-Indizes nicht mehr zu den alten Pfaden
+    // passen und Zusammenfassung-Texte stillschweigend verloren gehen.
+    var entry = zfData[ci] ? ensureZfEntry(ci) : null;
+    if(ta){ ta.value = items.map(function(it, i){ return numbers[i] + ' ' + it.title; }).join('\n'); }
+    if(entry && entry.subs){
+      var oldSubs = entry.subs;
+      var newSubs = {};
+      items.forEach(function(it, i){
+        if(it.oldPath && Object.prototype.hasOwnProperty.call(oldSubs, it.oldPath)){
+          newSubs[numbers[i]] = oldSubs[it.oldPath];
+        }
+      });
+      entry.subs = newSubs;
+    }
+    renumberChapterLabels();
+    refreshAllKapitelSelects();
+    if(opts.rerender !== false){ renderUeberblick(currentOverviewChaptersMeta()); }
+  }
+  // Reines Umbenennen eines Kapiteltitels ändert weder Reihenfolge noch
+  // Tiefe irgendeines Unterkapitels -- deshalb genügt ein direktes
+  // Durchschreiben ohne den (teuren, fokus-zerstörenden) vollen
+  // renderUeberblick()-Refresh bei jedem Tastenanschlag.
+  function commitOverviewChapterTitle(ci){
+    var chEl = document.querySelectorAll('#ueberblickList .ueb-chapter')[ci];
+    var chapterRow = document.querySelectorAll('#chapterRows .repeat-row')[ci];
+    if(!chEl || !chapterRow){ return; }
+    var titleInput = chEl.querySelector('.ueb-chapter-input');
+    var targetTitleInput = chapterRow.querySelector('input[type=text]');
+    if(titleInput && targetTitleInput){ targetTitleInput.value = titleInput.value; }
     renumberChapterLabels();
     refreshAllKapitelSelects();
   }
-  function readChaptersFromOverviewDOM(){
-    return Array.prototype.map.call(document.querySelectorAll('#ueberblickList .ueb-chapter'), function(chEl){
-      var titleInput = chEl.querySelector('.ueb-chapter-input');
-      var subs = Array.prototype.map.call(chEl.querySelectorAll('.ueb-sub-input'), function(si){ return si.value; });
-      return { title: titleInput ? titleInput.value : '', subs: subs, collapsed: chEl.classList.contains('collapsed') };
-    });
-  }
-  function handleOverviewEdit(){
-    syncStructureFromOverview(readChaptersFromOverviewDOM());
-  }
+  // Ganze Kapitel umsortieren: jedes Kapitel nimmt seinen vollständigen,
+  // tiefenerhaltenden Rohtext (inkl. etwaiger Verschachtelung) von seiner
+  // ALTEN Position (data-orig-index, an der jeweiligen .ueb-chapter-Box seit
+  // dem letzten Render gespeichert) mit an seine neue Position -- kein
+  // Zwischenschritt über ein flaches, tiefenloses Array wie zuvor.
+  // Bekannte, bewusst nicht in diesem Schritt behobene Einschränkung: Da
+  // zfData/chapterStatuses über den Kapitel-ARRAY-INDEX adressiert sind,
+  // bleiben sie beim Verschieben eines ganzen Kapitels an ihrer alten
+  // Position hängen (dieselbe vorbestehende Indexbindung wie überall sonst
+  // im Wizard, hier nicht neu eingeführt).
   function handleOverviewReorder(){
-    var chapters = readChaptersFromOverviewDOM();
-    syncStructureFromOverview(chapters);
-    renderUeberblick(chapters);
+    var chEls = Array.prototype.slice.call(document.querySelectorAll('#ueberblickList .ueb-chapter'));
+    var oldRows = document.querySelectorAll('#chapterRows .repeat-row');
+    var oldData = Array.prototype.map.call(oldRows, function(row){
+      var t = row.querySelector('input[type=text]');
+      var ta = row.querySelector('textarea');
+      return { title: t ? t.value : '', subs: ta ? ta.value : '' };
+    });
+    var newData = chEls.map(function(chEl){
+      var oldIdx = parseInt(chEl.dataset.origIndex, 10);
+      return oldData[oldIdx] || { title: '', subs: '' };
+    });
+    var rows = document.querySelectorAll('#chapterRows .repeat-row');
+    newData.forEach(function(d, i){
+      var row = rows[i];
+      if(!row){ return; }
+      var t = row.querySelector('input[type=text]');
+      var ta = row.querySelector('textarea');
+      if(t){ t.value = d.title; }
+      if(ta){ ta.value = d.subs; }
+    });
+    renumberChapterLabels();
+    refreshAllKapitelSelects();
+    renderUeberblick();
   }
   function getDragAfterElement(container, y, selector){
     var els = Array.prototype.slice.call(container.querySelectorAll(selector + ':not(.dragging)'));
@@ -2979,10 +3083,7 @@ window.renderSubjectsForHochschule = async function(){
   // Dokumentreihenfolge (Tiefe zuerst die Kinder, dann die Geschwister) --
   // jeder Knoten trägt sein eigenes .depth, damit die editierbare Liste
   // unten exakt dieselbe Einrückung zeigt wie die geparste Baumstruktur
-  // (KFOutline.parse), statt einer eigenen, unabhängigen Berechnung. Die
-  // Drag&Drop-Bearbeitung bleibt bewusst positionsbasiert-flach (siehe
-  // syncStructureFromOverview()); eine echte verschachtelte Drag&Drop-
-  // Bearbeitung ist hier nicht im Umfang.
+  // (KFOutline.parse), statt einer eigenen, unabhängigen Berechnung.
   function flattenOutlineNodes(nodes){
     var out = [];
     (nodes||[]).forEach(function(node){
@@ -3005,8 +3106,14 @@ window.renderSubjectsForHochschule = async function(){
       var rawSubs = rawRow ? (rawRow.querySelector('textarea')||{}).value : '';
       var outlineTree = window.KFOutline ? window.KFOutline.parse(rawSubs) : [];
       var flatNodes = flattenOutlineNodes(outlineTree);
+      // data-depth ist die Quelle für die Einrückung (nicht die Array-
+      // Position) und data-old-path das Pfad-Adressierungsziel, unter dem
+      // ein evtl. vorhandener Zusammenfassung-Text GERADE JETZT in
+      // zfData[ci].subs liegt -- beides wird von den Drag&Drop-Handlern
+      // unten gelesen/aktualisiert, ohne bei jedem Zwischenschritt neu
+      // geparst werden zu müssen (siehe commitOverviewChapterSubs()).
       var subsHtml = flatNodes.map(function(node, si){
-        return '<div class="ueb-sub" draggable="true" style="margin-left:' + (node.depth * 20) + 'px">' +
+        return '<div class="ueb-sub" draggable="true" data-depth="' + node.depth + '" data-old-path="' + escapeHtml(node.path) + '" style="margin-left:' + (node.depth * 20) + 'px">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿</span>' +
           '<span class="ueb-sub-num">' + escapeHtml(node.number || ((ci + 1) + '.' + (si + 1))) + '</span>' +
           '<input type="text" class="ueb-sub-input" value="' + escapeHtml(node.title) + '" placeholder="Unterkapitel-Titel">' +
@@ -3014,7 +3121,7 @@ window.renderSubjectsForHochschule = async function(){
       }).join('') || '<p class="ueb-empty-hint">Noch keine Unterkapitel – in Schritt 1 ergänzen.</p>';
       var collapsedClass = ch.collapsed ? ' collapsed' : '';
       var toggleSymbol = ch.collapsed ? '▸' : '▾';
-      return '<div class="ueb-chapter' + collapsedClass + '" draggable="true">' +
+      return '<div class="ueb-chapter' + collapsedClass + '" draggable="true" data-orig-index="' + ci + '">' +
         '<div class="ueb-chapter-head">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿⠿</span>' +
           '<button class="ueb-toggle" type="button">' + toggleSymbol + '</button>' +
@@ -3026,6 +3133,51 @@ window.renderSubjectsForHochschule = async function(){
     }).join('');
     container.innerHTML = html;
     wireUeberblickEvents();
+  }
+  // Liefert einen Punkt + alle seine direkt folgenden Nachfahren (Tiefe >
+  // die des Punktes, bis zum nächsten Geschwister/Ende) als zusammen-
+  // hängenden Block -- ein Punkt mit Kindern wandert beim Verschieben immer
+  // als Ganzes, die Kinder bleiben nie zurück und verlieren nie für sich
+  // allein ihre (relative) Tiefe.
+  function getSubBlock(row){
+    var block = [row];
+    var d = parseInt(row.dataset.depth, 10) || 0;
+    var next = row.nextElementSibling;
+    while(next && next.classList.contains('ueb-sub') && (parseInt(next.dataset.depth, 10) || 0) > d){
+      block.push(next);
+      next = next.nextElementSibling;
+    }
+    return block;
+  }
+  function shiftSubBlockDepth(block, delta){
+    if(!delta){ return; }
+    block.forEach(function(el){
+      // 1 ist die flachste gültige Tiefe in diesem Schema -- "1.1" hat
+      // bereits depth 1 (siehe KFOutline.parse/computeOutlineNumbers), eine
+      // Tiefe 0 gäbe es nur für eine nackte Kapitelnummer ohne Unterpunkt.
+      var nd = Math.max(1, (parseInt(el.dataset.depth, 10) || 1) + delta);
+      el.dataset.depth = String(nd);
+      el.style.marginLeft = (nd * 20) + 'px';
+    });
+  }
+  // Obere/untere Zone eines Ziels = normales Einfügen davor/danach auf
+  // dessen Ebene, mittlere Zone = Verschachteln als (letztes) Kind des
+  // Ziels -- exakt wie im Feature-Prompt beschrieben.
+  function subDropZone(targetEl, clientY){
+    var r = targetEl.getBoundingClientRect();
+    var rel = (clientY - r.top) / r.height;
+    if(rel < 0.25){ return 'before'; }
+    if(rel > 0.75){ return 'after'; }
+    return 'nest';
+  }
+  function subRowAtPoint(subsEl, clientY, excludeEls){
+    var rows = Array.prototype.slice.call(subsEl.querySelectorAll('.ueb-sub'));
+    for(var i = 0; i < rows.length; i++){
+      if(excludeEls.indexOf(rows[i]) !== -1){ continue; }
+      var r = rows[i].getBoundingClientRect();
+      if(clientY >= r.top && clientY <= r.bottom){ return rows[i]; }
+    }
+    return null;
   }
   function wireUeberblickEvents(){
     var listEl = document.getElementById('ueberblickList');
@@ -3039,11 +3191,18 @@ window.renderSubjectsForHochschule = async function(){
       });
     });
 
-    listEl.querySelectorAll('.ueb-chapter-input, .ueb-sub-input').forEach(function(inp){
-      inp.addEventListener('input', handleOverviewEdit);
+    var chapterEls = Array.prototype.slice.call(listEl.querySelectorAll('.ueb-chapter'));
+    chapterEls.forEach(function(chEl, ci){
+      var titleInput = chEl.querySelector('.ueb-chapter-input');
+      if(titleInput){ titleInput.addEventListener('input', function(){ commitOverviewChapterTitle(ci); }); }
+      chEl.querySelectorAll('.ueb-sub-input').forEach(function(inp){
+        inp.addEventListener('input', function(){ commitOverviewChapterSubs(ci, { rerender: false }); });
+      });
     });
 
-    // Ganze Kapitel per Drag&Drop umsortieren
+    // Ganze Kapitel per Drag&Drop umsortieren (unverändert flach -- ein
+    // Kapitel nimmt seine komplette, tiefenerhaltende Unterkapitel-Struktur
+    // als Ganzes mit an seine neue Position).
     listEl.querySelectorAll('.ueb-chapter').forEach(function(chEl){
       chEl.addEventListener('dragstart', function(e){
         chEl.classList.add('dragging');
@@ -3064,19 +3223,24 @@ window.renderSubjectsForHochschule = async function(){
       else{ listEl.insertBefore(draggingChapter, after); }
     });
 
-    // Unterkapitel innerhalb ihres Kapitels per Drag&Drop umsortieren
-    listEl.querySelectorAll('.ueb-subs').forEach(function(subsEl){
+    // Unterkapitel innerhalb ihres Kapitels per Drag&Drop umsortieren ODER
+    // auf einen anderen Punkt ziehen = darunter verschachteln.
+    listEl.querySelectorAll('.ueb-subs').forEach(function(subsEl, subsIdx){
+      var ci = subsIdx; // .ueb-subs kommt in derselben Reihenfolge wie .ueb-chapter
       subsEl.querySelectorAll('.ueb-sub').forEach(function(subEl){
         subEl.addEventListener('dragstart', function(e){
           e.stopPropagation();
-          subEl.classList.add('dragging');
+          getSubBlock(subEl).forEach(function(el){ el.classList.add('dragging'); });
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setData('text/plain', '');
         });
         subEl.addEventListener('dragend', function(e){
           e.stopPropagation();
-          subEl.classList.remove('dragging');
-          handleOverviewReorder();
+          subsEl.querySelectorAll('.ueb-sub').forEach(function(el){
+            el.classList.remove('dragging');
+            el.classList.remove('nest-target');
+          });
+          commitOverviewChapterSubs(ci);
         });
       });
       subsEl.addEventListener('dragover', function(e){
@@ -3084,9 +3248,40 @@ window.renderSubjectsForHochschule = async function(){
         if(!draggingSub){ return; }
         e.preventDefault();
         e.stopPropagation();
-        var after = getDragAfterElement(subsEl, e.clientY, '.ueb-sub');
-        if(after == null){ subsEl.appendChild(draggingSub); }
-        else{ subsEl.insertBefore(draggingSub, after); }
+        var block = getSubBlock(draggingSub);
+        var headDepth = parseInt(draggingSub.dataset.depth, 10) || 0;
+        var target = subRowAtPoint(subsEl, e.clientY, block);
+        subsEl.querySelectorAll('.ueb-sub.nest-target').forEach(function(el){ el.classList.remove('nest-target'); });
+        if(!target){
+          // Unterhalb der letzten Zeile losgelassen -- ans Ende, auf der
+          // Ebene der (verbleibenden) letzten Zeile, damit nicht versehentlich
+          // eine tief verschachtelte Struktur durch einen Top-Level-Punkt
+          // am Ende abgeschlossen wird.
+          var remaining = Array.prototype.slice.call(subsEl.querySelectorAll('.ueb-sub')).filter(function(el){ return block.indexOf(el) === -1; });
+          var lastRow = remaining[remaining.length - 1];
+          block.forEach(function(el){ subsEl.appendChild(el); });
+          shiftSubBlockDepth(block, (lastRow ? (parseInt(lastRow.dataset.depth, 10) || 1) : 1) - headDepth);
+          return;
+        }
+        var targetDepth = parseInt(target.dataset.depth, 10) || 0;
+        var zone = subDropZone(target, e.clientY);
+        if(zone === 'nest'){
+          target.classList.add('nest-target');
+          var targetBlock = getSubBlock(target);
+          var afterEl = targetBlock[targetBlock.length - 1];
+          block.forEach(function(el){ afterEl.parentNode.insertBefore(el, afterEl.nextSibling); afterEl = el; });
+          shiftSubBlockDepth(block, (targetDepth + 1) - headDepth);
+        } else if(zone === 'before'){
+          target.parentNode.insertBefore(block[0], target);
+          var prevBefore = block[0];
+          for(var i = 1; i < block.length; i++){ prevBefore.parentNode.insertBefore(block[i], prevBefore.nextSibling); prevBefore = block[i]; }
+          shiftSubBlockDepth(block, targetDepth - headDepth);
+        } else { // 'after' -> hinter den kompletten Block des Ziels (nicht zwischen Ziel und dessen Kindern)
+          var targetBlockAfter = getSubBlock(target);
+          var afterEl2 = targetBlockAfter[targetBlockAfter.length - 1];
+          block.forEach(function(el){ afterEl2.parentNode.insertBefore(el, afterEl2.nextSibling); afterEl2 = el; });
+          shiftSubBlockDepth(block, targetDepth - headDepth);
+        }
       });
     });
   }
