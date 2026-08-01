@@ -266,7 +266,17 @@ async function renderQueue(){
   });
 }
 
-function hasZusammenfassung(z){ return !!(z && ((z.subs||[]).some(function(t){ return t && t.trim(); }) || z.merke || z.tipps)); }
+// z.subs ist inzwischen ein pfad-adressiertes Objekt ("1.1", "1.1.1", …),
+// kann bei noch nicht neu gespeicherten Bestandskursen aber weiterhin das
+// alte flache Array sein -- hier reicht ein reiner Existenz-Check, der
+// beide Formen abdeckt (keine Pfad-Zuordnung nötig, nur "gibt es Text").
+function hasZusammenfassung(z){
+  if(!z){ return false; }
+  var subsHasText = Array.isArray(z.subs)
+    ? z.subs.some(function(t){ return t && t.trim(); })
+    : Object.keys(z.subs||{}).some(function(k){ return z.subs[k] && z.subs[k].trim(); });
+  return !!(subsHasText || z.merke || z.tipps);
+}
 function hasKarteikarten(k){ return !!(k && (k.cards||[]).some(function(c){ return (c.frage&&c.frage.trim()) || (c.antwort&&c.antwort.trim()); })); }
 function hasUebungen(u){ return !!(u && (u.items||[]).some(function(i){ return (i.aufgabe&&i.aufgabe.trim()) || (i.loesung&&i.loesung.trim()) || (i.themenKuerzel&&i.themenKuerzel.trim()); })); }
 function hasAltklausuren(a){ return !!(a && (a.items||[]).some(function(x){ return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim()); })); }
@@ -297,13 +307,31 @@ function nonEmptyIndexed(arr, predicate){
 // the three per-chapter bausteine carry it; altklausuren/tutorien/zusatz/
 // lernplan aren't snapshotted (see 20260731100000_content_snapshots.sql), so
 // their body*() functions below are unchanged.
+// subKey ist jetzt der volle Pfad-String aus KFOutline.parse (z.B. "1.1.1"),
+// nicht mehr ein flacher Zeilen-Index -- bei verschachtelten Unterkapiteln
+// wäre ein Index sonst nicht mehr eindeutig. z.subs kann noch das alte,
+// flache Array-Format sein (jeder bereits veröffentlichte/live Kurs, dessen
+// Ersteller den Wizard seit diesem Feature nicht neu gespeichert hat) --
+// KFOutline.normalizeSubs() übersetzt das transparent.
 function bodyZusammenfassung(sub, z){
-  var lines = (sub.subchapters||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
-  var items = (z.subs||[]).map(function(text, i){
-    return { label: window.KFLabels.subLabel('zusammenfassung', String(i), z, lines), subKey: String(i), rawText: text||'', html: '<div class="cp-item">'+esc(text||'—')+'</div>' };
-  });
-  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'merke', z, lines), subKey: 'merke', rawText: z.merke||'', html: '<div class="cp-item">'+esc(z.merke||'—')+'</div>' });
-  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'tipps', z, lines), subKey: 'tipps', rawText: z.tipps||'', html: '<div class="cp-item">'+esc(z.tipps||'—')+'</div>' });
+  var tree = window.KFOutline ? window.KFOutline.parse(sub.subchapters || '') : [];
+  var subs = window.KFOutline ? window.KFOutline.normalizeSubs(z.subs, tree) : (z.subs || {});
+  var items = [];
+  function walk(nodes){
+    nodes.forEach(function(node){
+      var text = subs[node.path];
+      items.push({
+        label: (node.number ? node.number + ' ' : '') + node.title,
+        subKey: node.path,
+        rawText: text || '',
+        html: '<div class="cp-item">'+esc(text||'—')+'</div>'
+      });
+      if(node.children.length){ walk(node.children); }
+    });
+  }
+  walk(tree);
+  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'merke', z, sub.subchapters), subKey: 'merke', rawText: z.merke||'', html: '<div class="cp-item">'+esc(z.merke||'—')+'</div>' });
+  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'tipps', z, sub.subchapters), subKey: 'tipps', rawText: z.tipps||'', html: '<div class="cp-item">'+esc(z.tipps||'—')+'</div>' });
   return items;
 }
 function bodyKarteikarten(k){

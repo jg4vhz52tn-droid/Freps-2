@@ -312,6 +312,26 @@ ul.plain li{margin-bottom:5px;}
 .lc-baustein .lc-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); margin-bottom:6px;}
 .lc-baustein .lc-item{font-size:13px; padding:5px 0; border-bottom:1px solid var(--line);}
 .lc-baustein .lc-item:last-child{border-bottom:none;}
+
+/* Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
+   Design 1:1 aus dem Unsere_Kurse_dc.html-Mockup übernommen, nur mit echten
+   Daten statt Festwerten. */
+.mindmap-section{margin-bottom:22px; padding-bottom:18px; border-bottom:1px solid var(--line);}
+.mm-chapter{margin-bottom:4px;}
+.mm-row{display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px;}
+.mm-row.mm-root{background:var(--accent-soft); cursor:pointer;}
+.mm-badge{width:18px; height:18px; border-radius:5px; background:var(--line); color:var(--muted); font-family:'Sora',sans-serif; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.mm-row.mm-root .mm-badge{background:var(--accent); color:#fff;}
+.mm-title{font-size:14px; font-weight:600;}
+.mm-count{font-size:11px; color:var(--muted); margin-left:auto; white-space:nowrap;}
+.mm-children{margin-left:26px; border-left:2px solid var(--line); padding-left:10px; margin-top:4px;}
+.mm-children.collapsed{display:none;}
+.mm-node .mm-row{padding:6px 10px; font-size:13px; color:var(--ink);}
+.mm-node .mm-row.mm-expandable{cursor:pointer;}
+.mm-node .mm-row.mm-expandable:hover{background:var(--paper);}
+.mm-node-num{color:var(--muted); margin-right:2px;}
+.mm-detail{font-size:12.5px; color:var(--muted); padding:2px 10px 8px; line-height:1.5;}
+.mm-hint{font-size:12px; color:var(--muted); margin-top:10px;}
 .tutorfragen{margin-top:8px;}
 .tf-panel{margin-top:8px; padding:10px 12px; background:#fff; border:1px solid var(--line); border-radius:8px;}
 .tf-faq-item{font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--line);}
@@ -621,7 +641,9 @@ ul.plain li{margin-bottom:5px;}
             <div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>
             <div class="summary-line"></div>
             <div class="field"><label>Kapitel 1 – Titel</label><input type="text" placeholder="z. B. Grundlagen"></div>
-            <div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="1.1 Projektmerkmale&#10;1.2 Projektarten&#10;1.3 Magisches Dreieck"></textarea></div>
+            <div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="1.1 Projektmerkmale&#10;1.2 Projektarten&#10;1.3 Magisches Dreieck"></textarea>
+              <p class="hint-sm">Für eine weitere Ebene einfach weiter durchnummerieren, z. B. 1.1.1 unter 1.1.</p>
+            </div>
           </div>
         </div>
         <button class="add-row-btn" id="addChapterBtn" type="button">+ Weiteres Kapitel hinzufügen</button>
@@ -1441,7 +1463,17 @@ function showToast(msg){
    Kompakte, rein lesende Variante der gleichen has-/body-Renderer wie im
    Prüf-Dashboard -- hier ohne Prüfer-Werkzeuge, dafür mit Tutorfragen je
    Baustein. */
-function lcHasZf(z){ return !!(z && ((z.subs||[]).some(function(t){ return t && t.trim(); }) || z.merke || z.tipps)); }
+// z.subs ist jetzt ein pfad-adressiertes Objekt, kann bei noch nicht neu
+// gespeicherten (auch bereits veröffentlichten/live) Kursen aber weiterhin
+// das alte flache Array sein -- reiner Existenz-Check braucht dafür keine
+// Pfad-Zuordnung, nur beide Formen abdecken.
+function lcHasZf(z){
+  if(!z){ return false; }
+  var subsHasText = Array.isArray(z.subs)
+    ? z.subs.some(function(t){ return t && t.trim(); })
+    : Object.keys(z.subs||{}).some(function(k){ return z.subs[k] && z.subs[k].trim(); });
+  return !!(subsHasText || z.merke || z.tipps);
+}
 function lcHasKk(k){ return !!(k && (k.cards||[]).some(function(c){ return (c.frage&&c.frage.trim()) || (c.antwort&&c.antwort.trim()) || c.frageBild || c.antwortBild; })); }
 function lcHasUeb(u){ return !!(u && (u.items||[]).some(function(i){ return (i.aufgabe&&i.aufgabe.trim()) || (i.loesung&&i.loesung.trim()) || (i.themenKuerzel&&i.themenKuerzel.trim()); })); }
 function lcHasAlt(a){ return !!(a && (a.items||[]).some(function(x){ return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim()); })); }
@@ -1449,10 +1481,27 @@ function lcHasTut(t){ return !!(t && (t.items||[]).some(function(x){ return (x.b
 function lcHasZus(z){ return !!(z && z.enabled && z.modules && z.modules.length); }
 function lcHasLp(l){ return !!(l && (l.items||[]).some(function(x){ return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim()); })); }
 
-function lcBodyZf(z){
-  var html = (z.subs||[]).map(function(t,i){ return t && t.trim() ? '<div class="lc-item">' + escapeHtmlMy(t) + '</div>' : ''; }).join('');
+// rawSubchaptersText liefert die Struktur (inkl. echter Tiefe, "1.1.1" unter
+// "1.1"), damit auch Lernende die Gliederung sehen statt nur einer flachen,
+// unbeschrifteten Liste von Texten.
+function lcBodyZf(z, rawSubchaptersText){
+  var tree = window.KFOutline ? window.KFOutline.parse(rawSubchaptersText || '') : [];
+  var subs = window.KFOutline ? window.KFOutline.normalizeSubs(z.subs, tree) : (z.subs || {});
+  var html = lcRenderZfOutline(tree, subs);
   if(z.merke){ html += '<div class="lc-item"><strong>Merke:</strong> ' + escapeHtmlMy(z.merke) + '</div>'; }
   if(z.tipps){ html += '<div class="lc-item"><strong>Tipps:</strong> ' + escapeHtmlMy(z.tipps) + '</div>'; }
+  return html;
+}
+function lcRenderZfOutline(nodes, subs){
+  var html = '';
+  nodes.forEach(function(node){
+    var text = subs[node.path];
+    if(text && text.trim()){
+      html += '<div class="lc-item" style="margin-left:' + (node.depth * 16) + 'px">' +
+        (node.number ? '<strong>' + escapeHtmlMy(node.number) + '</strong> ' : '') + escapeHtmlMy(text) + '</div>';
+    }
+    if(node.children.length){ html += lcRenderZfOutline(node.children, subs); }
+  });
   return html;
 }
 async function lcCardImageHtml(path){
@@ -1551,6 +1600,63 @@ function lcAnkiExportButton(chapterTitle, karteikarten){
   return '<button type="button" class="linklike" style="display:block; margin-top:8px; font-size:12.5px" data-anki-export="' + payload + '" data-anki-filename="' + filename + '">⬇ Als Anki-Karten exportieren (.txt)</button>';
 }
 
+// ---- Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
+// über alle Kapitel hinweg -- komplett aus vorhandenen Daten abgeleitet
+// (chapters.subchapters via KFOutline + die jeweilige Zusammenfassung), keine
+// eigene Tabelle nötig. ----
+function countOutlineNodes(nodes){
+  return (nodes||[]).reduce(function(sum, n){ return sum + 1 + countOutlineNodes(n.children); }, 0);
+}
+function renderMmNode(node, subs){
+  var text = subs[node.path];
+  var hasText = !!(text && text.trim());
+  return '<div class="mm-node" style="margin-left:' + (node.depth*18) + 'px">' +
+    '<div class="mm-row' + (hasText ? ' mm-expandable' : '') + '"' + (hasText ? ' data-mm-toggle' : '') + '>' +
+      (node.number ? '<span class="mm-node-num">' + escapeHtmlMy(node.number) + '</span>' : '') + escapeHtmlMy(node.title) +
+    '</div>' +
+    (hasText ? '<div class="mm-detail" style="display:none">' + escapeHtmlMy(text) + '</div>' : '') +
+    node.children.map(function(c){ return renderMmNode(c, subs); }).join('') +
+  '</div>';
+}
+function buildMindmapHtml(courseTitle, chapters, contentByChapter){
+  var chaptersHtml = chapters.map(function(ch, i){
+    var tree = window.KFOutline ? window.KFOutline.parse(ch.subchapters || '') : [];
+    var zf = (contentByChapter[ch.id] && contentByChapter[ch.id].zusammenfassung) || {};
+    var subs = window.KFOutline ? window.KFOutline.normalizeSubs(zf.subs, tree) : (zf.subs || {});
+    var count = countOutlineNodes(tree);
+    return '<div class="mm-chapter">' +
+      '<div class="mm-row mm-root" data-mm-chapter-toggle>' +
+        '<span class="mm-badge">' + (i+1) + '</span>' +
+        '<span class="mm-title">' + escapeHtmlMy(ch.chapterTitle) + '</span>' +
+        '<span class="mm-count">' + count + (count === 1 ? ' Unterpunkt' : ' Unterpunkte') + '</span>' +
+      '</div>' +
+      '<div class="mm-children">' + tree.map(function(n){ return renderMmNode(n, subs); }).join('') + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div class="mindmap-section">' +
+    '<h3 style="font-size:18px;font-weight:700;margin-bottom:14px">Mindmap — ' + escapeHtmlMy(courseTitle) + '</h3>' +
+    chaptersHtml +
+    '<p class="mm-hint">Zum Aufklappen der Zweige anklicken — der gesamte Stoff auf einen Blick.</p>' +
+  '</div>';
+}
+function wireMindmapEvents(container){
+  container.querySelectorAll('[data-mm-chapter-toggle]').forEach(function(row){
+    row.addEventListener('click', function(){
+      var childrenBox = row.nextElementSibling;
+      if(childrenBox){ childrenBox.classList.toggle('collapsed'); }
+    });
+  });
+  container.querySelectorAll('[data-mm-toggle]').forEach(function(row){
+    row.addEventListener('click', function(e){
+      e.stopPropagation();
+      var detail = row.nextElementSibling;
+      if(detail && detail.classList.contains('mm-detail')){
+        detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  });
+}
+
 async function renderLearnerCourseContentHtml(courseId){
   var session = await window.KFAuth.getSession();
   var userId = session ? session.id : null;
@@ -1561,13 +1667,15 @@ async function renderLearnerCourseContentHtml(courseId){
   var progress = await window.KFCatalog.getProgress(courseId);
 
   var html = '';
+  var contentByChapter = {};
   for(var i=0;i<chapters.length;i++){
     var ch = chapters[i];
     var cc = await window.KFStore.getChapterContent(ch.id);
+    contentByChapter[ch.id] = cc;
     var blocks = '';
     if(lcHasZf(cc.zusammenfassung)){
       var qZf = await window.KFQuestions.getForBaustein(courseId, ch.id, 'zusammenfassung');
-      blocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.zusammenfassung, lcBodyZf(cc.zusammenfassung), lcTutorfragenWidget(courseId, ch.id, 'zusammenfassung', qZf, userId));
+      blocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.zusammenfassung, lcBodyZf(cc.zusammenfassung, ch.subchapters), lcTutorfragenWidget(courseId, ch.id, 'zusammenfassung', qZf, userId));
     }
     if(lcHasKk(cc.karteikarten)){
       var qKk = await window.KFQuestions.getForBaustein(courseId, ch.id, 'karteikarten');
@@ -1603,8 +1711,10 @@ async function renderLearnerCourseContentHtml(courseId){
   if(courseBlocks){
     html += '<div class="lc-chapter"><h4>Kursweite Inhalte</h4>' + courseBlocks + '</div>';
   }
+  if(!html){ return '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
 
-  return html || '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>';
+  var mindmapHtml = chapters.length ? buildMindmapHtml(chapters[0].courseTitle, chapters, contentByChapter) : '';
+  return mindmapHtml + html;
 }
 
 function wireLearnerContentToggles(container){
@@ -1626,6 +1736,7 @@ function wireLearnerContentToggles(container){
         wireTutorfragenWidgets(box);
         wireAnkiExportButtons(box);
         wireLernplanCheckboxes(box, courseId);
+        wireMindmapEvents(box);
       }
     });
   });
@@ -2553,21 +2664,48 @@ window.renderSubjectsForHochschule = async function(){
     if(!ta){ return []; }
     return ta.value.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
   }
+  function getOutlineTree(chapterIdx){
+    return window.KFOutline ? window.KFOutline.parse(getSubchapterLines(chapterIdx).join('\n')) : [];
+  }
+  // Runde-1-Bestandsdaten (subs war ein flaches, Index-adressiertes Array,
+  // nie tiefer als eine Ebene) einmalig ins pfad-adressierte Objekt
+  // übersetzen -- die geparste Baumstruktur ist bei bisherigen Kursen selbst
+  // in alter Zählweise identisch mit dem Array-Index, die Zuordnung ist also
+  // eindeutig. KFOutline.normalizeSubs() macht dasselbe für gespeicherten
+  // Cloud-Content, hier für den lokalen Wizard-Zustand.
   function ensureZfEntry(idx){
-    if(!zfData[idx]){ zfData[idx] = { subs: [], merke: '', tipps: '' }; }
+    if(!zfData[idx]){
+      zfData[idx] = { subs: {}, merke: '', tipps: '' };
+    } else if(Array.isArray(zfData[idx].subs)){
+      zfData[idx].subs = window.KFOutline ? window.KFOutline.normalizeSubs(zfData[idx].subs, getOutlineTree(idx)) : {};
+    }
     return zfData[idx];
   }
   function saveCurrentZfFields(){
     if(currentZfIdx === null){ return; }
     var entry = ensureZfEntry(currentZfIdx);
-    var subFields = document.querySelectorAll('#zfDynamicFields .zf-sub-field');
-    if(subFields.length){
-      entry.subs = Array.prototype.map.call(subFields, function(el){ return el.value; });
-    }
+    document.querySelectorAll('#zfDynamicFields [data-zf-path]').forEach(function(el){
+      entry.subs[el.dataset.zfPath] = el.value;
+    });
     var merkeEl = document.getElementById('zfMerke');
     var tippsEl = document.getElementById('zfTipps');
     if(merkeEl){ entry.merke = merkeEl.value; }
     if(tippsEl){ entry.tipps = tippsEl.value; }
+  }
+  // Rekursiv, mit visueller Einrückung je Tiefe -- "1.1.1" bekommt genauso
+  // ein eigenes Feld wie "1.1", nur weiter eingerückt.
+  function renderOutlineFields(nodes, container, entry){
+    nodes.forEach(function(node){
+      var wrap = document.createElement('div');
+      wrap.className = 'field zf-sub-field';
+      wrap.style.marginLeft = (node.depth * 20) + 'px';
+      var label = (node.number ? escapeHtml(node.number) + ' ' : '') + escapeHtml(node.title);
+      wrap.innerHTML = '<label>' + label + '</label>' +
+        '<textarea data-zf-path="' + escapeHtml(node.path) + '" placeholder="Text zu ' + escapeHtml(node.title) + ' …"></textarea>';
+      wrap.querySelector('textarea').value = entry.subs[node.path] || '';
+      container.appendChild(wrap);
+      if(node.children.length){ renderOutlineFields(node.children, container, entry); }
+    });
   }
   function renderZfStep(){
     var select = document.getElementById('zfKapitelSelect');
@@ -2575,20 +2713,16 @@ window.renderSubjectsForHochschule = async function(){
     var idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
     saveCurrentZfFields();
     currentZfIdx = idx;
-    var lines = getSubchapterLines(idx);
+    var tree = getOutlineTree(idx);
     var entry = ensureZfEntry(idx);
-    while(entry.subs.length < lines.length){ entry.subs.push(''); }
 
     var container = document.getElementById('zfDynamicFields');
     if(!container){ return; }
-    if(lines.length === 0){
+    container.innerHTML = '';
+    if(tree.length === 0){
       container.innerHTML = '<p class="hint-sm" style="margin-bottom:16px">Noch keine Unterkapitel für dieses Kapitel definiert. Leg sie in Schritt 1 (Struktur) an – hier erscheinen dann automatisch passende Textfelder.</p>';
     } else {
-      container.innerHTML = lines.map(function(line){
-        return '<div class="field"><label>' + escapeHtml(line) + '</label><textarea class="zf-sub-field" placeholder="Text zu „' + escapeHtml(line) + '" …"></textarea></div>';
-      }).join('');
-      var fields = container.querySelectorAll('.zf-sub-field');
-      fields.forEach(function(f, i){ f.value = entry.subs[i] || ''; });
+      renderOutlineFields(tree, container, entry);
     }
     var merkeEl = document.getElementById('zfMerke');
     var tippsEl = document.getElementById('zfTipps');
@@ -2596,7 +2730,7 @@ window.renderSubjectsForHochschule = async function(){
     if(tippsEl){ tippsEl.value = entry.tipps || ''; }
   }
   document.addEventListener('input', function(e){
-    if(e.target && (e.target.id === 'zfMerke' || e.target.id === 'zfTipps' || e.target.classList.contains('zf-sub-field'))){
+    if(e.target && (e.target.id === 'zfMerke' || e.target.id === 'zfTipps' || e.target.hasAttribute('data-zf-path'))){
       saveCurrentZfFields();
     }
   });
@@ -2761,7 +2895,8 @@ window.renderSubjectsForHochschule = async function(){
       '<div class="row-actions"><button class="toggle-fertig" type="button">✓ Fertig</button><button class="rm" type="button">✕</button></div>' +
       '<div class="summary-line"></div>' +
       '<div class="field"><label>Kapitel – Titel</label><input type="text" placeholder="z. B. Projektorganisation"></div>' +
-      '<div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="2.1 …&#10;2.2 …"></textarea></div></div>';
+      '<div class="field"><label>Unterkapitel (eine Zeile je Unterkapitel)</label><textarea placeholder="2.1 …&#10;2.2 …"></textarea>' +
+      '<p class="hint-sm">Für eine weitere Ebene einfach weiter durchnummerieren, z. B. 2.1.1 unter 2.1.</p></div></div>';
     var row = wrap.firstElementChild;
     container.appendChild(row);
     enhanceRow(row, container);
@@ -2786,7 +2921,11 @@ window.renderSubjectsForHochschule = async function(){
       var titleInput = row.querySelector('input[type=text]');
       var ta = row.querySelector('textarea');
       var subs = ta ? ta.value.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; }) : [];
-      subs = subs.map(function(s){ return s.replace(/^\d+\.\d+\s+/, ''); });
+      // Strips the full leading "X.Y" or "X.Y.Z…" number regardless of depth
+      // -- a plain two-segment regex would leave a deeper "1.1.1 …" line's
+      // number attached to the text, showing up doubled next to this editor's
+      // own recomputed flat badge.
+      subs = subs.map(function(s){ return s.replace(/^\d+(?:\.\d+)*\s+/, ''); });
       return { title: titleInput ? titleInput.value : '', subs: subs };
     });
   }
@@ -2828,6 +2967,21 @@ window.renderSubjectsForHochschule = async function(){
     });
     return closest.element;
   }
+  // Zeigt echte Tiefe (1.1.1 unter 1.1) an -- die Drag&Drop-Liste direkt
+  // darüber bleibt bewusst flach (sie renummeriert beim Umsortieren immer neu
+  // nach Zeilenposition, siehe syncStructureFromOverview()); ein Umbau auf
+  // echte verschachtelte Drag&Drop-Bearbeitung ist hier nicht im Umfang.
+  // Nur wenn ein Kapitel wirklich mehrstufig ist, wird diese Vorschau
+  // gerendert -- bei rein zweistufigen Kursen (heute: alle) würde sie sonst
+  // genau dieselbe Liste ein zweites Mal, nur nicht editierbar, zeigen.
+  function outlineHasNesting(nodes){
+    return (nodes||[]).some(function(n){ return n.children.length > 0; });
+  }
+  function renderOutlinePreviewNode(node){
+    return '<div style="margin-left:' + (14 + node.depth*18) + 'px; font-size:12.5px; color:var(--muted); padding:3px 0">' +
+      (node.number ? node.number + ' ' : '') + escapeHtmlMy(node.title) + '</div>' +
+      node.children.map(renderOutlinePreviewNode).join('');
+  }
   function renderUeberblick(chapters){
     var container = document.getElementById('ueberblickList');
     if(!container){ return; }
@@ -2836,6 +2990,7 @@ window.renderSubjectsForHochschule = async function(){
       container.innerHTML = '<p class="step-intro">Noch keine Kapitel angelegt – geh zurück zu Schritt 1 und lege mindestens ein Kapitel an.</p>';
       return;
     }
+    var rawChapterRows = document.querySelectorAll('#chapterRows .repeat-row');
     var html = chapters.map(function(ch, ci){
       var subsHtml = ch.subs.map(function(s, si){
         return '<div class="ueb-sub" draggable="true">' +
@@ -2846,6 +3001,12 @@ window.renderSubjectsForHochschule = async function(){
       }).join('') || '<p class="ueb-empty-hint">Noch keine Unterkapitel – in Schritt 1 ergänzen.</p>';
       var collapsedClass = ch.collapsed ? ' collapsed' : '';
       var toggleSymbol = ch.collapsed ? '▸' : '▾';
+      var rawRow = rawChapterRows[ci];
+      var rawSubs = rawRow ? (rawRow.querySelector('textarea')||{}).value : '';
+      var outlineTree = window.KFOutline ? window.KFOutline.parse(rawSubs) : [];
+      var outlinePreviewHtml = outlineHasNesting(outlineTree)
+        ? '<div class="ueb-outline-preview">' + outlineTree.map(renderOutlinePreviewNode).join('') + '</div>'
+        : '';
       return '<div class="ueb-chapter' + collapsedClass + '" draggable="true">' +
         '<div class="ueb-chapter-head">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿⠿</span>' +
@@ -2854,6 +3015,7 @@ window.renderSubjectsForHochschule = async function(){
           '<input type="text" class="ueb-chapter-input" value="' + escapeHtml(ch.title) + '" placeholder="Kapitel-Titel">' +
         '</div>' +
         '<div class="ueb-subs">' + subsHtml + '</div>' +
+        outlinePreviewHtml +
       '</div>';
     }).join('');
     container.innerHTML = html;
@@ -3008,8 +3170,8 @@ window.renderSubjectsForHochschule = async function(){
     var cardRowsData = rowsData('cardRows');
     var uebRowsData = rowsData('uebungRows');
     titles.forEach(function(title, i){
-      var zf = zfData[i];
-      var hasZf = !!(zf && ((zf.merke && zf.merke.trim()) || (zf.tipps && zf.tipps.trim()) || (zf.subs || []).some(function(s){ return s && s.trim(); })));
+      var zf = ensureZfEntry(i);
+      var hasZf = !!(zf && ((zf.merke && zf.merke.trim()) || (zf.tipps && zf.tipps.trim()) || Object.keys(zf.subs||{}).some(function(k){ return zf.subs[k] && zf.subs[k].trim(); })));
       if(hasZf){ opts.push(title + ': Zusammenfassung'); }
       var hasKk = cardRowsData.some(function(r){ return r[2] === title && (((r[0]||'').trim()) || ((r[1]||'').trim())); });
       if(hasKk){ opts.push(title + ': Karteikarten'); }
@@ -3443,14 +3605,14 @@ window.renderSubjectsForHochschule = async function(){
       zusammenfassung: chapterContent.zusammenfassung, karteikarten: chapterContent.karteikarten, uebungen: chapterContent.uebungen,
       altklausuren: courseContent.altklausuren, tutorien: courseContent.tutorien, zusatz: courseContent.zusatz, lernplan: courseContent.lernplan
     };
-    var subchapterLines = typeof getSubchapterLines === 'function' ? getSubchapterLines(chapterIdx) : [];
+    var rawSubchaptersText = typeof getSubchapterLines === 'function' ? getSubchapterLines(chapterIdx).join('\n') : '';
     function jumpBtn(type, subKey){
       return '<button type="button" class="rf-jump" data-type="' + escapeHtml(type) + '" data-subkey="' + escapeHtml(subKey||'') + '" data-chapter-idx="' + chapterIdx + '">→ Bearbeiten</button>';
     }
     var groupsHtml = types.map(function(type){
       var bucket = byType[type];
       var subGroupsHtml = Object.keys(bucket.bySubKey).map(function(subKey){
-        var label = window.KFLabels.subLabel(type, subKey, contentByType[type], subchapterLines);
+        var label = window.KFLabels.subLabel(type, subKey, contentByType[type], rawSubchaptersText);
         return '<div class="rf-group"><div class="rf-group-title"><span>' + escapeHtml(CONTENT_TYPE_LABEL[type]) + ' · ' + escapeHtml(label) + '</span>' + jumpBtn(type, subKey) + '</div>' +
           bucket.bySubKey[subKey].map(commentHtml).join('') + '</div>';
       }).join('');
@@ -3479,7 +3641,13 @@ window.renderSubjectsForHochschule = async function(){
       }
       if(subKey === 'merke'){ target = document.getElementById('zfMerke'); }
       else if(subKey === 'tipps'){ target = document.getElementById('zfTipps'); }
-      else if(subKey){ target = document.querySelectorAll('#zfDynamicFields .zf-sub-field')[parseInt(subKey, 10)] || null; }
+      else if(subKey){
+        // subKey ist der volle Pfad ("1.1.1"), kein Zeilen-Index mehr --
+        // per Filter statt Selektor-String suchen, damit Punkte im Pfad
+        // keine Rolle spielen.
+        var zfFields = document.querySelectorAll('#zfDynamicFields [data-zf-path]');
+        target = Array.prototype.filter.call(zfFields, function(el){ return el.dataset.zfPath === subKey; })[0] || null;
+      }
     } else {
       var cfg = {
         karteikarten: { container: 'cardRows', ctx: 'kkKapitelSelect' },

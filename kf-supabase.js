@@ -20,6 +20,66 @@ window.KF_BAUSTEIN_LABELS = {
   altklausuren: "Altklausuren", tutorien: "Tutorien", zusatz: "Zusatzmodule", lernplan: "Lernplan"
 };
 
+// Turns a chapter's raw subchapters text ("1.1 Aufbau der Vorlesung\n1.1.1
+// Foliensatz\n1.2 Klausuraufbau") into a nested outline tree, purely from the
+// dot-depth of each line's leading number -- "1.1" is depth 1, "1.1.1" is
+// depth 2, and so on. No DB access, so this works anywhere kf-supabase.js is
+// loaded (creator wizard, reviewer dashboard, learner view) regardless of
+// session. chapters.subchapters itself stays a plain text column -- the tree
+// is always re-derived from it, so existing courses (all flat "X.Y" lines
+// today) parse into exactly the same flat structure they already render as.
+function parseOutline(rawText) {
+  var lines = (rawText || "").split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+  var root = [];
+  var stack = []; // [{ depth, node }]
+  lines.forEach(function (line) {
+    var m = line.match(/^(\d+(?:\.\d+)*)\s+(.*)$/);
+    var number, title, depth;
+    if (m) {
+      number = m[1];
+      title = m[2];
+      depth = number.split(".").length - 1;
+    } else {
+      // Free-form line without "X.Y" numbering (older content, or a creator
+      // who never used numbering) -- stays depth 0, same as today's flat
+      // behavior.
+      number = null;
+      title = line;
+      depth = 0;
+    }
+    var node = { number: number, title: title, depth: depth, path: number || title, children: [] };
+    while (stack.length && stack[stack.length - 1].depth >= depth) { stack.pop(); }
+    if (stack.length) { stack[stack.length - 1].node.children.push(node); }
+    else { root.push(node); }
+    stack.push({ depth: depth, node: node });
+  });
+  return root;
+}
+function findOutlineNode(tree, path) {
+  for (var i = 0; i < tree.length; i++) {
+    if (tree[i].path === path) { return tree[i]; }
+    var found = findOutlineNode(tree[i].children, path);
+    if (found) { return found; }
+  }
+  return null;
+}
+// Every reader of stored zusammenfassung content (chapter_content.content for
+// type='zusammenfassung') needs to go through this before touching .subs:
+// content saved before this feature shipped -- and any live/published course
+// whose creator hasn't reopened the wizard since -- still has subs as a flat
+// array indexed by position among the chapter's (always depth-1, pre-nesting)
+// top-level subchapters. Once already path-keyed, it's passed through as-is.
+function normalizeOutlineSubs(subsRaw, tree) {
+  if (!subsRaw) { return {}; }
+  if (!Array.isArray(subsRaw)) { return subsRaw; }
+  var out = {};
+  tree.forEach(function (node, i) {
+    if (subsRaw[i] !== undefined) { out[node.path] = subsRaw[i]; }
+  });
+  return out;
+}
+window.KFOutline = { parse: parseOutline, findNode: findOutlineNode, normalizeSubs: normalizeOutlineSubs };
+
 // Same idea as KF_BAUSTEIN_LABELS, but for the label of a single entry within
 // a baustein (one subchapter, one flashcard, one exercise, ...) -- both
 // Pruef-Dashboard.html (per-item review UI) and app.html (reviewer-feedback
@@ -28,18 +88,20 @@ window.KF_BAUSTEIN_LABELS = {
 window.KFLabels = {
   bausteinLabel: function (type) { return window.KF_BAUSTEIN_LABELS[type] || type; },
   // content = the baustein's content object (chapterContent.zusammenfassung,
-  // chapterContent.karteikarten, courseContent.altklausuren, ...). subchapterLines
-  // = chapter.subchapters split into trimmed non-empty lines (only used for
-  // zusammenfassung, where sub_key is an index into z.subs but the label
-  // should prefer the creator's own subchapter title line if present).
-  subLabel: function (type, subKey, content, subchapterLines) {
+  // chapterContent.karteikarten, courseContent.altklausuren, ...). The 4th arg
+  // is only used for zusammenfassung, where sub_key is now a path string like
+  // "1.1.1" (see KFOutline.parse) rather than a flat index -- it must be the
+  // chapter's raw subchapters text so the matching outline node's own title
+  // can be looked up, since a path alone doesn't carry its title.
+  subLabel: function (type, subKey, content, rawSubchaptersText) {
     content = content || {};
-    subchapterLines = subchapterLines || [];
     var i = parseInt(subKey, 10);
     if (type === "zusammenfassung") {
       if (subKey === "merke") return "Merke-Box";
       if (subKey === "tipps") return "Tipps für die Klausur";
-      return subchapterLines[i] || ("Abschnitt " + (i + 1));
+      var tree = parseOutline(rawSubchaptersText || "");
+      var node = findOutlineNode(tree, subKey);
+      return node ? (node.number ? node.number + " " + node.title : node.title) : subKey;
     }
     if (type === "karteikarten") {
       return "Karte " + (i + 1);
