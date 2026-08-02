@@ -51,7 +51,7 @@ a{color:var(--accent);}
 .list-item .li-time{font-size:12px; color:var(--muted); white-space:nowrap;}
 .list-empty{background:var(--card); border:1px dashed var(--line); border-radius:var(--radius); padding:24px 20px; text-align:center; color:var(--muted); font-size:14px;}
 
-.status-pill{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap; flex-shrink:0;}
+.status-pill{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap; flex-shrink:0; cursor:pointer;}
 .status-pill.entwurf{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber);}
 .status-pill.in_arbeit{background:var(--accent-soft); color:var(--accent); border:1px solid #97C4B8;}
 .status-pill.live{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
@@ -62,11 +62,18 @@ a{color:var(--accent);}
 
 .li-title-row{display:flex; align-items:center; gap:4px; flex-wrap:wrap;}
 .li-title-display{display:flex; align-items:center; gap:4px;}
-.li-title-edit{display:flex; align-items:center; gap:6px;}
-.li-rename-input{font:inherit; font-size:14px; padding:5px 8px; border:1px solid var(--line); border-radius:6px; min-width:180px;}
 .li-icon-btn{background:none; border:none; cursor:pointer; font-size:13px; padding:3px 5px; border-radius:6px; color:var(--muted); line-height:1;}
 .li-icon-btn:hover{background:var(--accent-soft); color:var(--ink);}
 .li-icon-btn.li-icon-danger:hover{background:var(--danger-soft); color:var(--danger);}
+
+.meta-edit-box{background:var(--card); border-radius:var(--radius); padding:24px 26px; max-width:460px; width:100%; box-shadow:0 12px 32px rgba(27,42,65,.3);}
+.meta-edit-box h3{font-size:16px; margin-bottom:16px;}
+.meta-edit-box .field{margin-bottom:12px;}
+.meta-edit-box .field label{display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:4px;}
+.meta-edit-box .field input, .meta-edit-box .field select{font:inherit; font-size:14px; width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink);}
+.meta-edit-box .field-row{display:flex; gap:12px;}
+.meta-edit-box .field-row .field{flex:1; min-width:0;}
+.meta-edit-box .action-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
 
 .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; font-size:13px; padding:10px 18px; border-radius:8px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50;}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
@@ -166,24 +173,23 @@ async function renderRecentLists(){
     return '<div class="list-item"><span class="li-main">'+esc(u.email)+'</span><span class="li-time">'+fmtDate(u.created_at)+'</span></div>';
   }).join('') : '<div class="list-empty">Noch keine Registrierungen.</div>';
 
+  var SEMESTER_OPTIONS = ['1. Semester','2. Semester','3. Semester','4. Semester','5. Semester','6. Semester'];
+
   coursesBox.innerHTML = courses.length ? courses.map(function(c){
+    var semesterOptionsHtml = SEMESTER_OPTIONS.concat(c.semester && SEMESTER_OPTIONS.indexOf(c.semester) < 0 ? [c.semester] : [])
+      .map(function(s){ return '<option'+(s===c.semester?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
     return '<div class="list-item" data-course-id="'+esc(c.id)+'" style="cursor:pointer">'+
       '<div>'+
         '<div class="li-main li-title-row">'+
           '<div class="li-title-display" data-title-display="'+esc(c.id)+'">'+
             '<span class="li-title-text">'+esc(c.title)+'</span>'+
-            '<button type="button" class="li-icon-btn" data-rename-course="'+esc(c.id)+'" title="Umbenennen" aria-label="Umbenennen">&#9998;</button>'+
+            '<button type="button" class="li-icon-btn" data-edit-course-meta="'+esc(c.id)+'" title="Bearbeiten" aria-label="Bearbeiten">&#9998;</button>'+
             '<button type="button" class="li-icon-btn li-icon-danger" data-delete-course="'+esc(c.id)+'" data-course-title="'+esc(c.title)+'" data-course-status="'+esc(c.status)+'" title="Löschen" aria-label="Löschen">&#128465;</button>'+
-          '</div>'+
-          '<div class="li-title-edit" data-title-edit="'+esc(c.id)+'" style="display:none">'+
-            '<input type="text" class="li-rename-input" data-rename-input="'+esc(c.id)+'" value="'+esc(c.title)+'">'+
-            '<button type="button" class="li-icon-btn" data-rename-save="'+esc(c.id)+'" title="Speichern" aria-label="Speichern">&#10003;</button>'+
-            '<button type="button" class="li-icon-btn" data-rename-cancel="'+esc(c.id)+'" title="Abbrechen" aria-label="Abbrechen">&#10005;</button>'+
           '</div>'+
         '</div>'+
         '<div class="li-sub">'+esc(c.hochschule||'')+(c.creatorEmail ? ' · '+esc(c.creatorEmail) : '')+'</div>'+
       '</div>'+
-      '<span class="status-pill '+esc(c.status)+'">'+esc(COURSE_STATUS_LABEL[c.status]||c.status)+'</span>'+
+      '<span class="status-pill '+esc(c.status)+'" data-status-pill="'+esc(c.id)+'" data-course-status="'+esc(c.status)+'" title="Klicken zum Ändern">'+esc(COURSE_STATUS_LABEL[c.status]||c.status)+'</span>'+
       '<span class="li-time">'+fmtDate(c.createdAt)+'</span>'+
       '<div class="confirm-delete-overlay" data-confirm-delete="'+esc(c.id)+'" style="display:none">'+
         '<div class="confirm-delete-box">'+
@@ -191,6 +197,33 @@ async function renderRecentLists(){
           '<div class="action-row">'+
             '<button type="button" class="btn-danger" data-confirm-delete-yes="'+esc(c.id)+'">Endgültig löschen</button>'+
             '<button type="button" class="btn-cancel" data-confirm-delete-no>Abbrechen</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="confirm-delete-overlay" data-confirm-status="'+esc(c.id)+'" style="display:none">'+
+        '<div class="confirm-delete-box">'+
+          '<p data-confirm-status-text="'+esc(c.id)+'"></p>'+
+          '<div class="action-row">'+
+            '<button type="button" class="btn-approve" data-confirm-status-yes="'+esc(c.id)+'">Bestätigen</button>'+
+            '<button type="button" class="btn-cancel" data-confirm-status-no>Abbrechen</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="confirm-delete-overlay" data-meta-edit="'+esc(c.id)+'" style="display:none">'+
+        '<div class="meta-edit-box">'+
+          '<h3>Kurs bearbeiten</h3>'+
+          '<div class="field"><label>Hochschule</label><input type="text" data-meta-hochschule="'+esc(c.id)+'" value="'+esc(c.hochschule||'')+'"></div>'+
+          '<div class="field-row">'+
+            '<div class="field"><label>Fach</label><input type="text" data-meta-fach="'+esc(c.id)+'" value="'+esc(c.title||'')+'"></div>'+
+            '<div class="field"><label>Professor/in</label><input type="text" data-meta-prof="'+esc(c.id)+'" value="'+esc(c.prof||'')+'"></div>'+
+          '</div>'+
+          '<div class="field-row">'+
+            '<div class="field"><label>Studiengänge (kommagetrennt)</label><input type="text" data-meta-studiengaenge="'+esc(c.id)+'" value="'+esc((c.sg||[]).join(', '))+'"></div>'+
+            '<div class="field"><label>Semester</label><select data-meta-semester="'+esc(c.id)+'">'+semesterOptionsHtml+'</select></div>'+
+          '</div>'+
+          '<div class="action-row">'+
+            '<button type="button" class="btn-approve" data-meta-save="'+esc(c.id)+'">Speichern</button>'+
+            '<button type="button" class="btn-cancel" data-meta-cancel="'+esc(c.id)+'">Abbrechen</button>'+
           '</div>'+
         '</div>'+
       '</div>'+
@@ -220,62 +253,95 @@ function wireCourseRowActions(container){
     el.addEventListener('click', function(e){ e.stopPropagation(); });
   });
 
-  function cancelRename(id){
-    var display = container.querySelector('[data-title-display="'+id+'"]');
-    var editEl = container.querySelector('[data-title-edit="'+id+'"]');
-    var input = editEl ? editEl.querySelector('[data-rename-input]') : null;
-    var text = display ? display.querySelector('.li-title-text') : null;
-    if(input && text){ input.value = text.textContent; }
-    if(editEl){ editEl.style.display = 'none'; }
-    if(display){ display.style.display = ''; }
-  }
-
-  function saveRename(id){
-    var editEl = container.querySelector('[data-title-edit="'+id+'"]');
-    var input = editEl ? editEl.querySelector('[data-rename-input]') : null;
-    var display = container.querySelector('[data-title-display="'+id+'"]');
-    var text = display ? display.querySelector('.li-title-text') : null;
-    if(!input || !text){ return; }
-    var newTitle = input.value.trim();
-    if(!newTitle || newTitle === text.textContent){ cancelRename(id); return; }
-    var saveBtn = editEl.querySelector('[data-rename-save]');
-    if(saveBtn){ saveBtn.disabled = true; }
-    window.KFCatalog.renameCourse(id, newTitle).then(function(){
-      showToast('Kurstitel aktualisiert.');
-      renderRecentLists();
-    }).catch(function(err){
-      if(saveBtn){ saveBtn.disabled = false; }
-      showToast('Fehler: ' + ((err && err.message) || 'unbekannt'));
-    });
-  }
-
-  container.querySelectorAll('[data-rename-course]').forEach(function(btn){
+  container.querySelectorAll('[data-edit-course-meta]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.stopPropagation();
-      var id = btn.dataset.renameCourse;
-      var display = container.querySelector('[data-title-display="'+id+'"]');
-      var editEl = container.querySelector('[data-title-edit="'+id+'"]');
-      if(display){ display.style.display = 'none'; }
-      if(editEl){
-        editEl.style.display = '';
-        var input = editEl.querySelector('[data-rename-input]');
-        if(input){ input.focus(); input.select(); }
+      var id = btn.dataset.editCourseMeta;
+      var overlay = container.querySelector('[data-meta-edit="'+id+'"]');
+      if(overlay){ overlay.style.display = 'flex'; }
+    });
+  });
+
+  container.querySelectorAll('[data-meta-cancel]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var overlay = btn.closest('[data-meta-edit]');
+      if(overlay){ overlay.style.display = 'none'; }
+    });
+  });
+
+  container.querySelectorAll('[data-meta-save]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = btn.dataset.metaSave;
+      var overlay = container.querySelector('[data-meta-edit="'+id+'"]');
+      if(!overlay){ return; }
+      var hochschule = overlay.querySelector('[data-meta-hochschule]').value.trim();
+      var fach = overlay.querySelector('[data-meta-fach]').value.trim();
+      var prof = overlay.querySelector('[data-meta-prof]').value.trim();
+      var semester = overlay.querySelector('[data-meta-semester]').value;
+      var studiengaenge = overlay.querySelector('[data-meta-studiengaenge]').value.split(',');
+      if(!hochschule || !fach){ showToast('Hochschule und Fach dürfen nicht leer sein.'); return; }
+      btn.disabled = true;
+      window.KFCatalog.adminUpdateCourseMeta(id, { hochschule: hochschule, fach: fach, prof: prof, semester: semester, studiengaenge: studiengaenge }).then(function(){
+        showToast('Kurs aktualisiert.');
+        renderRecentLists();
+      }).catch(function(err){
+        btn.disabled = false;
+        showToast('Fehler: ' + ((err && err.message) || 'unbekannt'));
+      });
+    });
+  });
+
+  container.querySelectorAll('[data-status-pill]').forEach(function(pill){
+    pill.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = pill.dataset.statusPill;
+      var status = pill.dataset.courseStatus;
+      var overlay = container.querySelector('[data-confirm-status="'+id+'"]');
+      var textEl = overlay ? overlay.querySelector('[data-confirm-status-text]') : null;
+      var yesBtn = overlay ? overlay.querySelector('[data-confirm-status-yes]') : null;
+      if(status === 'live'){
+        if(yesBtn){ yesBtn.dataset.targetStatus = 'in_arbeit'; }
+        if(textEl){ textEl.textContent = 'Kurs zurück auf "In Arbeit" setzen? Er ist danach für Lernende nicht mehr sichtbar/kaufbar.'; }
+        if(overlay){ overlay.style.display = 'flex'; }
+      } else {
+        if(yesBtn){ yesBtn.dataset.targetStatus = 'live'; }
+        if(textEl){ textEl.textContent = 'Lade …'; }
+        if(overlay){ overlay.style.display = 'flex'; }
+        window.supabase.from('chapters').select('status').eq('course_id', id).then(function(res){
+          var rows = (res && res.data) || [];
+          var total = rows.length;
+          var approved = rows.filter(function(r){ return r.status === 'freigegeben'; }).length;
+          if(textEl){
+            textEl.textContent = 'Dieser Kurs ist noch nicht vollständig geprüft/freigegeben. Trotzdem veröffentlichen? Lernende sehen dann nur die bereits freigegebenen Kapitel (' + approved + ' von ' + total + ').';
+          }
+        });
       }
     });
   });
 
-  container.querySelectorAll('[data-rename-cancel]').forEach(function(btn){
-    btn.addEventListener('click', function(e){ e.stopPropagation(); cancelRename(btn.dataset.renameCancel); });
+  container.querySelectorAll('[data-confirm-status-no]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var overlay = btn.closest('.confirm-delete-overlay');
+      if(overlay){ overlay.style.display = 'none'; }
+    });
   });
 
-  container.querySelectorAll('[data-rename-save]').forEach(function(btn){
-    btn.addEventListener('click', function(e){ e.stopPropagation(); saveRename(btn.dataset.renameSave); });
-  });
-
-  container.querySelectorAll('[data-rename-input]').forEach(function(input){
-    input.addEventListener('keydown', function(e){
-      if(e.key === 'Enter'){ e.preventDefault(); saveRename(input.dataset.renameInput); }
-      else if(e.key === 'Escape'){ e.preventDefault(); cancelRename(input.dataset.renameInput); }
+  container.querySelectorAll('[data-confirm-status-yes]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      btn.disabled = true;
+      var id = btn.dataset.confirmStatusYes;
+      var target = btn.dataset.targetStatus;
+      window.supabase.from('courses').update({ status: target }).eq('id', id).select('id').then(function(res){
+        btn.disabled = false;
+        if(res.error){ showToast('Fehler: ' + res.error.message); return; }
+        if(!res.data || !res.data.length){ showToast('Aktion nicht möglich -- keine Berechtigung oder Kurs nicht gefunden.'); return; }
+        showToast(target === 'live' ? 'Kurs veröffentlicht.' : 'Kurs zurückgesetzt.');
+        renderRecentLists();
+      });
     });
   });
 

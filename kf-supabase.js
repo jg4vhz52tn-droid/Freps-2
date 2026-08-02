@@ -910,15 +910,18 @@ window.KFStore = (function () {
 
   async function getRecentCourses(limit) {
     const { data, error } = await supabase.from("courses")
-      .select("id, title, status, created_at, creator:profiles ( email ), hochschule:hochschulen ( name )")
+      .select("id, title, professor, semester, status, created_at, creator:profiles ( email ), hochschule:hochschulen ( name )," +
+        " course_studiengaenge ( studiengaenge ( name ) )")
       .order("created_at", { ascending: false })
       .limit(limit || 10);
     if (error) { console.error(error); return []; }
     return data.map(function (r) {
       return {
         id: r.id, title: r.title, status: r.status, createdAt: r.created_at,
+        prof: r.professor || "", semester: r.semester || "",
         hochschule: r.hochschule ? r.hochschule.name : "",
-        creatorEmail: r.creator ? r.creator.email : ""
+        creatorEmail: r.creator ? r.creator.email : "",
+        sg: (r.course_studiengaenge || []).map(function (x) { return x.studiengaenge.name; })
       };
     });
   }
@@ -1050,11 +1053,58 @@ window.KFCatalog = (function () {
     if (error) throw error;
   }
 
-  // Admin-only rename (see "courses: admin update all") -- lets an admin fix
-  // courses stuck as "Unbenannter Kurs" without needing to be the creator.
-  async function renameCourse(courseId, newTitle) {
-    const { error } = await supabase.from("courses").update({ title: newTitle }).eq("id", courseId);
-    if (error) throw error;
+  // Admin-only full metadata edit (see "courses: admin update all" /
+  // "course_studiengaenge: admin insert|delete all") -- lets an admin fix a
+  // course stuck as "Unbenannter Kurs", or correct any other master-data
+  // field, without needing to be the creator. One row update plus a
+  // delete-then-insert of course_studiengaenge, analogous to
+  // getOrCreateDraftCourse()'s studiengang handling, except this always
+  // targets the given existing courseId directly (no upsert-by-title /
+  // create fallback -- an admin edit must never spawn a second course row).
+  //
+  // .select("id") on the update (not just delete()) so an RLS-blocked update
+  // (row filtered out, e.g. bad courseId) reports as an explicit error
+  // instead of silently doing nothing while still showing a success toast --
+  // the exact silent-no-op trap already documented on deleteCourse() above.
+  async function adminUpdateCourseMeta(courseId, meta) {
+    var hochschuleRow = (await supabase.from("hochschulen").select("id").eq("name", meta.hochschule).maybeSingle()).data;
+    if (!hochschuleRow) {
+      const { data: inserted, error: hErr } = await supabase.from("hochschulen")
+        .insert({ name: meta.hochschule, status: "aktiv" }).select("id").single();
+      if (hErr) throw hErr;
+      hochschuleRow = inserted;
+    }
+
+    const { data: updated, error: uErr } = await supabase.from("courses")
+      .update({
+        hochschule_id: hochschuleRow.id, title: meta.fach,
+        professor: meta.prof || null, semester: meta.semester || null
+      })
+      .eq("id", courseId)
+      .select("id");
+    if (uErr) throw uErr;
+    if (!updated || !updated.length) throw new Error("Speichern nicht möglich -- Kurs nicht gefunden oder keine Berechtigung.");
+
+    var sgNames = (meta.studiengaenge || []).map(function (s) { return s.trim(); }).filter(Boolean);
+    var sgIds = [];
+    for (var i = 0; i < sgNames.length; i++) {
+      var sgRow = (await supabase.from("studiengaenge").select("id").eq("name", sgNames[i]).maybeSingle()).data;
+      if (!sgRow) {
+        const { data: insertedSg, error: sgErr } = await supabase.from("studiengaenge")
+          .insert({ name: sgNames[i] }).select("id").single();
+        if (sgErr) throw sgErr;
+        sgRow = insertedSg;
+      }
+      sgIds.push(sgRow.id);
+    }
+
+    const { error: delErr } = await supabase.from("course_studiengaenge").delete().eq("course_id", courseId);
+    if (delErr) throw delErr;
+    if (sgIds.length) {
+      const { error: insErr } = await supabase.from("course_studiengaenge")
+        .insert(sgIds.map(function (id) { return { course_id: courseId, studiengang_id: id }; }));
+      if (insErr) throw insErr;
+    }
   }
 
   // RLS only allows this for the owning creator, and only while the course
@@ -1121,7 +1171,7 @@ window.KFCatalog = (function () {
     getSettings: getSettings,
     setBundleNote: setBundleNote,
     deleteCourse: deleteCourse,
-    renameCourse: renameCourse
+    adminUpdateCourseMeta: adminUpdateCourseMeta
   };
 })();
 
