@@ -1050,6 +1050,13 @@ window.KFCatalog = (function () {
     if (error) throw error;
   }
 
+  // Admin-only rename (see "courses: admin update all") -- lets an admin fix
+  // courses stuck as "Unbenannter Kurs" without needing to be the creator.
+  async function renameCourse(courseId, newTitle) {
+    const { error } = await supabase.from("courses").update({ title: newTitle }).eq("id", courseId);
+    if (error) throw error;
+  }
+
   // RLS only allows this for the owning creator, and only while the course
   // isn't 'live' yet (see "courses: delete own if not live") -- the delete
   // button is hidden client-side for live courses too, this is just the
@@ -1113,7 +1120,8 @@ window.KFCatalog = (function () {
     setProgressItem: setProgressItem,
     getSettings: getSettings,
     setBundleNote: setBundleNote,
-    deleteCourse: deleteCourse
+    deleteCourse: deleteCourse,
+    renameCourse: renameCourse
   };
 })();
 
