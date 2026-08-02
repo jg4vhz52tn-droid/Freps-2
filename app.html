@@ -257,7 +257,6 @@ ul.plain li{margin-bottom:5px;}
 .repeat-row .rm:hover{color:var(--danger);}
 .add-row-btn{background:none; border:1px dashed var(--line); color:var(--muted); font:inherit; font-size:13px; padding:9px 14px; border-radius:8px; cursor:pointer; width:100%; text-align:center; margin-bottom:18px;}
 .add-row-btn:hover{border-color:var(--accent); color:var(--accent);}
-.wizard-foot{display:flex; justify-content:space-between; margin-top:28px; padding-top:20px; border-top:1px solid var(--line);}
 .chapter-pack{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:10px; display:flex; align-items:center; gap:14px;}
 .chapter-pack .info{flex:1;}
 .chapter-pack h3{margin-bottom:2px; font-size:14px;}
@@ -371,10 +370,13 @@ ul.plain li{margin-bottom:5px;}
 .hs-suggestion:hover .hs-alias, .hs-suggestion.active .hs-alias{color:var(--accent);}
 
 /* Überblick (Drag & Drop Kapitelstruktur) */
-.ueb-chapter{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; cursor:grab;}
-.ueb-chapter.dragging{opacity:.4;}
+.ueb-chapter{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px;}
+.ueb-chapter.dragging{opacity:.4; position:relative; z-index:2;}
 .ueb-chapter-head{display:flex; align-items:center; gap:10px; padding:14px 16px;}
-.ueb-drag-handle{color:var(--muted); cursor:grab; font-size:14px; user-select:none; flex-shrink:0;}
+/* touch-action:none verhindert, dass iOS/iPadOS eine Ziehgeste vom Griff aus
+   als Seiten-Scroll interpretiert -- ohne das lässt sich per Touch nicht
+   zuverlässig gezogen werden (siehe wireSubPointerDrag/wireChapterPointerDrag). */
+.ueb-drag-handle{color:var(--muted); cursor:grab; font-size:14px; user-select:none; flex-shrink:0; touch-action:none;}
 .ueb-toggle{background:none; border:none; cursor:pointer; font-size:12px; color:var(--muted); padding:4px 6px; flex-shrink:0;}
 .ueb-toggle:hover{color:var(--accent);}
 .ueb-chapter-num{font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap; flex-shrink:0;}
@@ -384,8 +386,8 @@ ul.plain li{margin-bottom:5px;}
 .ueb-subs{padding:2px 16px 14px 48px; display:flex; flex-direction:column; gap:8px;}
 .ueb-chapter.collapsed .ueb-subs{display:none;}
 .ueb-empty-hint{font-size:12px; color:var(--muted); margin:0; padding:4px 0;}
-.ueb-sub{display:flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px; cursor:grab; transition:margin-left .12s;}
-.ueb-sub.dragging{opacity:.4;}
+.ueb-sub{display:flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px; transition:margin-left .12s;}
+.ueb-sub.dragging{opacity:.4; position:relative; z-index:2;}
 .ueb-sub.nest-target{outline:2px dotted var(--accent); outline-offset:2px;}
 .ueb-sub-num{font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap; min-width:30px; flex-shrink:0;}
 .ueb-sub-input{flex:1; border:1px solid transparent; background:none; font:inherit; font-size:13px; color:var(--ink); padding:4px 7px; border-radius:6px; min-width:0;}
@@ -393,8 +395,13 @@ ul.plain li{margin-bottom:5px;}
 .ueb-sub-input:focus{border-color:var(--accent); background:#fff; outline:none;}
 .step-intro{font-size:13px; color:var(--muted); margin-bottom:20px; max-width:520px;}
 
-/* Speichern (inline in Fußzeile) */
-.wizard-foot{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+/* Speichern (inline in Fußzeile) -- zwei feste Zeilen statt freiem Wrap:
+   Zurück/Weiter bleiben so IMMER nebeneinander, unabhängig davon, wie lang
+   der Sync-Status-Text gerade ist (der darf für sich alleine umbrechen,
+   siehe .wizard-foot-save). */
+.wizard-foot{display:flex; flex-direction:column; gap:10px; margin-top:28px; padding-top:20px; border-top:1px solid var(--line);}
+.wizard-foot-nav{display:flex; justify-content:space-between; align-items:center; gap:12px;}
+.wizard-foot-save{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--muted);}
 .save-inline{display:flex; align-items:center; gap:10px;}
 .save-btn{background:var(--card); border:1px solid var(--line); color:var(--ink); font:inherit; font-size:13px; font-weight:600; padding:9px 16px; border-radius:8px; cursor:pointer;}
 .save-btn:hover{border-color:var(--accent); color:var(--accent);}
@@ -542,7 +549,7 @@ ul.plain li{margin-bottom:5px;}
       <strong>Bevor du startest:</strong>
       Lade niemals Original-Skripte, Folien oder Aufgabentexte deines Professors hoch. Nur eigene, selbst formulierte Inhalte und Lösungswege sind erlaubt – das prüfen wir in jedem Kapitel.
     </div>
-    <button class="cta" data-goto-view="view-creator-setup">Jetzt starten →</button>
+    <button class="cta" id="creatorStartBtn">Jetzt starten →</button>
   </div>
 </div>
 
@@ -597,8 +604,10 @@ ul.plain li{margin-bottom:5px;}
     </div>
 
     <div class="wizard-foot">
-      <span></span>
-      <button class="cta" data-goto-view="view-creator-wizard">Antrag senden &amp; Kursbau starten →</button>
+      <div class="wizard-foot-nav">
+        <span></span>
+        <button class="cta" data-goto-view="view-creator-wizard">Antrag senden &amp; Kursbau starten →</button>
+      </div>
     </div>
   </div>
 </div>
@@ -661,7 +670,7 @@ ul.plain li{margin-bottom:5px;}
           <button class="ghost" type="button" id="bundleSaveBtn" style="margin-top:8px">Bundle-Vorschlag speichern</button>
         </div>
 
-        <div class="wizard-foot"><span></span><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="ueberblick">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><span></span><button class="cta" data-next="ueberblick">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 2: ÜBERBLICK -->
@@ -669,7 +678,7 @@ ul.plain li{margin-bottom:5px;}
         <h1 style="margin-bottom:6px">Überblick &amp; Reihenfolge prüfen</h1>
         <p class="step-intro">Alle Kapitel und Unterkapitel auf einen Blick. Titel direkt anklicken und umbenennen. Per Ziehen am Griff (⠿) lässt sich sowohl die Reihenfolge der Unterkapitel innerhalb eines Kapitels als auch die Reihenfolge ganzer Kapitel ändern – die Nummerierung passt sich automatisch an. Mit dem Pfeil links lässt sich ein Kapitel einklappen.</p>
         <div id="ueberblickList"></div>
-        <div class="wizard-foot"><button class="ghost" data-next="struktur">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="zusammenfassung">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="struktur">← Zurück</button><button class="cta" data-next="zusammenfassung">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 2: ZUSAMMENFASSUNG -->
@@ -689,7 +698,7 @@ ul.plain li{margin-bottom:5px;}
           <label>„Tipps für die Klausur"</label>
           <textarea id="zfTipps" placeholder="Konkrete Hinweise, worauf dieser Professor bei dieser Klausur besonders achtet …"></textarea>
         </div>
-        <div class="wizard-foot"><button class="ghost" data-next="ueberblick">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="karteikarten">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="ueberblick">← Zurück</button><button class="cta" data-next="karteikarten">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 3: KARTEIKARTEN -->
@@ -724,7 +733,7 @@ ul.plain li{margin-bottom:5px;}
         </div>
         <p class="hint-sm" id="cardEmptyHint" style="display:none">Noch keine Karten für dieses Kapitel – leg über „+ Weitere Karte hinzufügen" die erste an oder importiere ein Set.</p>
         <button class="add-row-btn" id="addCardBtn" type="button">+ Weitere Karte hinzufügen</button>
-        <div class="wizard-foot"><button class="ghost" data-next="zusammenfassung">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="uebungen">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="zusammenfassung">← Zurück</button><button class="cta" data-next="uebungen">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 4: ÜBUNGSAUFGABEN -->
@@ -759,7 +768,7 @@ ul.plain li{margin-bottom:5px;}
         </div>
         <p class="hint-sm" id="uebungEmptyHint" style="display:none">Noch keine Übungsaufgaben für dieses Kapitel – leg über „+ Weitere Aufgabe hinzufügen" die erste an.</p>
         <button class="add-row-btn" id="addUebungBtn" type="button">+ Weitere Aufgabe hinzufügen</button>
-        <div class="wizard-foot"><button class="ghost" data-next="karteikarten">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="altklausuren">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="karteikarten">← Zurück</button><button class="cta" data-next="altklausuren">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 5: ALTKLAUSUREN -->
@@ -801,7 +810,7 @@ ul.plain li{margin-bottom:5px;}
           </div>
         </div>
         <button class="add-row-btn" id="addAltklausurBtn" type="button">+ Weitere Altklausur-Aufgabe hinzufügen</button>
-        <div class="wizard-foot"><button class="ghost" data-next="uebungen">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="tutorien">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="uebungen">← Zurück</button><button class="cta" data-next="tutorien">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 6: TUTORIEN -->
@@ -817,7 +826,7 @@ ul.plain li{margin-bottom:5px;}
           </div>
         </div>
         <button class="add-row-btn" id="addTutBtn" type="button">+ Weiteres Tutorium hinzufügen</button>
-        <div class="wizard-foot"><button class="ghost" data-next="altklausuren">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="zusatz">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="altklausuren">← Zurück</button><button class="cta" data-next="zusatz">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 7: ZUSATZMODULE (OPTIONAL) -->
@@ -835,7 +844,7 @@ ul.plain li{margin-bottom:5px;}
           <div id="zusatzModuleRows"></div>
           <button class="add-row-btn" id="addZusatzModulBtn" type="button">+ Weiteres Zusatzmodul hinzufügen</button>
         </div>
-        <div class="wizard-foot"><button class="ghost" data-next="tutorien">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="lernplan">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="tutorien">← Zurück</button><button class="cta" data-next="lernplan">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 8: LERNPLAN -->
@@ -854,7 +863,7 @@ ul.plain li{margin-bottom:5px;}
           </div>
         </div>
         <button class="add-row-btn" id="addLernplanBtn" type="button">+ Weiteren Lernplan-Eintrag hinzufügen</button>
-        <div class="wizard-foot"><button class="ghost" data-next="zusatz">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><button class="cta" data-next="einreichen">Weiter →</button></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="zusatz">← Zurück</button><button class="cta" data-next="einreichen">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
       <!-- SCHRITT 9: EINREICHEN -->
@@ -862,7 +871,7 @@ ul.plain li{margin-bottom:5px;}
         <h1 style="margin-bottom:6px">Kapitel zur Prüfung einreichen</h1>
         <p class="step-intro">Du reichst jedes Kapitel einzeln als vollständiges Paket ein (Zusammenfassung + Karteikarten + passende Übungsaufgaben). Erst nach Freigabe wird das jeweils nächste Kapitel entsperrt. Altklausuren, Tutorien, Zusatzmodule und der Lernplan werden gesammelt geprüft, sobald alle Kapitel freigegeben sind. Diese Liste passt sich automatisch an die Kapitel aus Schritt 1 an.</p>
         <div id="chapterPackList"></div>
-        <div class="wizard-foot"><button class="ghost" data-next="lernplan">← Zurück</button><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div><span></span></div>
+        <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="lernplan">← Zurück</button><span></span></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
 
     </main>
@@ -986,6 +995,52 @@ document.querySelectorAll('[data-goto-view]').forEach(function(el){
   });
 });
 
+/* ---- Login-Gate: Kauf und Creator-Setup dürfen nicht anonym passieren --
+   statt den Server-Fehler "Nicht eingeloggt." erst hinterher als Toast zu
+   zeigen, wird die Session VORHER geprüft; fehlt sie, merkt sich
+   sessionStorage die eigentliche Absicht (Kurs kaufen / Creator-Setup
+   öffnen) und der Login-Erfolgshandler (resolvePendingActionAfterLogin(),
+   an beiden signIn/signUp-Stellen unten) führt sie danach automatisch
+   fort, statt immer stur zu "Meine Kurse" zu springen. */
+function requireLoginOrRedirect(pendingKey, pendingValue){
+  return window.KFAuth.getSession().then(function(session){
+    if(session){ return true; }
+    try{ sessionStorage.setItem(pendingKey, pendingValue); }catch(e){}
+    showView('view-login');
+    return false;
+  });
+}
+function resolvePendingActionAfterLogin(){
+  var pendingPurchase = null, pendingGoto = null;
+  try{ pendingPurchase = sessionStorage.getItem('kf_pending_purchase'); }catch(e){}
+  try{ pendingGoto = sessionStorage.getItem('kf_pending_goto'); }catch(e){}
+  if(pendingPurchase){
+    try{ sessionStorage.removeItem('kf_pending_purchase'); }catch(e){}
+    window.KFCatalog.recordPlaceholderPurchase(pendingPurchase).then(function(){
+      showToast('Kurs freigeschaltet.');
+    }, function(err){
+      showToast('Kauf fehlgeschlagen: ' + ((err && err.message) || 'unbekannter Fehler'));
+    }).then(function(){
+      showView('view-my-courses');
+    });
+    return;
+  }
+  if(pendingGoto){
+    try{ sessionStorage.removeItem('kf_pending_goto'); }catch(e){}
+    showView(pendingGoto);
+    return;
+  }
+  showView('view-my-courses');
+}
+var creatorStartBtn = document.getElementById('creatorStartBtn');
+if(creatorStartBtn){
+  creatorStartBtn.addEventListener('click', function(){
+    requireLoginOrRedirect('kf_pending_goto', 'view-creator-setup').then(function(canProceed){
+      if(canProceed){ showView('view-creator-setup'); }
+    });
+  });
+}
+
 /* kf-supabase.js is loaded as a deferred module, so it can still be running
    when this inline script executes. Code that touches KFAuth/KFStore/KFCatalog
    right away (not from a later click) should go through this. */
@@ -1067,7 +1122,7 @@ function whenKFReady(fn){
             applyMode();
             if(hintEl){ hintEl.textContent = 'Fast fertig: Wir haben dir eine Bestätigungs-E-Mail geschickt. Klicke den Link darin an und melde dich danach hier an.'; }
           } else {
-            showView('view-my-courses');
+            resolvePendingActionAfterLogin();
           }
         }).catch(function(e){
           submitBtn.disabled = false;
@@ -1076,7 +1131,7 @@ function whenKFReady(fn){
       } else {
         window.KFAuth.signIn(email.trim(), pw).then(function(){
           submitBtn.disabled = false;
-          showView('view-my-courses');
+          resolvePendingActionAfterLogin();
         }).catch(function(e){
           submitBtn.disabled = false;
           if(err){ err.style.display='block'; err.textContent = (e && e.message) || 'Anmeldung fehlgeschlagen.'; }
@@ -1437,13 +1492,16 @@ function wireLearnerPurchaseSuggestions(container){
     btn.dataset.wired = '1';
     btn.addEventListener('click', function(){
       var courseId = btn.dataset.buyCourse;
-      btn.disabled = true;
-      window.KFCatalog.recordPlaceholderPurchase(courseId).then(function(){
-        showToast('Kurs freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung).');
-        window.renderMyCourses();
-      }).catch(function(err){
-        btn.disabled = false;
-        showToast('Kauf fehlgeschlagen: ' + ((err && err.message) || 'unbekannter Fehler'));
+      requireLoginOrRedirect('kf_pending_purchase', courseId).then(function(canProceed){
+        if(!canProceed){ return; }
+        btn.disabled = true;
+        window.KFCatalog.recordPlaceholderPurchase(courseId).then(function(){
+          showToast('Kurs freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung).');
+          window.renderMyCourses();
+        }).catch(function(err){
+          btn.disabled = false;
+          showToast('Kauf fehlgeschlagen: ' + ((err && err.message) || 'unbekannter Fehler'));
+        });
       });
     });
   });
@@ -1935,18 +1993,21 @@ window.renderSubjectsForHochschule = async function(){
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         var courseId = btn.dataset.buyCourse;
-        btn.disabled = true;
-        window.KFCatalog.recordPlaceholderPurchase(courseId).then(function(){
-          var span = document.createElement('span');
-          span.className = 'meta';
-          span.style.color = 'var(--accent)';
-          span.textContent = 'Gekauft ✓';
-          btn.replaceWith(span);
-          showToast('Kurs freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung). Weiter zu Meine Kurse …');
-          setTimeout(function(){ showView('view-my-courses'); }, 900);
-        }).catch(function(err){
-          btn.disabled = false;
-          showToast('Kauf fehlgeschlagen: ' + ((err&&err.message)||'unbekannter Fehler'));
+        requireLoginOrRedirect('kf_pending_purchase', courseId).then(function(canProceed){
+          if(!canProceed){ return; }
+          btn.disabled = true;
+          window.KFCatalog.recordPlaceholderPurchase(courseId).then(function(){
+            var span = document.createElement('span');
+            span.className = 'meta';
+            span.style.color = 'var(--accent)';
+            span.textContent = 'Gekauft ✓';
+            btn.replaceWith(span);
+            showToast('Kurs freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung). Weiter zu Meine Kurse …');
+            setTimeout(function(){ showView('view-my-courses'); }, 900);
+          }).catch(function(err){
+            btn.disabled = false;
+            showToast('Kauf fehlgeschlagen: ' + ((err&&err.message)||'unbekannter Fehler'));
+          });
         });
       });
     });
@@ -3113,7 +3174,7 @@ window.renderSubjectsForHochschule = async function(){
       // unten gelesen/aktualisiert, ohne bei jedem Zwischenschritt neu
       // geparst werden zu müssen (siehe commitOverviewChapterSubs()).
       var subsHtml = flatNodes.map(function(node, si){
-        return '<div class="ueb-sub" draggable="true" data-depth="' + node.depth + '" data-old-path="' + escapeHtml(node.path) + '" style="margin-left:' + (node.depth * 20) + 'px">' +
+        return '<div class="ueb-sub" data-depth="' + node.depth + '" data-old-path="' + escapeHtml(node.path) + '" style="margin-left:' + (node.depth * 20) + 'px">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿</span>' +
           '<span class="ueb-sub-num">' + escapeHtml(node.number || ((ci + 1) + '.' + (si + 1))) + '</span>' +
           '<input type="text" class="ueb-sub-input" value="' + escapeHtml(node.title) + '" placeholder="Unterkapitel-Titel">' +
@@ -3121,7 +3182,7 @@ window.renderSubjectsForHochschule = async function(){
       }).join('') || '<p class="ueb-empty-hint">Noch keine Unterkapitel – in Schritt 1 ergänzen.</p>';
       var collapsedClass = ch.collapsed ? ' collapsed' : '';
       var toggleSymbol = ch.collapsed ? '▸' : '▾';
-      return '<div class="ueb-chapter' + collapsedClass + '" draggable="true" data-orig-index="' + ci + '">' +
+      return '<div class="ueb-chapter' + collapsedClass + '" data-orig-index="' + ci + '">' +
         '<div class="ueb-chapter-head">' +
           '<span class="ueb-drag-handle" title="Ziehen zum Umsortieren">⠿⠿</span>' +
           '<button class="ueb-toggle" type="button">' + toggleSymbol + '</button>' +
@@ -3200,89 +3261,146 @@ window.renderSubjectsForHochschule = async function(){
       });
     });
 
-    // Ganze Kapitel per Drag&Drop umsortieren (unverändert flach -- ein
-    // Kapitel nimmt seine komplette, tiefenerhaltende Unterkapitel-Struktur
-    // als Ganzes mit an seine neue Position).
+    // Ganze Kapitel umsortieren (unverändert flach -- ein Kapitel nimmt
+    // seine komplette, tiefenerhaltende Unterkapitel-Struktur als Ganzes mit
+    // an seine neue Position). Pointer Events statt nativem HTML5-Drag&Drop,
+    // da Letzteres auf iOS/iPadOS per Touch nicht zuverlässig funktioniert --
+    // Maus, Stift und Touch laufen hierüber alle über denselben Pfad.
     listEl.querySelectorAll('.ueb-chapter').forEach(function(chEl){
-      chEl.addEventListener('dragstart', function(e){
-        chEl.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', '');
-      });
-      chEl.addEventListener('dragend', function(){
-        chEl.classList.remove('dragging');
-        handleOverviewReorder();
-      });
-    });
-    listEl.addEventListener('dragover', function(e){
-      var draggingChapter = listEl.querySelector('.ueb-chapter.dragging');
-      if(!draggingChapter){ return; }
-      e.preventDefault();
-      var after = getDragAfterElement(listEl, e.clientY, '.ueb-chapter');
-      if(after == null){ listEl.appendChild(draggingChapter); }
-      else{ listEl.insertBefore(draggingChapter, after); }
+      var handle = chEl.querySelector(':scope > .ueb-chapter-head > .ueb-drag-handle');
+      if(!handle){ return; }
+      wireChapterPointerDrag(handle, chEl, listEl);
     });
 
-    // Unterkapitel innerhalb ihres Kapitels per Drag&Drop umsortieren ODER
-    // auf einen anderen Punkt ziehen = darunter verschachteln.
+    // Unterkapitel innerhalb ihres Kapitels umsortieren ODER auf einen
+    // anderen Punkt ziehen = darunter verschachteln -- ebenfalls über
+    // Pointer Events (siehe applySubDrop() für die eigentliche Verschiebe-
+    // /Verschachtelungslogik, die identisch bleibt, nur die Event-Quelle
+    // wechselt von dragover zu pointermove).
     listEl.querySelectorAll('.ueb-subs').forEach(function(subsEl, subsIdx){
       var ci = subsIdx; // .ueb-subs kommt in derselben Reihenfolge wie .ueb-chapter
       subsEl.querySelectorAll('.ueb-sub').forEach(function(subEl){
-        subEl.addEventListener('dragstart', function(e){
-          e.stopPropagation();
-          getSubBlock(subEl).forEach(function(el){ el.classList.add('dragging'); });
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', '');
-        });
-        subEl.addEventListener('dragend', function(e){
-          e.stopPropagation();
-          subsEl.querySelectorAll('.ueb-sub').forEach(function(el){
-            el.classList.remove('dragging');
-            el.classList.remove('nest-target');
-          });
-          commitOverviewChapterSubs(ci);
-        });
+        var handle = subEl.querySelector(':scope > .ueb-drag-handle');
+        if(!handle){ return; }
+        wireSubPointerDrag(handle, subEl, subsEl, ci);
       });
-      subsEl.addEventListener('dragover', function(e){
-        var draggingSub = subsEl.querySelector('.ueb-sub.dragging');
-        if(!draggingSub){ return; }
-        e.preventDefault();
-        e.stopPropagation();
-        var block = getSubBlock(draggingSub);
-        var headDepth = parseInt(draggingSub.dataset.depth, 10) || 0;
-        var target = subRowAtPoint(subsEl, e.clientY, block);
+    });
+  }
+  // Führt die eigentliche Verschiebung/Verschachtelung eines Unterkapitel-
+  // Blocks aus -- identische Logik wie zuvor im dragover-Handler, jetzt aber
+  // ein einziger Aufruf bei Loslassen (pointerup) statt bei jedem
+  // Zwischenschritt, siehe wireSubPointerDrag().
+  function applySubDrop(block, target, zone){
+    var subsEl = block[0].parentNode;
+    var headDepth = parseInt(block[0].dataset.depth, 10) || 1;
+    if(!target){
+      var remaining = Array.prototype.slice.call(subsEl.querySelectorAll('.ueb-sub')).filter(function(el){ return block.indexOf(el) === -1; });
+      var lastRow = remaining[remaining.length - 1];
+      block.forEach(function(el){ subsEl.appendChild(el); });
+      shiftSubBlockDepth(block, (lastRow ? (parseInt(lastRow.dataset.depth, 10) || 1) : 1) - headDepth);
+      return;
+    }
+    var targetDepth = parseInt(target.dataset.depth, 10) || 1;
+    if(zone === 'nest'){
+      var targetBlock = getSubBlock(target);
+      var afterEl = targetBlock[targetBlock.length - 1];
+      block.forEach(function(el){ afterEl.parentNode.insertBefore(el, afterEl.nextSibling); afterEl = el; });
+      shiftSubBlockDepth(block, (targetDepth + 1) - headDepth);
+    } else if(zone === 'before'){
+      target.parentNode.insertBefore(block[0], target);
+      var prevBefore = block[0];
+      for(var i = 1; i < block.length; i++){ prevBefore.parentNode.insertBefore(block[i], prevBefore.nextSibling); prevBefore = block[i]; }
+      shiftSubBlockDepth(block, targetDepth - headDepth);
+    } else { // 'after' -> hinter den kompletten Block des Ziels (nicht zwischen Ziel und dessen Kindern)
+      var targetBlockAfter = getSubBlock(target);
+      var afterEl2 = targetBlockAfter[targetBlockAfter.length - 1];
+      block.forEach(function(el){ afterEl2.parentNode.insertBefore(el, afterEl2.nextSibling); afterEl2 = el; });
+      shiftSubBlockDepth(block, targetDepth - headDepth);
+    }
+  }
+  // touch-action:none auf dem Griff (siehe CSS) verhindert, dass iOS/iPadOS
+  // die Geste als Seiten-Scroll interpretiert. Der Griff selbst folgt per
+  // transform:translateY() dem Finger/Zeiger; die eigentliche DOM-Umsortierung
+  // passiert erst bei pointerup (applySubDrop), nicht bei jedem
+  // Zwischenschritt -- das vermeidet die Rückkopplungsprobleme, die ein
+  // sofortiges Neuparenten bei jedem pointermove hätte (Layout verschiebt
+  // sich unter dem noch bewegten Finger).
+  function wireSubPointerDrag(handle, subEl, subsEl, ci){
+    handle.addEventListener('pointerdown', function(e){
+      if(e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse'){ return; }
+      e.preventDefault();
+      var block = getSubBlock(subEl);
+      block.forEach(function(el){ el.classList.add('dragging'); });
+      var startY = e.clientY;
+      var moved = false;
+      var lastTarget = null, lastZone = null;
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+
+      function clearNestTarget(){
         subsEl.querySelectorAll('.ueb-sub.nest-target').forEach(function(el){ el.classList.remove('nest-target'); });
-        if(!target){
-          // Unterhalb der letzten Zeile losgelassen -- ans Ende, auf der
-          // Ebene der (verbleibenden) letzten Zeile, damit nicht versehentlich
-          // eine tief verschachtelte Struktur durch einen Top-Level-Punkt
-          // am Ende abgeschlossen wird.
-          var remaining = Array.prototype.slice.call(subsEl.querySelectorAll('.ueb-sub')).filter(function(el){ return block.indexOf(el) === -1; });
-          var lastRow = remaining[remaining.length - 1];
-          block.forEach(function(el){ subsEl.appendChild(el); });
-          shiftSubBlockDepth(block, (lastRow ? (parseInt(lastRow.dataset.depth, 10) || 1) : 1) - headDepth);
-          return;
+      }
+      function onMove(ev){
+        var dy = ev.clientY - startY;
+        if(Math.abs(dy) > 3){ moved = true; }
+        block.forEach(function(el){ el.style.transform = 'translateY(' + dy + 'px)'; });
+        var target = subRowAtPoint(subsEl, ev.clientY, block);
+        clearNestTarget();
+        if(target){
+          var zone = subDropZone(target, ev.clientY);
+          if(zone === 'nest'){ target.classList.add('nest-target'); }
+          lastTarget = target; lastZone = zone;
+        } else {
+          lastTarget = null; lastZone = null;
         }
-        var targetDepth = parseInt(target.dataset.depth, 10) || 0;
-        var zone = subDropZone(target, e.clientY);
-        if(zone === 'nest'){
-          target.classList.add('nest-target');
-          var targetBlock = getSubBlock(target);
-          var afterEl = targetBlock[targetBlock.length - 1];
-          block.forEach(function(el){ afterEl.parentNode.insertBefore(el, afterEl.nextSibling); afterEl = el; });
-          shiftSubBlockDepth(block, (targetDepth + 1) - headDepth);
-        } else if(zone === 'before'){
-          target.parentNode.insertBefore(block[0], target);
-          var prevBefore = block[0];
-          for(var i = 1; i < block.length; i++){ prevBefore.parentNode.insertBefore(block[i], prevBefore.nextSibling); prevBefore = block[i]; }
-          shiftSubBlockDepth(block, targetDepth - headDepth);
-        } else { // 'after' -> hinter den kompletten Block des Ziels (nicht zwischen Ziel und dessen Kindern)
-          var targetBlockAfter = getSubBlock(target);
-          var afterEl2 = targetBlockAfter[targetBlockAfter.length - 1];
-          block.forEach(function(el){ afterEl2.parentNode.insertBefore(el, afterEl2.nextSibling); afterEl2 = el; });
-          shiftSubBlockDepth(block, targetDepth - headDepth);
+      }
+      function onUp(ev){
+        try{ handle.releasePointerCapture(ev.pointerId); }catch(err){}
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+        clearNestTarget();
+        block.forEach(function(el){ el.classList.remove('dragging'); el.style.transform = ''; });
+        if(moved){
+          applySubDrop(block, lastTarget, lastZone);
+          commitOverviewChapterSubs(ci);
         }
-      });
+      }
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+    });
+  }
+  function wireChapterPointerDrag(handle, chEl, listEl){
+    handle.addEventListener('pointerdown', function(e){
+      if(e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse'){ return; }
+      e.preventDefault();
+      chEl.classList.add('dragging');
+      var startY = e.clientY;
+      var moved = false;
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+
+      function onMove(ev){
+        var dy = ev.clientY - startY;
+        if(Math.abs(dy) > 3){ moved = true; }
+        chEl.style.transform = 'translateY(' + dy + 'px)';
+      }
+      function onUp(ev){
+        try{ handle.releasePointerCapture(ev.pointerId); }catch(err){}
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+        chEl.classList.remove('dragging');
+        chEl.style.transform = '';
+        if(moved){
+          var after = getDragAfterElement(listEl, ev.clientY, '.ueb-chapter');
+          if(after == null){ listEl.appendChild(chEl); }
+          else if(after !== chEl){ listEl.insertBefore(chEl, after); }
+          handleOverviewReorder();
+        }
+      }
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
     });
   }
   function addCardRow(frage, antwort, kapitelText){
