@@ -330,6 +330,17 @@ ul.plain li{margin-bottom:5px;}
 .kf-inline-table th, .kf-inline-table td{border:1px solid var(--line); padding:5px 9px; text-align:left; white-space:nowrap;}
 .kf-inline-table thead th{background:var(--accent-soft); color:var(--ink); font-weight:700;}
 
+/* Kursübersicht + Bereichs-Ansichten (Lernende) -- Kacheln/Chapter-Nav/Two-Col
+   nutzen die bereits vorhandenen .grid/.tile/.two-col/.chapter-nav-Klassen
+   (identisch zum alten Prototyp, hier bislang nur für Kursbau-Intro-Kacheln
+   verwendet), nur die folgenden Klassen sind neu. */
+.co-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px;}
+.co-head .cta{white-space:nowrap;}
+.co-purchased-badge{font-size:12px; font-weight:600; background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459; padding:5px 14px; border-radius:20px; white-space:nowrap;}
+.tile .tile-hint{font-size:11.5px; color:var(--muted); margin-top:8px;}
+.lock-card{background:var(--paper); border:1px dashed var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:10px; font-size:13px; color:var(--muted);}
+.lock-card .cta{margin-top:10px; padding:8px 16px; font-size:13px;}
+
 /* Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
    Design 1:1 aus dem Unsere_Kurse_dc.html-Mockup übernommen, nur mit echten
    Daten statt Festwerten. */
@@ -549,6 +560,22 @@ ul.plain li{margin-bottom:5px;}
     <div style="margin-top:26px">
       <a href="app.html?goto=view-creator-intro" class="cta" id="myCoursesCta" style="display:inline-block; text-decoration:none">+ Neuen Kurs erstellen</a>
     </div>
+  </div>
+</div>
+
+<!-- ANSICHT: KURSÜBERSICHT (Lernende) -->
+<div class="view" id="view-course-overview">
+  <div class="portal">
+    <button class="back-link" data-goto-view="view-my-courses">‹ Meine Kurse</button>
+    <div id="courseOverviewBody"><p class="hint-sm">Lade …</p></div>
+  </div>
+</div>
+
+<!-- ANSICHT: KURS-BEREICH (Lernende) -->
+<div class="view" id="view-course-area">
+  <div class="portal">
+    <button class="back-link" data-goto-view="view-course-overview">‹ Kursübersicht</button>
+    <div id="courseAreaBody"><p class="hint-sm">Lade …</p></div>
   </div>
 </div>
 
@@ -1020,6 +1047,8 @@ function showView(id){
   if(id === 'view-creator-wizard' && typeof window.markCreatorSeen === 'function'){ window.markCreatorSeen(); }
   if(id === 'view-my-courses' && typeof window.renderMyCourses === 'function'){ window.renderMyCourses(); }
   if(id === 'view-creator-intro' && window.__kfReady && window.KFAuth){ window.KFAuth.becomeCreator().catch(function(){}); }
+  if(id === 'view-course-overview' && typeof window.renderCourseOverviewView === 'function'){ window.renderCourseOverviewView(); }
+  if(id === 'view-course-area' && typeof window.renderCourseAreaView === 'function'){ window.renderCourseAreaView(); }
 }
 (function(){
   var burgerBtn = document.getElementById('appHeaderBurger');
@@ -1243,7 +1272,7 @@ window.renderMyCourses = async function(){
     html += await renderMyCoursesLearner();
   }
   list.innerHTML = html;
-  wireLearnerContentToggles(list);
+  wireLearnerCourseOpenButtons(list);
   wireQuestionAnswerForms(list);
   wireLearnerPurchaseSuggestions(list);
   wireCourseDeleteButtons(list);
@@ -1498,8 +1527,7 @@ async function renderMyCoursesLearner(){
       '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
       '<p>' + escapeHtmlMy(course.hochschule) + purchaseLineHtml + '</p></div></div>' +
       bundleHtml +
-      '<div style="margin-top:10px"><button type="button" class="linklike" data-toggle-content="' + escapeHtmlMy(course.id) + '">Kursinhalte ansehen ▾</button>' +
-      '<div class="lc-content-box" data-content-box="' + escapeHtmlMy(course.id) + '" style="display:none"></div></div>' +
+      '<div style="margin-top:10px"><button type="button" class="cta" data-open-course="' + escapeHtmlMy(course.id) + '" style="padding:8px 16px;font-size:13px">Kurs öffnen ›</button></div>' +
       '</div>';
   }
   if(!cards){
@@ -1585,23 +1613,33 @@ function lcHasLp(l){ return !!(l && (l.items||[]).some(function(x){ return (x.ta
 // rawSubchaptersText liefert die Struktur (inkl. echter Tiefe, "1.1.1" unter
 // "1.1"), damit auch Lernende die Gliederung sehen statt nur einer flachen,
 // unbeschrifteten Liste von Texten.
-function lcBodyZf(z, rawSubchaptersText){
+function lcBodyZf(z, rawSubchaptersText, anchorPrefix){
   var tree = window.KFOutline ? window.KFOutline.parse(rawSubchaptersText || '') : [];
   var subs = window.KFOutline ? window.KFOutline.normalizeSubs(z.subs, tree) : (z.subs || {});
-  var html = lcRenderZfOutline(tree, subs);
+  var html = lcRenderZfOutline(tree, subs, anchorPrefix);
   if(z.merke){ html += '<div class="lc-item"><strong>Merke:</strong> ' + window.KFTables.render(z.merke) + '</div>'; }
   if(z.tipps){ html += '<div class="lc-item"><strong>Tipps:</strong> ' + window.KFTables.render(z.tipps) + '</div>'; }
   return html;
 }
-function lcRenderZfOutline(nodes, subs){
+// anchorPrefix (optional): wenn gesetzt, bekommt jeder Knoten eine
+// eindeutige id="<anchorPrefix>-<path>" -- damit kann die Zusammenfassung-
+// Bereichsansicht per Klick im linken Nav-Baum zum passenden Unterkapitel
+// rechts scrollen. Ohne anchorPrefix (bestehendes Verhalten) wird keine id
+// erzeugt.
+function lcRenderZfOutline(nodes, subs, anchorPrefix){
   var html = '';
   nodes.forEach(function(node){
     var text = subs[node.path];
+    var idAttr = anchorPrefix ? ' id="' + escapeHtmlMy(anchorPrefix + '-' + node.path) + '"' : '';
     if(text && text.trim()){
-      html += '<div class="lc-item" style="margin-left:' + (node.depth * 16) + 'px">' +
+      html += '<div class="lc-item"' + idAttr + ' style="margin-left:' + (node.depth * 16) + 'px">' +
         (node.number ? '<strong>' + escapeHtmlMy(node.number) + '</strong> ' : '') + window.KFTables.render(text) + '</div>';
+    } else if(anchorPrefix){
+      // Noch textleeres Unterkapitel: trotzdem einen (unsichtbaren) Anker
+      // setzen, damit ein Klick im Nav-Baum darauf nicht ins Leere läuft.
+      html += '<div' + idAttr + '></div>';
     }
-    if(node.children.length){ html += lcRenderZfOutline(node.children, subs); }
+    if(node.children.length){ html += lcRenderZfOutline(node.children, subs, anchorPrefix); }
   });
   return html;
 }
@@ -1758,90 +1796,317 @@ function wireMindmapEvents(container){
   });
 }
 
-async function renderLearnerCourseContentHtml(courseId){
+function wireLearnerCourseOpenButtons(container){
+  container.querySelectorAll('[data-open-course]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      window.currentLearnerCourseId = btn.dataset.openCourse;
+      showView('view-course-overview');
+    });
+  });
+}
+
+// ---- Kursübersicht + Bereichs-Ansichten (Lernende) ----
+// Ersetzt den früheren einzigen langen, flachen Durchlauf aller Kapitel/
+// Bausteine (renderLearnerCourseContentHtml) durch eine Zwischenseite pro
+// Kurs (Kacheln je Bereich) + eine eigene Unteransicht je Bereich. Die
+// eigentlichen Baustein-Renderer (lcHas*/lcBody* oben) bleiben unverändert
+// und werden hier nur anders orchestriert.
+
+async function lcCourseAccess(courseId){
   var session = await window.KFAuth.getSession();
-  var userId = session ? session.id : null;
+  var params = new URLSearchParams(window.location.search);
+  var isAdminPreview = !!(session && session.isAdmin && params.get('adminPreviewCourse') === courseId);
+  var purchased = isAdminPreview || await window.KFCatalog.hasPurchased(courseId);
+  return { session: session, userId: session ? session.id : null, purchased: purchased, isAdminPreview: isAdminPreview };
+}
+
+// Lädt alle für Kursübersicht + Bereichs-Ansichten nötigen Rohdaten in einem
+// Rutsch, damit beide dieselbe Abfrage teilen statt sie zu duplizieren.
+async function lcLoadCourseData(courseId){
   var chapters = (await window.KFStore.getForCourse(courseId))
     .filter(function(c){ return c.status === 'freigegeben'; })
     .sort(function(a,b){ return a.chapterIndex - b.chapterIndex; });
   var courseContent = await window.KFStore.getCourseContent(courseId);
-  var progress = await window.KFCatalog.getProgress(courseId);
-
-  var html = '';
   var contentByChapter = {};
   for(var i=0;i<chapters.length;i++){
-    var ch = chapters[i];
-    var cc = await window.KFStore.getChapterContent(ch.id);
-    contentByChapter[ch.id] = cc;
-    var blocks = '';
-    if(lcHasZf(cc.zusammenfassung)){
-      var qZf = await window.KFQuestions.getForBaustein(courseId, ch.id, 'zusammenfassung');
-      blocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.zusammenfassung, lcBodyZf(cc.zusammenfassung, ch.subchapters), lcTutorfragenWidget(courseId, ch.id, 'zusammenfassung', qZf, userId));
-    }
-    if(lcHasKk(cc.karteikarten)){
-      var qKk = await window.KFQuestions.getForBaustein(courseId, ch.id, 'karteikarten');
-      var kkBody = await lcBodyKk(cc.karteikarten) + lcAnkiExportButton(ch.chapterTitle, cc.karteikarten);
-      blocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.karteikarten, kkBody, lcTutorfragenWidget(courseId, ch.id, 'karteikarten', qKk, userId));
-    }
-    if(lcHasUeb(cc.uebungen)){
-      var qUeb = await window.KFQuestions.getForBaustein(courseId, ch.id, 'uebungen');
-      blocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.uebungen, lcBodyUeb(cc.uebungen), lcTutorfragenWidget(courseId, ch.id, 'uebungen', qUeb, userId));
-    }
-    if(blocks){
-      html += '<div class="lc-chapter"><h4>Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h4>' + blocks + '</div>';
-    }
+    contentByChapter[chapters[i].id] = await window.KFStore.getChapterContent(chapters[i].id);
   }
-
-  var courseBlocks = '';
-  if(lcHasAlt(courseContent.altklausuren)){
-    var qAlt = await window.KFQuestions.getForBaustein(courseId, null, 'altklausuren');
-    courseBlocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.altklausuren, lcBodyAlt(courseContent.altklausuren), lcTutorfragenWidget(courseId, null, 'altklausuren', qAlt, userId));
-  }
-  if(lcHasTut(courseContent.tutorien)){
-    var qTut = await window.KFQuestions.getForBaustein(courseId, null, 'tutorien');
-    courseBlocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.tutorien, lcBodyTut(courseContent.tutorien), lcTutorfragenWidget(courseId, null, 'tutorien', qTut, userId));
-  }
-  if(lcHasZus(courseContent.zusatz)){
-    var qZus = await window.KFQuestions.getForBaustein(courseId, null, 'zusatz');
-    courseBlocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.zusatz, lcBodyZus(courseContent.zusatz), lcTutorfragenWidget(courseId, null, 'zusatz', qZus, userId));
-  }
-  if(lcHasLp(courseContent.lernplan)){
-    var qLp = await window.KFQuestions.getForBaustein(courseId, null, 'lernplan');
-    courseBlocks += lcBausteinBox(window.KF_BAUSTEIN_LABELS.lernplan, lcBodyLp(courseContent.lernplan, progress), lcTutorfragenWidget(courseId, null, 'lernplan', qLp, userId));
-  }
-  if(courseBlocks){
-    html += '<div class="lc-chapter"><h4>Kursweite Inhalte</h4>' + courseBlocks + '</div>';
-  }
-  if(!html){ return '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
-
-  var mindmapHtml = chapters.length ? buildMindmapHtml(chapters[0].courseTitle, chapters, contentByChapter) : '';
-  return mindmapHtml + html;
+  return { chapters: chapters, courseContent: courseContent, contentByChapter: contentByChapter };
 }
 
-function wireLearnerContentToggles(container){
-  container.querySelectorAll('[data-toggle-content]').forEach(function(btn){
-    if(btn.dataset.wired){ return; }
-    btn.dataset.wired = '1';
-    btn.addEventListener('click', async function(){
-      var courseId = btn.dataset.toggleContent;
-      var box = container.querySelector('[data-content-box="' + courseId + '"]');
-      if(!box){ return; }
-      var isOpen = box.style.display !== 'none';
-      if(isOpen){ box.style.display = 'none'; btn.textContent = 'Kursinhalte ansehen ▾'; return; }
-      btn.textContent = 'Kursinhalte ausblenden ▴';
-      box.style.display = 'block';
-      if(!box.dataset.loaded){
-        box.innerHTML = '<p class="hint-sm">Lade …</p>';
-        box.innerHTML = await renderLearnerCourseContentHtml(courseId);
-        box.dataset.loaded = '1';
-        wireTutorfragenWidgets(box);
-        wireAnkiExportButtons(box);
-        wireLernplanCheckboxes(box, courseId);
-        wireMindmapEvents(box);
-      }
+// Kein is_free_preview auf Kapitel-Ebene => Zugriff erlaubt, wenn gekauft
+// (oder Admin-Vorschau/Ersteller/Prüfer, alles bereits in .purchased via RLS
+// berücksichtigt) ODER das Kapitel selbst als Vorschau markiert ist.
+function lcChapterLocked(ch, access){ return !access.purchased && !ch.isFreePreview; }
+
+function lcHasForArea(key, cc){
+  cc = cc || {};
+  if(key === 'zusammenfassung'){ return lcHasZf(cc.zusammenfassung); }
+  if(key === 'karteikarten'){ return lcHasKk(cc.karteikarten); }
+  if(key === 'uebungen'){ return lcHasUeb(cc.uebungen); }
+  if(key === 'altklausuren'){ return lcHasAlt(cc.altklausuren); }
+  if(key === 'tutorien'){ return lcHasTut(cc.tutorien); }
+  if(key === 'zusatz'){ return lcHasZus(cc.zusatz); }
+  if(key === 'lernplan'){ return lcHasLp(cc.lernplan); }
+  return false;
+}
+var LC_CHAPTER_AREAS = ['zusammenfassung', 'karteikarten', 'uebungen'];
+var LC_COURSE_AREAS = ['altklausuren', 'tutorien', 'zusatz', 'lernplan'];
+
+// Gemeinsamer Kauf-Mechanismus für "Kurs buchen" (Kursübersicht-Header +
+// jede Zugriffssperre) -- derselbe Login-Gate/Platzhalter-Kauf wie bei den
+// bestehenden Kursvorschlägen (wireLearnerPurchaseSuggestions), nur mit
+// frei wählbarem Erfolgs-Callback statt fest verdrahtetem Sprung zu
+// "Meine Kurse" (hier soll die aktuelle Ansicht neu geladen werden).
+function lcBuyCourse(courseId, btn, onSuccess){
+  requireLoginOrRedirect('kf_pending_purchase', courseId).then(function(canProceed){
+    if(!canProceed){ return; }
+    if(btn){ btn.disabled = true; }
+    window.KFCatalog.recordPlaceholderPurchase(courseId).then(function(){
+      showToast('Kurs freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung).');
+      if(onSuccess){ onSuccess(); } else { window.renderMyCourses(); }
+    }).catch(function(err){
+      if(btn){ btn.disabled = false; }
+      showToast('Kauf fehlgeschlagen: ' + ((err && err.message) || 'unbekannter Fehler'));
     });
   });
 }
+function lcLockCardHtml(courseId, message){
+  return '<div class="lock-card">🔒 ' + escapeHtmlMy(message) +
+    '<div><button type="button" class="cta" data-buy-course-inline="' + escapeHtmlMy(courseId) + '">Kurs buchen</button></div></div>';
+}
+function wireBuyCourseInlineButtons(container, onSuccess){
+  container.querySelectorAll('[data-buy-course-inline]').forEach(function(btn){
+    btn.addEventListener('click', function(){ lcBuyCourse(btn.dataset.buyCourseInline, btn, onSuccess); });
+  });
+}
+
+async function renderCourseOverviewHtml(courseId){
+  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
+  if(!course){ return '<p class="hint-sm">Kurs nicht gefunden.</p>'; }
+  var access = await lcCourseAccess(courseId);
+  var data = await lcLoadCourseData(courseId);
+  var settings = await window.KFCatalog.getSettings();
+  var coursePrice = settings.course_price || '29';
+
+  var buyOrOwnedHtml = access.isAdminPreview
+    ? '<span class="co-purchased-badge">Admin-Vorschau — kein Kauf</span>'
+    : access.purchased
+      ? '<span class="co-purchased-badge">Gekauft ✓</span>'
+      : '<button type="button" class="cta" data-buy-course-inline="' + escapeHtmlMy(courseId) + '">Kurs buchen – ' + escapeHtmlMy(coursePrice) + ' €</button>';
+
+  function tile(key, label, hint){
+    return '<div class="tile" data-open-area="' + key + '"><h3>' + escapeHtmlMy(label) + '</h3>' +
+      '<p class="tile-hint">' + escapeHtmlMy(hint) + '</p></div>';
+  }
+
+  var tilesHtml = '';
+  var totalChapters = data.chapters.length;
+  if(totalChapters){
+    LC_CHAPTER_AREAS.forEach(function(key){
+      if(access.purchased){
+        var totalWithContent = data.chapters.filter(function(ch){ return lcHasForArea(key, data.contentByChapter[ch.id]); }).length;
+        if(!totalWithContent){ return; }
+        tilesHtml += tile(key, window.KF_BAUSTEIN_LABELS[key], totalWithContent + (totalWithContent === 1 ? ' Kapitel verfügbar' : ' Kapitel verfügbar'));
+      } else {
+        var previewAvailable = data.chapters.filter(function(ch){
+          return !lcChapterLocked(ch, access) && lcHasForArea(key, data.contentByChapter[ch.id]);
+        }).length;
+        tilesHtml += tile(key, window.KF_BAUSTEIN_LABELS[key], previewAvailable + ' von ' + totalChapters + ' Kapiteln als Vorschau verfügbar');
+      }
+    });
+  }
+  LC_COURSE_AREAS.forEach(function(key){
+    // Kursweite Inhalte sind rein kaufgebunden (kein is_free_preview auf
+    // course_content) -- ob ein Nicht-Käufer hier überhaupt Inhalt hätte,
+    // ist serverseitig unsichtbar (RLS liefert dafür einfach nichts), daher
+    // bleibt die Kachel für Nicht-Käufer immer als "gesperrt" sichtbar
+    // (damit erkennbar bleibt, dass es mehr gibt), Käufern nur, wenn
+    // wirklich Inhalt vorhanden ist.
+    if(access.purchased && !lcHasForArea(key, data.courseContent)){ return; }
+    tilesHtml += tile(key, window.KF_BAUSTEIN_LABELS[key], access.purchased ? 'Verfügbar' : 'Nur mit Kauf verfügbar');
+  });
+  if(totalChapters){
+    tilesHtml += tile('mindmap', 'Übersicht / Mindmap', access.purchased ? 'Alle Kapitel' : 'Vorschau-Kapitel');
+  }
+  if(!tilesHtml){ tilesHtml = '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
+
+  return '<div class="co-head"><div>' +
+      '<div class="crumb">Kurse / ' + escapeHtmlMy(course.title) + '</div>' +
+      '<h1>' + escapeHtmlMy(course.title) + '</h1>' +
+      '<p class="lede" style="margin-bottom:0">' + escapeHtmlMy(course.prof||'') + (course.prof && course.hochschule ? ' · ' : '') + escapeHtmlMy(course.hochschule||'') + '</p>' +
+    '</div>' + buyOrOwnedHtml + '</div>' +
+    '<div class="grid" style="margin-top:22px">' + tilesHtml + '</div>';
+}
+
+window.renderCourseOverviewView = async function(){
+  var body = document.getElementById('courseOverviewBody');
+  if(!body){ return; }
+  var courseId = window.currentLearnerCourseId;
+  if(!courseId){ body.innerHTML = '<p class="hint-sm">Kein Kurs ausgewählt.</p>'; return; }
+  body.innerHTML = '<p class="hint-sm">Lade …</p>';
+  body.innerHTML = await renderCourseOverviewHtml(courseId);
+  wireBuyCourseInlineButtons(body, function(){ window.renderCourseOverviewView(); });
+  body.querySelectorAll('[data-open-area]').forEach(function(t){
+    t.addEventListener('click', function(){
+      window.currentLearnerAreaKey = t.dataset.openArea;
+      window.currentLearnerZfChapterId = null;
+      window.currentLearnerZfAnchor = null;
+      showView('view-course-area');
+    });
+  });
+};
+
+// Zusammenfassung: Zwei-Spalten-Ansicht wie im alten Prototyp -- linke
+// Kapitel-Navigation (Struktur aus KFOutline.parse(), unabhängig davon, ob
+// zu jedem Punkt schon Text existiert), rechts der Inhalt des gewählten
+// Kapitels inkl. Anker-Sprungmarken zu den Unterkapiteln.
+function buildZfSubNavHtml(nodes, chapterId){
+  return nodes.map(function(node){
+    var btn = '<button data-zf-chapter="' + escapeHtmlMy(chapterId) + '" data-zf-anchor="zf-anchor-' + escapeHtmlMy(chapterId) + '-' + escapeHtmlMy(node.path) + '" style="margin-left:' + ((node.depth-1) * 10) + 'px">' +
+      (node.number ? escapeHtmlMy(node.number) + ' ' : '') + escapeHtmlMy(node.title) + '</button>';
+    return btn + (node.children.length ? buildZfSubNavHtml(node.children, chapterId) : '');
+  }).join('');
+}
+function buildZfNavHtml(chapters, access, curChapterId){
+  return chapters.map(function(ch){
+    var locked = lcChapterLocked(ch, access);
+    var isCur = ch.id === curChapterId;
+    var tree = window.KFOutline ? window.KFOutline.parse(ch.subchapters || '') : [];
+    var subListHtml = buildZfSubNavHtml(tree, ch.id);
+    return '<div class="nav-group' + (isCur ? ' open' : '') + '">' +
+      '<button class="' + (isCur ? 'cur' : '') + '" data-zf-chapter="' + escapeHtmlMy(ch.id) + '">' +
+        'Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + (locked ? ' 🔒' : '') +
+      '</button>' +
+      (subListHtml ? '<div class="sub-list">' + subListHtml + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+async function renderZfAreaHtml(courseId, data, access, userId, curChapterId){
+  if(!data.chapters.length){ return '<p class="hint-sm">Noch keine Kapitel verfügbar.</p>'; }
+  if(!curChapterId || !data.chapters.some(function(c){ return c.id === curChapterId; })){
+    curChapterId = data.chapters[0].id;
+  }
+  var ch = data.chapters.filter(function(c){ return c.id === curChapterId; })[0];
+  var navHtml = buildZfNavHtml(data.chapters, access, curChapterId);
+  var contentHtml;
+  if(lcChapterLocked(ch, access)){
+    contentHtml = '<h1>Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
+      lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.');
+  } else {
+    var cc = data.contentByChapter[ch.id] || {};
+    var qZf = await window.KFQuestions.getForBaustein(courseId, ch.id, 'zusammenfassung');
+    var bodyHtml = lcHasZf(cc.zusammenfassung)
+      ? lcBodyZf(cc.zusammenfassung, ch.subchapters, 'zf-anchor-' + ch.id)
+      : '<p class="hint-sm">Noch keine Zusammenfassung für dieses Kapitel.</p>';
+    contentHtml = '<h1>Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
+      bodyHtml + lcTutorfragenWidget(courseId, ch.id, 'zusammenfassung', qZf, userId);
+  }
+  return '<div class="two-col"><div class="chapter-nav">' + navHtml + '</div>' +
+    '<div>' + contentHtml + '</div></div>';
+}
+function wireZfAreaNav(container){
+  container.querySelectorAll('[data-zf-chapter]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      window.currentLearnerZfChapterId = btn.dataset.zfChapter;
+      window.currentLearnerZfAnchor = btn.dataset.zfAnchor || null;
+      window.renderCourseAreaView();
+    });
+  });
+}
+
+// Alle anderen Bereiche: einfachere Einspalten-Ansicht, im Kern dieselben
+// lcBody*-Renderer wie zuvor im flachen Durchlauf, nur isoliert je Bereich.
+async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
+  var label = areaKey === 'mindmap' ? 'Übersicht / Mindmap' : window.KF_BAUSTEIN_LABELS[areaKey];
+  var html = '<h1>' + escapeHtmlMy(label) + '</h1>';
+
+  if(areaKey === 'mindmap'){
+    var visibleChapters = data.chapters.filter(function(ch){ return !lcChapterLocked(ch, access); });
+    if(!visibleChapters.length){
+      html += lcLockCardHtml(courseId, 'Die Mindmap ist erst mit Kauf oder für Vorschau-Kapitel verfügbar.');
+    } else {
+      html += buildMindmapHtml(visibleChapters[0].courseTitle, visibleChapters, data.contentByChapter);
+      if(!access.purchased && visibleChapters.length < data.chapters.length){
+        html += lcLockCardHtml(courseId, 'Weitere Kapitel sind nur mit Kauf sichtbar.');
+      }
+    }
+    return html;
+  }
+
+  if(LC_CHAPTER_AREAS.indexOf(areaKey) !== -1){
+    var any = false;
+    for(var i=0;i<data.chapters.length;i++){
+      var ch = data.chapters[i];
+      var chHeadHtml = '<h3 style="margin-top:22px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h3>';
+      if(lcChapterLocked(ch, access)){
+        any = true;
+        html += chHeadHtml + lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.');
+        continue;
+      }
+      var cc = data.contentByChapter[ch.id] || {};
+      var content = areaKey === 'karteikarten' ? cc.karteikarten : cc.uebungen;
+      if(!lcHasForArea(areaKey, cc)){ continue; }
+      any = true;
+      var q = await window.KFQuestions.getForBaustein(courseId, ch.id, areaKey);
+      var body = areaKey === 'karteikarten'
+        ? (await lcBodyKk(content)) + lcAnkiExportButton(ch.chapterTitle, content)
+        : lcBodyUeb(content);
+      html += chHeadHtml + lcBausteinBox(label, body, lcTutorfragenWidget(courseId, ch.id, areaKey, q, userId));
+    }
+    if(!any){ html += '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
+    return html;
+  }
+
+  // Kursweite Bereiche (Altklausuren/Tutorien/Zusatzmodule/Lernplan): rein
+  // kaufgebunden, keine Kapitel-Granularität (siehe lcLoadCourseData/RLS).
+  if(!access.purchased){
+    html += lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
+    return html;
+  }
+  if(!lcHasForArea(areaKey, data.courseContent)){
+    html += '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>';
+    return html;
+  }
+  var q2 = await window.KFQuestions.getForBaustein(courseId, null, areaKey);
+  var body2;
+  if(areaKey === 'altklausuren'){ body2 = lcBodyAlt(data.courseContent.altklausuren); }
+  else if(areaKey === 'tutorien'){ body2 = lcBodyTut(data.courseContent.tutorien); }
+  else if(areaKey === 'zusatz'){ body2 = lcBodyZus(data.courseContent.zusatz); }
+  else { var progress = await window.KFCatalog.getProgress(courseId); body2 = lcBodyLp(data.courseContent.lernplan, progress); }
+  html += lcBausteinBox(label, body2, lcTutorfragenWidget(courseId, null, areaKey, q2, userId));
+  return html;
+}
+
+async function renderCourseAreaHtml(courseId, areaKey){
+  var access = await lcCourseAccess(courseId);
+  var data = await lcLoadCourseData(courseId);
+  if(areaKey === 'zusammenfassung'){
+    return await renderZfAreaHtml(courseId, data, access, access.userId, window.currentLearnerZfChapterId);
+  }
+  return await renderSimpleAreaHtml(courseId, areaKey, data, access, access.userId);
+}
+
+window.renderCourseAreaView = async function(){
+  var body = document.getElementById('courseAreaBody');
+  if(!body){ return; }
+  var courseId = window.currentLearnerCourseId;
+  var areaKey = window.currentLearnerAreaKey;
+  if(!courseId || !areaKey){ body.innerHTML = '<p class="hint-sm">Kein Bereich ausgewählt.</p>'; return; }
+  body.innerHTML = '<p class="hint-sm">Lade …</p>';
+  body.innerHTML = await renderCourseAreaHtml(courseId, areaKey);
+  wireBuyCourseInlineButtons(body, function(){ window.renderCourseAreaView(); });
+  wireTutorfragenWidgets(body);
+  wireAnkiExportButtons(body);
+  wireLernplanCheckboxes(body, courseId);
+  wireMindmapEvents(body);
+  wireZfAreaNav(body);
+  if(window.currentLearnerZfAnchor){
+    var target = document.getElementById(window.currentLearnerZfAnchor);
+    if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
+    window.currentLearnerZfAnchor = null;
+  }
+};
 
 function wireLernplanCheckboxes(box, courseId){
   box.querySelectorAll('.lc-lp-check').forEach(function(cb){
