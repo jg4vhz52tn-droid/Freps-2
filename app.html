@@ -296,6 +296,20 @@ ul.plain li{margin-bottom:5px;}
 .confirm-delete-box .action-row{display:flex; gap:10px; flex-wrap:wrap;}
 .btn-danger{background:var(--danger); color:#fff; border:none; font:inherit; font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; cursor:pointer;}
 .btn-cancel{background:none; border:none; color:var(--muted); font:inherit; font-size:14px; cursor:pointer; padding:10px 8px;}
+/* Tabellen-Werkzeug in den Zusammenfassung-Textfeldern (Wizard) -- Popover
+   mit Mini-Grid-Editor, siehe [table]-Syntax in KFTables (kf-supabase.js). */
+.zf-table-links{font-size:12px; margin-bottom:4px;}
+.zf-table-edit-link{background:none; border:none; color:var(--accent); font:inherit; font-size:12px; cursor:pointer; padding:2px 0; margin-right:10px; text-decoration:underline;}
+.zf-table-insert-btn{background:none; border:1px dashed var(--line); color:var(--muted); font:inherit; font-size:12px; padding:5px 10px; border-radius:6px; cursor:pointer; margin-top:6px;}
+.zf-table-insert-btn:hover{border-color:var(--accent); color:var(--accent);}
+.tbl-editor-overlay{position:fixed; inset:0; background:rgba(27,42,65,.55); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px;}
+.tbl-editor-box{background:var(--card); border-radius:var(--radius); padding:22px 24px; max-width:560px; width:100%; box-shadow:0 12px 32px rgba(27,42,65,.3);}
+.tbl-editor-box h3{font-size:16px; margin-bottom:14px;}
+.tbl-editor-grid{display:grid; gap:6px; margin-bottom:12px; overflow-x:auto;}
+.tbl-cell{font:inherit; font-size:13px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; min-width:70px;}
+.tbl-cell-head{font-weight:700; background:var(--accent-soft);}
+.tbl-editor-controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+.tbl-editor-actions{display:flex; justify-content:flex-end; gap:10px;}
 .mycourse-chapters{display:flex; flex-direction:column; gap:6px;}
 .mycourse-chapter{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; padding:8px 12px; background:var(--paper); border:1px solid var(--line); border-radius:8px;}
 .mini-status{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap;}
@@ -311,6 +325,10 @@ ul.plain li{margin-bottom:5px;}
 .lc-baustein .lc-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); margin-bottom:6px;}
 .lc-baustein .lc-item{font-size:13px; padding:5px 0; border-bottom:1px solid var(--line);}
 .lc-baustein .lc-item:last-child{border-bottom:none;}
+.kf-inline-table-wrap{overflow-x:auto; margin:6px 0;}
+.kf-inline-table{border-collapse:collapse; font-size:13px;}
+.kf-inline-table th, .kf-inline-table td{border:1px solid var(--line); padding:5px 9px; text-align:left; white-space:nowrap;}
+.kf-inline-table thead th{background:var(--accent-soft); color:var(--ink); font-weight:700;}
 
 /* Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
    Design 1:1 aus dem Unsere_Kurse_dc.html-Mockup übernommen, nur mit echten
@@ -467,6 +485,26 @@ ul.plain li{margin-bottom:5px;}
 </header>
 
 <div class="toast" id="toast"></div>
+
+<!-- Tabellen-Werkzeug: ein einziges, wiederverwendetes Popover für alle
+     Zusammenfassung-Textfelder (Unterkapitel jeder Tiefe + Merke + Tipps),
+     statt pro Feld ein eigenes Overlay zu erzeugen. -->
+<div class="tbl-editor-overlay" id="tblEditorOverlay" style="display:none">
+  <div class="tbl-editor-box">
+    <h3 id="tblEditorTitle">Tabelle einfügen</h3>
+    <div class="tbl-editor-grid" id="tblEditorGrid"></div>
+    <div class="tbl-editor-controls">
+      <button type="button" class="ghost" id="tblAddRow">+ Zeile</button>
+      <button type="button" class="ghost" id="tblRemoveRow">– Zeile</button>
+      <button type="button" class="ghost" id="tblAddCol">+ Spalte</button>
+      <button type="button" class="ghost" id="tblRemoveCol">– Spalte</button>
+    </div>
+    <div class="tbl-editor-actions">
+      <button type="button" class="btn-cancel" id="tblEditorCancel">Abbrechen</button>
+      <button type="button" class="cta" id="tblEditorSave">Einfügen</button>
+    </div>
+  </div>
+</div>
 
 <!-- ANSICHT: HOCHSCHULAUSWAHL -->
 <div class="view active" id="view-landing">
@@ -692,11 +730,15 @@ ul.plain li{margin-bottom:5px;}
         <div id="zfDynamicFields"></div>
         <div class="field">
           <label>„Merke"-Box (Kernaussage für das ganze Kapitel)</label>
+          <div class="zf-table-links" id="zfMerkeTableLinks" style="display:none"></div>
           <textarea id="zfMerke" placeholder="Die wichtigste Kernaussage des Kapitels in 2–3 Sätzen …"></textarea>
+          <button type="button" class="zf-table-insert-btn" id="zfMerkeTableBtn">+ Tabelle einfügen</button>
         </div>
         <div class="field">
           <label>„Tipps für die Klausur"</label>
+          <div class="zf-table-links" id="zfTippsTableLinks" style="display:none"></div>
           <textarea id="zfTipps" placeholder="Konkrete Hinweise, worauf dieser Professor bei dieser Klausur besonders achtet …"></textarea>
+          <button type="button" class="zf-table-insert-btn" id="zfTippsTableBtn">+ Tabelle einfügen</button>
         </div>
         <div class="wizard-foot"><div class="wizard-foot-nav"><button class="ghost" data-next="ueberblick">← Zurück</button><button class="cta" data-next="karteikarten">Weiter →</button></div><div class="wizard-foot-save"><div class="save-inline"><button class="save-btn" type="button">💾 Speichern</button><span class="save-status"></span></div></div></div>
       </section>
@@ -1547,8 +1589,8 @@ function lcBodyZf(z, rawSubchaptersText){
   var tree = window.KFOutline ? window.KFOutline.parse(rawSubchaptersText || '') : [];
   var subs = window.KFOutline ? window.KFOutline.normalizeSubs(z.subs, tree) : (z.subs || {});
   var html = lcRenderZfOutline(tree, subs);
-  if(z.merke){ html += '<div class="lc-item"><strong>Merke:</strong> ' + escapeHtmlMy(z.merke) + '</div>'; }
-  if(z.tipps){ html += '<div class="lc-item"><strong>Tipps:</strong> ' + escapeHtmlMy(z.tipps) + '</div>'; }
+  if(z.merke){ html += '<div class="lc-item"><strong>Merke:</strong> ' + window.KFTables.render(z.merke) + '</div>'; }
+  if(z.tipps){ html += '<div class="lc-item"><strong>Tipps:</strong> ' + window.KFTables.render(z.tipps) + '</div>'; }
   return html;
 }
 function lcRenderZfOutline(nodes, subs){
@@ -1557,7 +1599,7 @@ function lcRenderZfOutline(nodes, subs){
     var text = subs[node.path];
     if(text && text.trim()){
       html += '<div class="lc-item" style="margin-left:' + (node.depth * 16) + 'px">' +
-        (node.number ? '<strong>' + escapeHtmlMy(node.number) + '</strong> ' : '') + escapeHtmlMy(text) + '</div>';
+        (node.number ? '<strong>' + escapeHtmlMy(node.number) + '</strong> ' : '') + window.KFTables.render(text) + '</div>';
     }
     if(node.children.length){ html += lcRenderZfOutline(node.children, subs); }
   });
@@ -2771,9 +2813,14 @@ window.renderSubjectsForHochschule = async function(){
       wrap.style.marginLeft = (node.depth * 20) + 'px';
       var label = (node.number ? escapeHtml(node.number) + ' ' : '') + escapeHtml(node.title);
       wrap.innerHTML = '<label>' + label + '</label>' +
+        '<div class="zf-table-links" style="display:none"></div>' +
         '<textarea data-zf-path="' + escapeHtml(node.path) + '" placeholder="Text zu ' + escapeHtml(node.title) + ' …"></textarea>';
-      wrap.querySelector('textarea').value = entry.subs[node.path] || '';
+      var ta = wrap.querySelector('textarea');
+      ta.value = entry.subs[node.path] || '';
+      ta.addEventListener('blur', function(){ refreshTableLinksFor(ta); });
+      wrap.appendChild(makeTableInsertBtn(ta));
       container.appendChild(wrap);
+      refreshTableLinksFor(ta);
       if(node.children.length){ renderOutlineFields(node.children, container, entry); }
     });
   }
@@ -2796,9 +2843,135 @@ window.renderSubjectsForHochschule = async function(){
     }
     var merkeEl = document.getElementById('zfMerke');
     var tippsEl = document.getElementById('zfTipps');
-    if(merkeEl){ merkeEl.value = entry.merke || ''; }
-    if(tippsEl){ tippsEl.value = entry.tipps || ''; }
+    if(merkeEl){ merkeEl.value = entry.merke || ''; refreshTableLinksFor(merkeEl); }
+    if(tippsEl){ tippsEl.value = entry.tipps || ''; refreshTableLinksFor(tippsEl); }
   }
+  // ---- Tabellen-Werkzeug: "+ Tabelle einfügen" + Erkennung bestehender
+  // [table]-Blöcke, für jedes Zusammenfassung-Textfeld (Unterkapitel jeder
+  // Tiefe, Merke, Tipps). Ein einziges, wiederverwendetes Popover statt
+  // eines pro Feld -- siehe #tblEditorOverlay oben im Markup und
+  // window.KFTables (kf-supabase.js) für die [table]-Syntax/das Rendering. ---
+  var tblEditorState = null; // { textarea, start, end, grid }
+  function makeTableInsertBtn(ta){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'zf-table-insert-btn';
+    btn.textContent = '+ Tabelle einfügen';
+    btn.addEventListener('click', function(){ tblOpenForInsert(ta); });
+    return btn;
+  }
+  function refreshTableLinksFor(ta){
+    var linksEl = ta.parentNode ? ta.parentNode.querySelector('.zf-table-links') : null;
+    if(!linksEl){ return; }
+    var blocks = window.KFTables ? window.KFTables.findBlocks(ta.value) : [];
+    if(!blocks.length){ linksEl.style.display = 'none'; linksEl.innerHTML = ''; return; }
+    linksEl.style.display = '';
+    linksEl.innerHTML = '';
+    blocks.forEach(function(b, i){
+      var lineNo = ta.value.slice(0, b.start).split('\n').length;
+      var link = document.createElement('button');
+      link.type = 'button';
+      link.className = 'zf-table-edit-link';
+      link.textContent = '✎ Tabelle bearbeiten (Zeile ' + lineNo + ')';
+      link.addEventListener('click', function(){ tblOpenForEdit(ta, b.start, b.end, b.rows); });
+      linksEl.appendChild(link);
+    });
+  }
+  function tblCreateGrid(rows, cols){
+    var g = [];
+    for(var r = 0; r < rows; r++){
+      var row = [];
+      for(var c = 0; c < cols; c++){ row.push(''); }
+      g.push(row);
+    }
+    return g;
+  }
+  function tblRenderGrid(){
+    var gridEl = document.getElementById('tblEditorGrid');
+    if(!gridEl || !tblEditorState){ return; }
+    var cols = tblEditorState.grid[0] ? tblEditorState.grid[0].length : 1;
+    gridEl.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(70px,1fr))';
+    gridEl.innerHTML = '';
+    tblEditorState.grid.forEach(function(row, ri){
+      row.forEach(function(val, ci){
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'tbl-cell' + (ri === 0 ? ' tbl-cell-head' : '');
+        inp.value = val;
+        inp.placeholder = ri === 0 ? 'Spalte ' + (ci + 1) : '';
+        inp.addEventListener('input', function(){ tblEditorState.grid[ri][ci] = inp.value; });
+        gridEl.appendChild(inp);
+      });
+    });
+  }
+  function tblShowEditor(title, saveLabel){
+    document.getElementById('tblEditorTitle').textContent = title;
+    document.getElementById('tblEditorSave').textContent = saveLabel;
+    tblRenderGrid();
+    document.getElementById('tblEditorOverlay').style.display = 'flex';
+  }
+  function tblCloseEditor(){
+    document.getElementById('tblEditorOverlay').style.display = 'none';
+    tblEditorState = null;
+  }
+  function tblOpenForInsert(ta){
+    var hadFocus = document.activeElement === ta;
+    var start = hadFocus ? ta.selectionStart : ta.value.length;
+    var end = hadFocus ? ta.selectionEnd : ta.value.length;
+    tblEditorState = { textarea: ta, start: start, end: end, grid: tblCreateGrid(3, 3) };
+    tblShowEditor('Tabelle einfügen', 'Einfügen');
+  }
+  function tblOpenForEdit(ta, blockStart, blockEnd, rows){
+    tblEditorState = { textarea: ta, start: blockStart, end: blockEnd, grid: rows && rows.length ? rows.map(function(r){ return r.slice(); }) : tblCreateGrid(3, 3) };
+    tblShowEditor('Tabelle bearbeiten', 'Speichern');
+  }
+  var tblAddRowBtn = document.getElementById('tblAddRow');
+  if(tblAddRowBtn){ tblAddRowBtn.addEventListener('click', function(){
+    if(!tblEditorState){ return; }
+    var cols = tblEditorState.grid[0] ? tblEditorState.grid[0].length : 3;
+    tblEditorState.grid.push(tblCreateGrid(1, cols)[0]);
+    tblRenderGrid();
+  }); }
+  var tblRemoveRowBtn = document.getElementById('tblRemoveRow');
+  if(tblRemoveRowBtn){ tblRemoveRowBtn.addEventListener('click', function(){
+    if(tblEditorState && tblEditorState.grid.length > 1){ tblEditorState.grid.pop(); tblRenderGrid(); }
+  }); }
+  var tblAddColBtn = document.getElementById('tblAddCol');
+  if(tblAddColBtn){ tblAddColBtn.addEventListener('click', function(){
+    if(!tblEditorState){ return; }
+    tblEditorState.grid.forEach(function(row){ row.push(''); });
+    tblRenderGrid();
+  }); }
+  var tblRemoveColBtn = document.getElementById('tblRemoveCol');
+  if(tblRemoveColBtn){ tblRemoveColBtn.addEventListener('click', function(){
+    if(tblEditorState && tblEditorState.grid[0] && tblEditorState.grid[0].length > 1){
+      tblEditorState.grid.forEach(function(row){ row.pop(); });
+      tblRenderGrid();
+    }
+  }); }
+  var tblEditorCancelBtn = document.getElementById('tblEditorCancel');
+  if(tblEditorCancelBtn){ tblEditorCancelBtn.addEventListener('click', tblCloseEditor); }
+  var tblEditorSaveBtn = document.getElementById('tblEditorSave');
+  if(tblEditorSaveBtn){ tblEditorSaveBtn.addEventListener('click', function(){
+    if(!tblEditorState){ return; }
+    var serialized = window.KFTables.serialize(tblEditorState.grid);
+    var ta = tblEditorState.textarea;
+    var before = ta.value.slice(0, tblEditorState.start);
+    var after = ta.value.slice(tblEditorState.end);
+    ta.value = before + serialized + after;
+    var newPos = tblEditorState.start + serialized.length;
+    ta.focus();
+    ta.setSelectionRange(newPos, newPos);
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    refreshTableLinksFor(ta);
+    tblCloseEditor();
+  }); }
+  ['zfMerke', 'zfTipps'].forEach(function(id){
+    var ta = document.getElementById(id);
+    var btn = document.getElementById(id + 'TableBtn');
+    if(ta && btn){ btn.addEventListener('click', function(){ tblOpenForInsert(ta); }); }
+    if(ta){ ta.addEventListener('blur', function(){ refreshTableLinksFor(ta); }); }
+  });
   document.addEventListener('input', function(e){
     if(e.target && (e.target.id === 'zfMerke' || e.target.id === 'zfTipps' || e.target.hasAttribute('data-zf-path'))){
       saveCurrentZfFields();

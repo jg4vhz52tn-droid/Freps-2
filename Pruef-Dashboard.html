@@ -105,6 +105,12 @@ a{color:var(--accent);}
 .vc-notes{margin:8px 0;}
 .diff-del{color:var(--danger); text-decoration:line-through; opacity:.75;}
 .diff-add{background:#D7ECC2; color:#3B6D11; border-radius:3px; padding:0 2px;}
+.vc-table-pair{margin-top:8px;}
+.vc-table-pair .vc-old{margin-top:0;}
+.kf-inline-table-wrap{overflow-x:auto; margin:6px 0;}
+.kf-inline-table{border-collapse:collapse; font-size:13px;}
+.kf-inline-table th, .kf-inline-table td{border:1px solid var(--line); padding:5px 9px; text-align:left; white-space:nowrap;}
+.kf-inline-table thead th{background:var(--accent-soft); color:var(--ink); font-weight:700;}
 
 .reviewer-box{border-top:1px solid var(--line); padding-top:20px;}
 .reviewer-box label{display:block; font-size:13px; font-weight:600; margin-bottom:7px;}
@@ -324,14 +330,14 @@ function bodyZusammenfassung(sub, z){
         label: (node.number ? node.number + ' ' : '') + node.title,
         subKey: node.path,
         rawText: text || '',
-        html: '<div class="cp-item">'+esc(text||'—')+'</div>'
+        html: '<div class="cp-item">'+(text ? window.KFTables.render(text) : '—')+'</div>'
       });
       if(node.children.length){ walk(node.children); }
     });
   }
   walk(tree);
-  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'merke', z, sub.subchapters), subKey: 'merke', rawText: z.merke||'', html: '<div class="cp-item">'+esc(z.merke||'—')+'</div>' });
-  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'tipps', z, sub.subchapters), subKey: 'tipps', rawText: z.tipps||'', html: '<div class="cp-item">'+esc(z.tipps||'—')+'</div>' });
+  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'merke', z, sub.subchapters), subKey: 'merke', rawText: z.merke||'', html: '<div class="cp-item">'+(z.merke ? window.KFTables.render(z.merke) : '—')+'</div>' });
+  items.push({ label: window.KFLabels.subLabel('zusammenfassung', 'tipps', z, sub.subchapters), subKey: 'tipps', rawText: z.tipps||'', html: '<div class="cp-item">'+(z.tipps ? window.KFTables.render(z.tipps) : '—')+'</div>' });
   return items;
 }
 function bodyKarteikarten(k){
@@ -404,6 +410,39 @@ function wordDiffHtml(oldText, newText){
   return { oldHtml: oldHtml, newHtml: newHtml };
 }
 
+// Sonderfall für Zusammenfassung-Texte mit [table]-Blöcken: Diff.diffWords()
+// auf den rohen Text angewendet würde die Pipe-Syntax Wort für Wort zerlegen
+// und ein unleserliches Diff der Tabellenzellen ergeben. Stattdessen wird nur
+// der Fließtext AUSSERHALB der Tabellenblöcke wortweise verglichen (dafür aus
+// beiden Versionen herausgeschnitten und je für sich zusammengefügt);
+// Tabellenblöcke werden nach Position gepaart (1. Tabelle alt vs. 1. Tabelle
+// neu, usw.) und bei inhaltlicher Änderung komplett alt/neu nebeneinander
+// gerendert statt wortweise verglichen -- unveränderte Tabellen bekommen,
+// genau wie unveränderter Fließtext, keinen Vergleichsblock. Enthält keine
+// Version einen [table]-Block, liefert diese Funktion null und der Aufrufer
+// nutzt das unveränderte wordDiffHtml().
+function tableAwareDiffHtml(oldText, newText){
+  oldText = oldText || ''; newText = newText || '';
+  if(!window.KFTables.hasTable(oldText) && !window.KFTables.hasTable(newText)){ return null; }
+  var oldSegs = window.KFTables.splitTextAndTableBlocks(oldText);
+  var newSegs = window.KFTables.splitTextAndTableBlocks(newText);
+  var oldProse = oldSegs.filter(function(s){ return s.type === 'text'; }).map(function(s){ return s.value; }).join('');
+  var newProse = newSegs.filter(function(s){ return s.type === 'text'; }).map(function(s){ return s.value; }).join('');
+  var proseDiff = wordDiffHtml(oldProse, newProse);
+  var oldTables = oldSegs.filter(function(s){ return s.type === 'table'; }).map(function(s){ return s.value; });
+  var newTables = newSegs.filter(function(s){ return s.type === 'table'; }).map(function(s){ return s.value; });
+  var tableBlocksHtml = '';
+  for(var i = 0; i < Math.max(oldTables.length, newTables.length); i++){
+    var o = oldTables[i], n = newTables[i];
+    if(o !== undefined && n !== undefined && o.trim() === n.trim()){ continue; }
+    tableBlocksHtml += '<div class="vc-table-pair">' +
+      (o !== undefined ? '<div class="vc-old"><div class="vc-label">Vorherige Tabelle</div>'+window.KFTables.renderBlock(o)+'</div>' : '') +
+      (n !== undefined ? '<div class="vc-new"><div class="vc-label">Aktuelle Tabelle</div>'+window.KFTables.renderBlock(n)+'</div>' : '') +
+    '</div>';
+  }
+  return { oldHtml: proseDiff.oldHtml, newHtml: proseDiff.newHtml, tableBlocksHtml: tableBlocksHtml };
+}
+
 /* Ein eigener Kommentar-Thread + eigenes Anmerkungsfeld je Einzeleintrag
    (Unterkapitel, Karte, Aufgabe, ...) statt nur je Baustein -- nur Bausteine,
    die im Kapitel bzw. Kurs tatsächlich Inhalt haben, werden überhaupt
@@ -435,7 +474,7 @@ function renderBausteinBlock(type, items, commentsForType, editable, oldItemsByS
       var newRawText = item.rawText || '';
       if(oldRawText.trim() !== newRawText.trim()){
         isDiffing = true;
-        var diff = wordDiffHtml(oldRawText, newRawText);
+        var diff = tableAwareDiffHtml(oldRawText, newRawText) || wordDiffHtml(oldRawText, newRawText);
         var prevNotes = subComments.filter(function(c){ return c.roundNo === diffPrevRoundNo; });
         var notesHtml = prevNotes.length
           ? '<div class="vc-notes">'+prevNotes.map(commentHtml).join('')+'</div>'
@@ -444,6 +483,7 @@ function renderBausteinBlock(type, items, commentsForType, editable, oldItemsByS
           '<div class="vc-old"><div class="vc-label">Vorherige Version</div>'+diff.oldHtml+'</div>'+
           notesHtml+
           '<div class="vc-new"><div class="vc-label">Aktuelle Version</div>'+diff.newHtml+'</div>'+
+          (diff.tableBlocksHtml || '')+
         '</div>';
       }
     }

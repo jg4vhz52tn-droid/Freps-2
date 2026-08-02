@@ -130,6 +130,86 @@ window.KFLabels = {
   }
 };
 
+// Zusammenfassung-Textfelder erlauben eine einfache [table]...[/table]-Pipe-
+// Syntax für kleine Tabellen (z. B. Konjugationstabellen), damit Creator die
+// nicht mehr als Screenshot einfügen müssen -- der gespeicherte Wert bleibt
+// reiner Text (kompatibel mit Diff, Suche, Migration), wird aber überall, wo
+// er als HTML angezeigt wird, als <table> gerendert. Zentral hier abgelegt
+// (wie KFOutline/KFLabels), damit Wizard, Prüf-Dashboard und Lernenden-
+// Ansicht exakt dieselbe Erkennung/Darstellung verwenden, statt drei Kopien
+// zu pflegen, die auseinanderlaufen können. Bewusst mit expliziten
+// [table]/[/table]-Markern statt freiem Markdown-Pipe-Format, damit ein
+// zufälliges "|" in normalem Fließtext nie versehentlich als Tabelle erkannt
+// wird.
+function escTableText(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function parseTableRows(tableText) {
+  return String(tableText || "").replace(/^\r?\n/, "").replace(/\r?\n$/, "").split(/\r?\n/)
+    .map(function (r) { return r.trim(); })
+    .filter(function (r) { return r.length > 0; })
+    .map(function (r) { return r.split("|").map(function (c) { return c.trim(); }); });
+}
+function renderTableBlock(tableText) {
+  var rows = parseTableRows(tableText);
+  if (!rows.length) { return ""; }
+  var head = rows[0], body = rows.slice(1);
+  return '<div class="kf-inline-table-wrap"><table class="kf-inline-table">' +
+    "<thead><tr>" + head.map(function (c) { return "<th>" + escTableText(c) + "</th>"; }).join("") + "</tr></thead>" +
+    "<tbody>" + body.map(function (r) {
+      return "<tr>" + r.map(function (c) { return "<td>" + escTableText(c) + "</td>"; }).join("") + "</tr>";
+    }).join("") + "</tbody></table></div>";
+}
+function findTableBlocks(raw) {
+  // Liefert [{start, end, inner, rows}] mit Zeichen-Offsets des KOMPLETTEN
+  // "[table]...[/table]"-Blocks (Marker inklusive) im String -- damit ein
+  // gefundener Block beim Bearbeiten exakt an seiner Stelle ersetzt werden
+  // kann, ohne den Rest des Textfelds anzufassen.
+  var re = /\[table\]([\s\S]*?)\[\/table\]/g;
+  var out = [];
+  var str = String(raw || "");
+  var m;
+  while ((m = re.exec(str))) {
+    out.push({ start: m.index, end: m.index + m[0].length, inner: m[1], rows: parseTableRows(m[1]) });
+  }
+  return out;
+}
+function splitTextAndTableBlocks(raw) {
+  // Liefert die Segmente in Dokumentreihenfolge als {type:'text'|'table',
+  // value} -- genutzt vom Wort-Diff, damit nur die Fließtext-Segmente
+  // wortweise verglichen werden und Tabellenblöcke separat (komplett, nicht
+  // wortweise) behandelt werden.
+  var blocks = findTableBlocks(raw);
+  var str = String(raw || "");
+  var out = [];
+  var last = 0;
+  blocks.forEach(function (b) {
+    if (b.start > last) { out.push({ type: "text", value: str.slice(last, b.start) }); }
+    out.push({ type: "table", value: b.inner });
+    last = b.end;
+  });
+  if (last < str.length) { out.push({ type: "text", value: str.slice(last) }); }
+  return out;
+}
+function renderTextWithTables(raw) {
+  var parts = String(raw || "").split(/\[table\]([\s\S]*?)\[\/table\]/);
+  return parts.map(function (part, i) {
+    if (i % 2 === 1) { return renderTableBlock(part); }
+    return escTableText(part).replace(/\n/g, "<br>");
+  }).join("");
+}
+window.KFTables = {
+  render: renderTextWithTables,
+  renderBlock: renderTableBlock,
+  hasTable: function (raw) { return /\[table\][\s\S]*?\[\/table\]/.test(String(raw || "")); },
+  findBlocks: findTableBlocks,
+  splitTextAndTableBlocks: splitTextAndTableBlocks,
+  parseRows: parseTableRows,
+  serialize: function (grid) {
+    return "[table]\n" + (grid || []).map(function (row) { return row.join(" | "); }).join("\n") + "\n[/table]";
+  }
+};
+
 async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
