@@ -163,6 +163,12 @@ a{color:var(--accent);}
 .support-bar .linklike{font-size:13px; font-weight:500;}
 .footer-nav{display:flex; justify-content:flex-end; margin-top:20px;}
 .ghost{background:var(--card); border:1px solid var(--line); font:inherit; font-size:13px; padding:9px 16px; border-radius:8px; cursor:pointer;}
+/* Bewusste Layout-Abweichung vom Prototyp (Teil 8): dort stehen .support-bar
+   (Fragen-Links) und .footer-nav (Weiter-Button) als zwei separate Zeilen --
+   hier eine gemeinsame Zeile, Fragen-Links links/Weiter-Button rechts, damit
+   der Platzhalter unten schon jetzt richtig sitzt, sobald Teil 9 die
+   Tutorfragen-Links dort ergänzt. */
+.section-footer{display:flex; justify-content:space-between; align-items:center; margin-top:28px; padding-top:18px; border-top:1px solid var(--line);}
 .ghost:hover{border-color:var(--accent); color:var(--accent);}
 .progress-line{display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;}
 .progress-line span:last-child{color:var(--muted);}
@@ -1505,6 +1511,7 @@ async function renderMyCoursesLearner(){
   var coursePrice = settings.course_price || '29';
   var bundlePrice = settings.bundle_price || '49';
   var purchases = await window.KFCatalog.getMyPurchases();
+  var session = await window.KFAuth.getSession();
 
   // Admin-Vorschau: aus dem Admin-Dashboard heraus einen Kurs ohne echten
   // Kauf-Eintrag ansehen können (RLS erlaubt is_reviewer()/is_admin() ohnehin
@@ -1513,20 +1520,32 @@ async function renderMyCoursesLearner(){
   // Kurs nicht ohnehin schon (echt) gekauft ist.
   var params = new URLSearchParams(window.location.search);
   var previewCourseId = params.get('adminPreviewCourse');
-  if(previewCourseId){
-    var session = await window.KFAuth.getSession();
-    if(session && session.isAdmin){
-      var alreadyOwned = purchases.some(function(c){ return c.id === previewCourseId; });
-      if(!alreadyOwned){
-        var previewCourse = (await window.KFCatalog.getAllCourses())
-          .filter(function(c){ return c.id === previewCourseId; })[0];
-        if(previewCourse){
-          purchases = [{
-            id: previewCourse.id, title: previewCourse.title, prof: previewCourse.prof,
-            hochschule: previewCourse.hochschule, purchasedAt: null, bundleNote: null, __adminPreview: true
-          }].concat(purchases);
-        }
+  if(previewCourseId && session && session.isAdmin){
+    var alreadyOwned = purchases.some(function(c){ return c.id === previewCourseId; });
+    if(!alreadyOwned){
+      var previewCourse = (await window.KFCatalog.getAllCourses())
+        .filter(function(c){ return c.id === previewCourseId; })[0];
+      if(previewCourse){
+        purchases = [{
+          id: previewCourse.id, title: previewCourse.title, prof: previewCourse.prof,
+          hochschule: previewCourse.hochschule, purchasedAt: null, bundleNote: null, __adminPreview: true
+        }].concat(purchases);
       }
+    }
+  }
+
+  // Creator-Freizugang: eigene Kurse erscheinen hier automatisch als frei
+  // zugänglich, ohne echten Kauf-Eintrag -- analog zur Admin-Vorschau oben,
+  // nur für alle eigenen Kurse statt für einen einzelnen per URL-Parameter
+  // (siehe lcCourseAccess()'s isOwnCourse, Punkt 2).
+  if(session){
+    var ownedIds3 = purchases.map(function(c){ return c.id; });
+    var ownCourses = (await window.KFCatalog.getAllCourses())
+      .filter(function(c){ return c.creatorId === session.id && ownedIds3.indexOf(c.id) === -1; });
+    if(ownCourses.length){
+      purchases = purchases.concat(ownCourses.map(function(c){
+        return { id: c.id, title: c.title, prof: c.prof, hochschule: c.hochschule, creatorId: c.creatorId, purchasedAt: null, bundleNote: null, __ownCourse: true };
+      }));
     }
   }
 
@@ -1543,11 +1562,13 @@ async function renderMyCoursesLearner(){
     }
     var purchaseLineHtml = course.__adminPreview
       ? ' · Admin-Vorschau — kein Kauf'
-      : ' · gekauft am ' + fmtPurchaseDate(course.purchasedAt);
+      : course.__ownCourse
+        ? ' · Eigener Kurs — kein Kauf nötig'
+        : ' · gekauft am ' + fmtPurchaseDate(course.purchasedAt);
     // Derselbe Gesamtfortschritt wie in der Kursübersicht (lcCourseProgress),
     // hier je Kurs einmal beim Laden von "Meine Kurse" berechnet -- 1:1 aus
     // dem Prototyp (.fach-progress in der Fächerliste).
-    var courseAccess = await lcCourseAccess(course.id);
+    var courseAccess = await lcCourseAccess(course.id, course);
     var courseData = await lcLoadCourseData(course.id);
     var courseProgress = await lcCourseProgress(course.id, courseData, courseAccess);
     var progressPct = courseProgress.overall ? courseProgress.overall.percent : 0;
@@ -1783,7 +1804,13 @@ function lcBodyZus(z){
   return z.modules.map(function(m){ return '<div class="block"><strong>' + escapeHtmlMy(m.art||'') + (m.titel ? ' — ' + escapeHtmlMy(m.titel) : '') + ':</strong> ' + window.KFTables.render(m.hinweise||'') + '</div>'; }).join('');
 }
 
-function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
+// In zwei Teile gesplittet (toggleHtml/panelHtml), damit der Toggle-Button
+// wahlweise a) in seiner eigenen .support-bar-Zeile steht (lcTutorfragenWidget,
+// bestehendes Verhalten für Bereiche ohne section-footer) oder b) auf
+// gleicher Höhe wie der Weiter-Button in .section-footer landet (Teil 8,
+// renderZfAreaHtml/renderUebungenAreaHtml) -- der Nutzer wollte "Tutor/in
+// fragen" ausdrücklich NICHT unter, sondern neben "Nächstes Kapitel".
+function lcTutorfragenParts(courseId, chapterId, type, questions, userId){
   var wid = 'tf_' + courseId + '_' + (chapterId||'course') + '_' + type;
   // getForBaustein() already returns the current user's own questions
   // regardless of status/is_public (RLS: asked_by = auth.uid()) -- they were
@@ -1806,21 +1833,23 @@ function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
       }).join('')
     : (ownHtml ? '' : '<p class="hint-sm">Noch keine öffentlichen Antworten zu diesem Baustein.</p>');
   var countLabel = publicAnswered.length ? ' (' + publicAnswered.length + ' öffentliche ' + (publicAnswered.length===1?'Antwort':'Antworten') + ')' : '';
-  // .support-bar ist die Leiste, die im Prototyp unter jedem Abschnitt steht
-  // ("💬 Tutor/in fragen"). Bei uns hängt daran die echte Tutorfragen-Funktion
-  // (eigene Fragen + öffentliche Antworten + Formular) statt eines Mockups.
   // Den zweiten Prototyp-Link "✦ KI fragen" gibt es hier bewusst nicht --
   // dafür existiert keine Funktion, und ein toter Link wäre eine Attrappe.
-  return '<div class="tutorfragen"><div class="support-bar">' +
-    '<button type="button" class="linklike tf-toggle" data-tf-toggle="' + wid + '">💬 Tutor/in fragen' + countLabel + '</button>' +
-    '</div>' +
-    '<div class="tf-panel" data-tf-panel="' + wid + '" style="display:none">' +
+  var toggleHtml = '<button type="button" class="linklike tf-toggle" data-tf-toggle="' + wid + '">💬 Tutor/in fragen' + countLabel + '</button>';
+  var panelHtml = '<div class="tf-panel" data-tf-panel="' + wid + '" style="display:none">' +
       ownHtml +
       faqHtml +
       '<textarea class="tf-question-input" data-tf-input="' + wid + '" placeholder="Deine Frage zu diesem Baustein …"></textarea>' +
       '<button type="button" class="cta" style="padding:7px 14px;font-size:12.5px" data-tf-submit="' + wid + '" data-course="' + escapeHtmlMy(courseId) + '" data-chapter="' + escapeHtmlMy(chapterId||'') + '" data-type="' + type + '">Frage abschicken</button>' +
-    '</div>' +
-  '</div>';
+    '</div>';
+  return { toggleHtml: toggleHtml, panelHtml: panelHtml, wid: wid };
+}
+// .support-bar ist die Leiste, die im Prototyp unter jedem Abschnitt steht
+// ("💬 Tutor/in fragen"). Bei uns hängt daran die echte Tutorfragen-Funktion
+// (eigene Fragen + öffentliche Antworten + Formular) statt eines Mockups.
+function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
+  var parts = lcTutorfragenParts(courseId, chapterId, type, questions, userId);
+  return '<div class="tutorfragen"><div class="support-bar">' + parts.toggleHtml + '</div>' + parts.panelHtml + '</div>';
 }
 
 // ---- Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
@@ -1897,12 +1926,19 @@ function wireLearnerCourseOpenButtons(container){
 // eigentlichen Baustein-Renderer (lcHas*/lcBody* oben) bleiben unverändert
 // und werden hier nur anders orchestriert.
 
-async function lcCourseAccess(courseId){
+// course (optional) ist das bereits geladene Kursobjekt (creatorId inkl.) --
+// wird vom Aufrufer durchgereicht, damit hier keine zusätzliche DB-Abfrage
+// nötig ist, nur um creatorId nachzuschlagen.
+async function lcCourseAccess(courseId, course){
   var session = await window.KFAuth.getSession();
   var params = new URLSearchParams(window.location.search);
   var isAdminPreview = !!(session && session.isAdmin && params.get('adminPreviewCourse') === courseId);
-  var purchased = isAdminPreview || await window.KFCatalog.hasPurchased(courseId);
-  return { session: session, userId: session ? session.id : null, purchased: purchased, isAdminPreview: isAdminPreview };
+  // Punkt 2: Creator sehen ihren eigenen Kurs kostenlos in der
+  // Lernenden-Ansicht, ohne Kauf -- analog zur Admin-Vorschau, nur
+  // automatisch statt über einen URL-Parameter ausgelöst.
+  var isOwnCourse = !!(session && course && course.creatorId === session.id);
+  var purchased = isAdminPreview || isOwnCourse || await window.KFCatalog.hasPurchased(courseId);
+  return { session: session, userId: session ? session.id : null, purchased: purchased, isAdminPreview: isAdminPreview, isOwnCourse: isOwnCourse };
 }
 
 // Lädt alle für Kursübersicht + Bereichs-Ansichten nötigen Rohdaten in einem
@@ -2106,6 +2142,64 @@ var LC_AREA_ORDER = ['zusammenfassung', 'tutorien', 'uebungen', 'altklausuren', 
 function lcAreaLabel(key){
   return key === 'mindmap' ? 'Übersicht / Mindmap' : (window.KF_BAUSTEIN_LABELS[key] || key);
 }
+
+// Kanonische Reihenfolge für die "Weiter"-Kette am Bereichsende (Teil 8) --
+// bewusst eine EIGENE Konstante statt LC_AREA_ORDER wiederzuverwenden: das
+// ist die pädagogische Abarbeitungs-Reihenfolge (Zusammenfassung lesen →
+// üben → Tutorien → Altklausuren → Karteikarten → Lernplan), nicht die
+// Sidebar-Anzeigereihenfolge (dort steht Tutorien vor Übungsaufgaben).
+// Zusatzmodule/Mindmap fehlen bewusst -- Zusatzmodule sind ergänzend, Mindmap
+// ist reine Navigation, beides ist kein linear "durcharbeitbarer" Bereich.
+var BEREICH_ORDER = ['zusammenfassung', 'uebungen', 'tutorien', 'altklausuren', 'karteikarten', 'lernplan'];
+// Nächster Bereich NACH currentBereich, den dieser Kurs für diese:n
+// Nutzer:in tatsächlich hat (courseBereicheVorhanden = areas.map(a=>a.key)
+// aus lcAvailableAreas) -- überspringt fehlende Bereiche, liefert null, wenn
+// currentBereich der letzte tatsächlich vorhandene Bereich ist.
+function getNextBereich(currentBereich, courseBereicheVorhanden){
+  var idx = BEREICH_ORDER.indexOf(currentBereich);
+  for(var i = idx + 1; i < BEREICH_ORDER.length; i++){
+    if(courseBereicheVorhanden.indexOf(BEREICH_ORDER[i]) >= 0){ return BEREICH_ORDER[i]; }
+  }
+  return null;
+}
+// Gemeinsamer Fußzeilen-Baustein für alle linear durcharbeitbaren Bereiche:
+// links die Tutorfragen-Leiste (derselbe Toggle-Button wie sonst auch, nur
+// hier auf einer Zeile mit dem Weiter-Button statt darüber -- siehe
+// lcTutorfragenParts()), rechts der Weiter-Button. supportBarHtml ist
+// optional (Bereiche ohne eigene Tutorfragen bekommen einfach eine leere
+// linke Seite, .support-bar-placeholder hält dafür weiterhin das Flex-Layout
+// korrekt). chapterLinkHtml ist das fertige "Nächstes Kapitel"-Button-Markup
+// des Aufrufers (jeder Bereich hat sein eigenes Sprungziel-Attribut --
+// Zusammenfassung schaltet die Kapitel-Ansicht um, Übungsaufgaben scrollt
+// innerhalb der bereits vollständig gerenderten Liste) -- null/undefined
+// bedeutet "letztes Kapitel des Bereichs", dann kommt stattdessen der
+// Bereichs-Wechsel- bzw. Zurück-zur-Kursübersicht-Button.
+function renderSectionFooter(currentBereich, courseBereicheVorhanden, chapterLinkHtml, supportBarHtml){
+  var btnHtml = chapterLinkHtml;
+  if(!btnHtml){
+    var nextBereich = getNextBereich(currentBereich, courseBereicheVorhanden);
+    btnHtml = nextBereich
+      ? '<button type="button" class="ghost next-btn" data-next-bereich="' + escapeHtmlMy(nextBereich) + '">Weiter: ' + escapeHtmlMy(lcAreaLabel(nextBereich)) + ' ›</button>'
+      : '<button type="button" class="ghost next-btn" data-next-bereich-overview="1">‹ Zurück zur Kursübersicht</button>';
+  }
+  return '<div class="section-footer"><div class="support-bar-placeholder">' + (supportBarHtml || '') + '</div>' + btnHtml + '</div>';
+}
+function wireSectionFooter(container){
+  container.querySelectorAll('[data-next-bereich]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      lcResetAreaState(btn.dataset.nextBereich);
+      window.scrollTo(0, 0);
+      window.renderCourseView();
+    });
+  });
+  container.querySelectorAll('[data-next-bereich-overview]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      lcResetAreaState(null);
+      window.scrollTo(0, 0);
+      window.renderCourseView();
+    });
+  });
+}
 // Der gerade geöffnete Kurs, von renderCourseView() gesetzt. Im Prototyp
 // trägt jede Bereichs-Seite die Brotkrume "Kurse / {Kursname}" (einzige
 // Ausnahme: die Zusammenfassung, die stattdessen das Kapitel nennt) -- über
@@ -2235,9 +2329,11 @@ function renderCourseSidebarHtml(course, areas, activeKey, overallProgress){
 function renderCourseOverviewHtml(courseId, course, data, access, areas, progress, coursePrice){
   var buyOrOwnedHtml = access.isAdminPreview
     ? '<span class="co-purchased-badge">Admin-Vorschau — kein Kauf</span>'
-    : access.purchased
-      ? '<span class="co-purchased-badge">Gekauft ✓</span>'
-      : '<button type="button" class="cta" data-buy-course-inline="' + escapeHtmlMy(courseId) + '">Kurs buchen – ' + escapeHtmlMy(coursePrice) + ' €</button>';
+    : access.isOwnCourse
+      ? '<span class="co-purchased-badge">Eigener Kurs</span>'
+      : access.purchased
+        ? '<span class="co-purchased-badge">Gekauft ✓</span>'
+        : '<button type="button" class="cta" data-buy-course-inline="' + escapeHtmlMy(courseId) + '">Kurs buchen – ' + escapeHtmlMy(coursePrice) + ' €</button>';
 
   // 1:1 aus dem Prototyp: <div class="tile"><span class="tag">...</span>
   // <h3>...</h3><p>...</p></div> -- der Tag zeigt hier (statt einer
@@ -2303,7 +2399,7 @@ function buildZfNavHtml(chapters, access, curChapterId){
     '</div>';
   }).join('');
 }
-async function renderZfAreaHtml(courseId, data, access, userId, curChapterId){
+async function renderZfAreaHtml(courseId, data, access, userId, curChapterId, courseBereicheVorhanden){
   if(!data.chapters.length){ return '<p class="hint-sm">Noch keine Kapitel verfügbar.</p>'; }
   if(!curChapterId || !data.chapters.some(function(c){ return c.id === curChapterId; })){
     curChapterId = data.chapters[0].id;
@@ -2311,10 +2407,20 @@ async function renderZfAreaHtml(courseId, data, access, userId, curChapterId){
   var ch = data.chapters.filter(function(c){ return c.id === curChapterId; })[0];
   var navHtml = buildZfNavHtml(data.chapters, access, curChapterId);
   var crumbHtml = '<div class="crumb">Zusammenfassung / Kapitel ' + (ch.chapterIndex+1) + '</div>';
+  // "Nächstes Kapitel" springt (Teil 8) via data-zf-chapter -- exakt dasselbe
+  // Attribut/derselbe Klick-Handler wie die Kapitel-Nav links (wireZfAreaNav),
+  // keine eigene Sprung-Logik nötig. curPos statt ch.chapterIndex, da
+  // chapterIndex bei gelöschten Zwischenkapiteln Lücken haben kann.
+  var curPos = data.chapters.indexOf(ch);
+  var nextChapter = (curPos >= 0 && curPos < data.chapters.length - 1) ? data.chapters[curPos + 1] : null;
+  var chapterLinkHtml = nextChapter
+    ? '<button type="button" class="ghost next-btn" data-zf-chapter="' + escapeHtmlMy(nextChapter.id) + '">Nächstes Kapitel ›</button>'
+    : null;
   var contentHtml;
   if(lcChapterLocked(ch, access)){
+    var footerHtmlLocked = renderSectionFooter('zusammenfassung', courseBereicheVorhanden || [], chapterLinkHtml);
     contentHtml = crumbHtml + '<h1 style="margin-bottom:20px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
-      lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.');
+      lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.') + footerHtmlLocked;
   } else {
     var cc = data.contentByChapter[ch.id] || {};
     var qZf = await window.KFQuestions.getForBaustein(courseId, ch.id, 'zusammenfassung');
@@ -2335,8 +2441,13 @@ async function renderZfAreaHtml(courseId, data, access, userId, curChapterId){
     var bodyHtml = lcHasZf(cc.zusammenfassung)
       ? lcBodyZf(cc.zusammenfassung, ch.subchapters, 'zf-anchor-' + ch.id, ratingCtx)
       : '<p class="hint-sm">Noch keine Zusammenfassung für dieses Kapitel.</p>';
+    // "Tutor/in fragen" steht auf gleicher Höhe wie "Nächstes Kapitel" (nicht
+    // darüber) -- der Toggle-Button wandert in den section-footer, das
+    // Fragen-Panel selbst bleibt ein eigener Block direkt darunter.
+    var tfParts = lcTutorfragenParts(courseId, ch.id, 'zusammenfassung', qZf, userId);
+    var footerHtml = renderSectionFooter('zusammenfassung', courseBereicheVorhanden || [], chapterLinkHtml, tfParts.toggleHtml);
     contentHtml = crumbHtml + '<h1 style="margin-bottom:20px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
-      bodyHtml + lcTutorfragenWidget(courseId, ch.id, 'zusammenfassung', qZf, userId);
+      bodyHtml + footerHtml + tfParts.panelHtml;
   }
   // .zf-content grenzt die table.data-Optik für KFTables.render()-Tabellen
   // (siehe CSS) auf genau diese Ansicht ein, ohne die geteilte Funktion
@@ -2910,31 +3021,56 @@ function wireLernplanArea(container, courseId){
 // gruppiert (Kapitel-Überschrift + Tutorfragen-Widget bleiben chapterweise,
 // da Fragen serverseitig chapterweise abgefragt werden -- gefiltert wird
 // innerhalb dieser Gruppierung auf Item- bzw. Sektionsebene).
-async function renderUebungenAreaHtml(courseId, data, access, userId){
+async function renderUebungenAreaHtml(courseId, data, access, userId, courseBereicheVorhanden){
   var crumbHtml = lcCourseCrumb();
   // Bewertung ist wie bei der Zusammenfassung eine Lernfunktion für Käufer,
   // keine Vorschau-Funktion -- ohne Kauf/Login bleibt allRatings null und
   // lcBodyUeb zeigt keine .ampel-Zeile.
   var allRatings = (access.purchased && userId) ? await window.KFCatalog.getProgress(courseId) : null;
-  var sectionsHtml = '', chipChapters = [];
-  for(var i=0;i<data.chapters.length;i++){
-    var ch = data.chapters[i];
+
+  // Erster Durchlauf: welche Kapitel überhaupt eine Sektion bekommen
+  // (gesperrt ODER mit echtem Übungsaufgaben-Inhalt) -- wird für die
+  // Kapitel-Chips UND für das "Nächstes Kapitel"-Sprungziel im
+  // section-footer gebraucht (Teil 8), deshalb vor dem HTML-Bau einmal
+  // vollständig ermittelt statt erst während des Renderns.
+  var chapterGroups = [];
+  data.chapters.forEach(function(ch){
+    if(lcChapterLocked(ch, access)){ chapterGroups.push({ chapter: ch, locked: true }); return; }
+    if(!lcHasForArea('uebungen', data.contentByChapter[ch.id] || {})){ return; }
+    chapterGroups.push({ chapter: ch, locked: false });
+  });
+  if(!chapterGroups.length){
+    return crumbHtml + '<h1>Übungsaufgaben</h1><p class="hint-sm">Noch keine Inhalte verfügbar.</p>';
+  }
+
+  var sectionsHtml = '';
+  for(var i=0;i<chapterGroups.length;i++){
+    var g = chapterGroups[i];
+    var ch = g.chapter;
     var chHeadHtml = '<h3 style="margin-top:22px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h3>';
-    if(lcChapterLocked(ch, access)){
-      chipChapters.push(ch);
+    var nextGroup = chapterGroups[i + 1];
+    // "Nächstes Kapitel" scrollt (statt umzuschalten) zur nächsten bereits
+    // im DOM vorhandenen Sektion -- Übungsaufgaben zeigt anders als die
+    // Zusammenfassung alle Kapitel gleichzeitig als eine gefilterte Liste
+    // (Teil 7), es gibt also keinen separaten "aktuelles Kapitel"-Zustand
+    // zum Umschalten. Siehe data-ueb-goto-chapter-Wiring in wireUebungenArea.
+    var chapterLinkHtml = nextGroup
+      ? '<button type="button" class="ghost next-btn" data-ueb-goto-chapter="' + escapeHtmlMy(nextGroup.chapter.id) + '">Nächstes Kapitel ›</button>'
+      : null;
+    if(g.locked){
+      var footerHtmlLocked = renderSectionFooter('uebungen', courseBereicheVorhanden || [], chapterLinkHtml);
       sectionsHtml += '<div class="ueb-chapter-section" data-kapitel="' + escapeHtmlMy(ch.id) + '">' +
-        chHeadHtml + lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.') + '</div>';
+        chHeadHtml + lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.') + footerHtmlLocked + '</div>';
       continue;
     }
     var cc = data.contentByChapter[ch.id] || {};
-    if(!lcHasForArea('uebungen', cc)){ continue; }
-    chipChapters.push(ch);
     var q = await window.KFQuestions.getForBaustein(courseId, ch.id, 'uebungen');
+    // "Tutor/in fragen" auf gleicher Höhe wie "Nächstes Kapitel" (siehe
+    // renderZfAreaHtml) statt in einer eigenen Zeile darüber.
+    var tfParts = lcTutorfragenParts(courseId, ch.id, 'uebungen', q, userId);
+    var footerHtml = renderSectionFooter('uebungen', courseBereicheVorhanden || [], chapterLinkHtml, tfParts.toggleHtml);
     sectionsHtml += '<div class="ueb-chapter-section" data-kapitel="' + escapeHtmlMy(ch.id) + '">' + chHeadHtml +
-      lcBodyUeb(cc.uebungen, ch.id, allRatings) + lcTutorfragenWidget(courseId, ch.id, 'uebungen', q, userId) + '</div>';
-  }
-  if(!chipChapters.length){
-    return crumbHtml + '<h1>Übungsaufgaben</h1><p class="hint-sm">Noch keine Inhalte verfügbar.</p>';
+      lcBodyUeb(cc.uebungen, ch.id, allRatings) + footerHtml + tfParts.panelHtml + '</div>';
   }
 
   var schwierigkeitChipsHtml = '<p>Schwierigkeit</p><button type="button" class="chip on" data-schwierigkeit="alle">Alle</button>' +
@@ -2942,8 +3078,8 @@ async function renderUebungenAreaHtml(courseId, data, access, userId){
       return '<button type="button" class="chip" data-schwierigkeit="' + s + '">' + s.charAt(0).toUpperCase() + s.slice(1) + '</button>';
     }).join('');
   var kapitelChipsHtml = '<p>Kapitel</p><button type="button" class="chip on" data-kapitel="alle">Alle Kapitel</button>' +
-    chipChapters.map(function(ch){
-      return '<button type="button" class="chip" data-kapitel="' + escapeHtmlMy(ch.id) + '">Kapitel ' + (ch.chapterIndex+1) + '</button>';
+    chapterGroups.map(function(g){
+      return '<button type="button" class="chip" data-kapitel="' + escapeHtmlMy(g.chapter.id) + '">Kapitel ' + (g.chapter.chapterIndex+1) + '</button>';
     }).join('');
 
   return '<div class="two-col"><div class="filter-col">' + schwierigkeitChipsHtml + kapitelChipsHtml + '</div><div>' +
@@ -2986,6 +3122,17 @@ function wireUebungenArea(container){
       c.classList.add('on'); kapitelSel = c.dataset.kapitel; applyFilter();
     });
   });
+  // "Nächstes Kapitel"-Button im section-footer (Teil 8): setzt den
+  // Kapitel-Filter zurück auf "Alle Kapitel" (sonst könnte das Sprungziel
+  // durch einen aktiven Filter unsichtbar bleiben) und scrollt dann dorthin.
+  container.querySelectorAll('[data-ueb-goto-chapter]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var alleChip = container.querySelector('[data-kapitel="alle"].chip');
+      if(alleChip && !alleChip.classList.contains('on')){ alleChip.click(); }
+      var target = list.querySelector('.ueb-chapter-section[data-kapitel="' + btn.dataset.uebGotoChapter + '"]');
+      if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
+    });
+  });
 }
 
 // Alle anderen Bereiche: einfachere Einspalten-Ansicht, im Kern dieselben
@@ -3023,9 +3170,9 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
   return html;
 }
 
-async function renderCourseAreaHtml(courseId, areaKey, data, access){
+async function renderCourseAreaHtml(courseId, areaKey, data, access, courseBereicheVorhanden){
   if(areaKey === 'zusammenfassung'){
-    return await renderZfAreaHtml(courseId, data, access, access.userId, window.currentLearnerZfChapterId);
+    return await renderZfAreaHtml(courseId, data, access, access.userId, window.currentLearnerZfChapterId, courseBereicheVorhanden);
   }
   if(areaKey === 'karteikarten'){
     return await renderKkAreaHtml(courseId, data, access);
@@ -3034,7 +3181,7 @@ async function renderCourseAreaHtml(courseId, areaKey, data, access){
     return await renderAltklausurenAreaHtml(courseId, data, access);
   }
   if(areaKey === 'uebungen'){
-    return await renderUebungenAreaHtml(courseId, data, access, access.userId);
+    return await renderUebungenAreaHtml(courseId, data, access, access.userId, courseBereicheVorhanden);
   }
   if(areaKey === 'lernplan'){
     return await renderLernplanAreaHtml(courseId, data, access, access.userId);
@@ -3059,7 +3206,7 @@ window.renderCourseView = async function(){
   lcCourse = course;
   // Zugriff/Inhalte/Fortschritt einmal laden und an Seitenleiste UND Inhalt
   // weiterreichen, statt sie je Teilbereich erneut abzufragen.
-  var access = await lcCourseAccess(courseId);
+  var access = await lcCourseAccess(courseId, course);
   var data = await lcLoadCourseData(courseId);
   var areas = lcAvailableAreas(data, access);
   var progress = await lcCourseProgress(courseId, data, access);
@@ -3074,8 +3221,9 @@ window.renderCourseView = async function(){
 
   sidebarEl.innerHTML = renderCourseSidebarHtml(course, areas, areaKey, progress.overall);
   var settings = await window.KFCatalog.getSettings();
+  var courseBereicheVorhanden = areas.map(function(a){ return a.key; });
   var contentHtml = areaKey
-    ? await renderCourseAreaHtml(courseId, areaKey, data, access)
+    ? await renderCourseAreaHtml(courseId, areaKey, data, access, courseBereicheVorhanden)
     : renderCourseOverviewHtml(courseId, course, data, access, areas, progress, settings.course_price || '29');
   // .page/.page.active kommen aus dem Prototyp und bringen die dortige
   // Einblend-Animation beim Bereichswechsel mit.
@@ -3099,6 +3247,7 @@ window.renderCourseView = async function(){
   wireAltklausurenArea(body);
   wireUebungenArea(body);
   wireShowSolutionButtons(body);
+  wireSectionFooter(body);
   if(window.currentLearnerZfAnchor){
     var target = document.getElementById(window.currentLearnerZfAnchor);
     if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }

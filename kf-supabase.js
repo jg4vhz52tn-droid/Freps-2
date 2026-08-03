@@ -1162,11 +1162,23 @@ window.KFCatalog = (function () {
     return Object.keys(set);
   }
 
+  // Alle je angelegten Studiengänge, unabhängig von Hochschule/Kurs -- anders
+  // als getStudiengaengeFor() (nur die einem bestimmten Hochschul-Kurs bereits
+  // zugeordneten) für die admin-seitige Kurs-Bearbeitung gedacht: dort soll
+  // jeder real existierende Studiengang auswählbar sein, nicht nur die schon
+  // an dieser Hochschule verwendeten.
+  async function getAllStudiengaenge() {
+    const { data, error } = await supabase.from("studiengaenge").select("name").order("name");
+    if (error) { console.error(error); return []; }
+    return data.map(function (r) { return r.name; });
+  }
+
   return {
     getAllCourses: getAllCourses,
     getHochschulen: getHochschulen,
     getSubjectsFor: getSubjectsFor,
     getStudiengaengeFor: getStudiengaengeFor,
+    getAllStudiengaenge: getAllStudiengaenge,
     hasPurchased: hasPurchased,
     recordPlaceholderPurchase: recordPlaceholderPurchase,
     getMyPurchases: getMyPurchases,
