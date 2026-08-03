@@ -319,27 +319,36 @@ ul.plain li{margin-bottom:5px;}
 .mini-status.revise{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
 
 /* Meine Kurse: echte Kursinhalte + Tutorfragen je Baustein */
-.lc-chapter{margin-top:14px; padding-top:14px; border-top:1px solid var(--line);}
-.lc-chapter h4{font-size:13.5px; margin-bottom:8px;}
-.lc-baustein{background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:10px;}
-.lc-baustein .lc-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); margin-bottom:6px;}
-.lc-baustein .lc-item{font-size:13px; padding:5px 0; border-bottom:1px solid var(--line);}
-.lc-baustein .lc-item:last-child{border-bottom:none;}
 .kf-inline-table-wrap{overflow-x:auto; margin:6px 0;}
 .kf-inline-table{border-collapse:collapse; font-size:13px;}
 .kf-inline-table th, .kf-inline-table td{border:1px solid var(--line); padding:5px 9px; text-align:left; white-space:nowrap;}
 .kf-inline-table thead th{background:var(--accent-soft); color:var(--ink); font-weight:700;}
 
-/* Kursübersicht + Bereichs-Ansichten (Lernende) -- Kacheln/Chapter-Nav/Two-Col
-   nutzen die bereits vorhandenen .grid/.tile/.two-col/.chapter-nav-Klassen
-   (identisch zum alten Prototyp, hier bislang nur für Kursbau-Intro-Kacheln
-   verwendet), nur die folgenden Klassen sind neu. */
-.co-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px;}
-.co-head .cta{white-space:nowrap;}
+/* Kursübersicht + Bereichs-Ansichten (Lernende) -- Optik/Struktur 1:1 aus
+   klausurfuchs-prototyp.html übernommen: .page-head/.crumb/.lede/.grid/
+   .tile/.tag/.progress-line/.segbar (Kursübersicht), .two-col/.chapter-nav/
+   .nav-group/.sub-list/.block/.kicker/table.data (Zusammenfassung) sind
+   bereits vorhandene, identische Prototyp-Klassen (dieselbe CSS-Datei war
+   von Anfang an aus dem Prototyp übernommen, bislang aber nur teilweise
+   verwendet) -- keine Kollision, daher kein Präfix nötig. Nur die folgenden
+   Klassen sind für dieses Feature neu:
+   - .co-purchased-badge: der Prototyp kennt keinen "bereits gekauft"-Zustand
+     im Kursübersicht-Header, das brauchen wir aber real.
+   - .lock-card: die Vorschau-Sperre gibt es im Prototyp gar nicht (der
+     zeigte nur fertige Musterdaten), ist aber Kernteil dieser Spec. */
 .co-purchased-badge{font-size:12px; font-weight:600; background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459; padding:5px 14px; border-radius:20px; white-space:nowrap;}
-.tile .tile-hint{font-size:11.5px; color:var(--muted); margin-top:8px;}
 .lock-card{background:var(--paper); border:1px dashed var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:10px; font-size:13px; color:var(--muted);}
 .lock-card .cta{margin-top:10px; padding:8px 16px; font-size:13px;}
+/* KFTables.render() (geteilte Funktion, auch vom Wizard-Tabellen-Werkzeug
+   und Prüf-Dashboard genutzt) rendert Tabellen als .kf-inline-table -- für
+   die Lernenden-Zusammenfassung soll das aber wie table.data aus dem
+   Prototyp aussehen. Statt die geteilte Funktion/Klasse anzufassen (Risiko
+   für Wizard/Prüf-Dashboard), wird die table.data-Optik hier nur auf den
+   .zf-content-Container skaliert. */
+.zf-content .kf-inline-table-wrap{overflow-x:visible; margin:0 0 16px;}
+.zf-content .kf-inline-table{width:100%; border-collapse:collapse; font-size:13px;}
+.zf-content .kf-inline-table th, .zf-content .kf-inline-table td{text-align:left; padding:7px 10px; border:none; border-bottom:1px solid var(--line); white-space:normal; vertical-align:top;}
+.zf-content .kf-inline-table thead th{background:none; color:var(--muted); font-weight:600; font-size:12px;}
 
 /* Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
    Design 1:1 aus dem Unsere_Kurse_dc.html-Mockup übernommen, nur mit echten
@@ -1613,78 +1622,95 @@ function lcHasLp(l){ return !!(l && (l.items||[]).some(function(x){ return (x.ta
 // rawSubchaptersText liefert die Struktur (inkl. echter Tiefe, "1.1.1" unter
 // "1.1"), damit auch Lernende die Gliederung sehen statt nur einer flachen,
 // unbeschrifteten Liste von Texten.
-function lcBodyZf(z, rawSubchaptersText, anchorPrefix){
+// ratingCtx (optional): { chapterId, ratings } -- ratings ist eine Map
+// path -> 'gut'|'mittel'|'schlecht' NUR für dieses eine Kapitel (siehe
+// renderZfAreaHtml). Ohne ratingCtx (z. B. Vorschau ohne Kauf) wird keine
+// .ampel-Bewertungszeile gerendert.
+function lcBodyZf(z, rawSubchaptersText, anchorPrefix, ratingCtx){
   var tree = window.KFOutline ? window.KFOutline.parse(rawSubchaptersText || '') : [];
   var subs = window.KFOutline ? window.KFOutline.normalizeSubs(z.subs, tree) : (z.subs || {});
-  var html = lcRenderZfOutline(tree, subs, anchorPrefix);
-  if(z.merke){ html += '<div class="lc-item"><strong>Merke:</strong> ' + window.KFTables.render(z.merke) + '</div>'; }
-  if(z.tipps){ html += '<div class="lc-item"><strong>Tipps:</strong> ' + window.KFTables.render(z.tipps) + '</div>'; }
+  var html = lcRenderZfOutline(tree, subs, anchorPrefix, ratingCtx);
+  if(z.merke){ html += '<div class="block merke"><div class="kicker">Merke</div>' + window.KFTables.render(z.merke) + '</div>'; }
+  if(z.tipps){ html += '<div class="block merke"><div class="kicker">Tipps für die Klausur</div>' + window.KFTables.render(z.tipps) + '</div>'; }
   return html;
 }
-// anchorPrefix (optional): wenn gesetzt, bekommt jeder Knoten eine
-// eindeutige id="<anchorPrefix>-<path>" -- damit kann die Zusammenfassung-
-// Bereichsansicht per Klick im linken Nav-Baum zum passenden Unterkapitel
-// rechts scrollen. Ohne anchorPrefix (bestehendes Verhalten) wird keine id
-// erzeugt.
-function lcRenderZfOutline(nodes, subs, anchorPrefix){
+// Optik/Struktur 1:1 aus dem Prototyp übernommen: jedes Unterkapitel mit
+// eigenem Text bekommt ein <h4> (Nummer + Titel aus der Struktur) gefolgt
+// von einer .block-Box mit dem eigentlichen Zusammenfassungstext -- die
+// Nummerierungstiefe wird (wie im Prototyp) nicht per Einrückung, sondern
+// rein durch die Nummer selbst ausgedrückt.
+//
+// anchorPrefix (optional): wenn gesetzt, bekommt jedes <h4> eine eindeutige
+// id="<anchorPrefix>-<path>" -- damit kann die Zusammenfassung-Bereichs-
+// ansicht per Klick im linken Nav-Baum zum passenden Unterkapitel rechts
+// scrollen. Ohne anchorPrefix (bestehendes Verhalten) wird keine id erzeugt.
+function lcRenderZfOutline(nodes, subs, anchorPrefix, ratingCtx){
   var html = '';
   nodes.forEach(function(node){
     var text = subs[node.path];
     var idAttr = anchorPrefix ? ' id="' + escapeHtmlMy(anchorPrefix + '-' + node.path) + '"' : '';
     if(text && text.trim()){
-      html += '<div class="lc-item"' + idAttr + ' style="margin-left:' + (node.depth * 16) + 'px">' +
-        (node.number ? '<strong>' + escapeHtmlMy(node.number) + '</strong> ' : '') + window.KFTables.render(text) + '</div>';
+      html += '<h4' + idAttr + '>' + (node.number ? escapeHtmlMy(node.number) + ' ' : '') + escapeHtmlMy(node.title) + '</h4>' +
+        '<div class="block">' + window.KFTables.render(text) + '</div>';
+      if(ratingCtx){ html += lcRenderAmpel(ratingCtx.chapterId, node.path, ratingCtx.ratings[node.path]); }
     } else if(anchorPrefix){
       // Noch textleeres Unterkapitel: trotzdem einen (unsichtbaren) Anker
       // setzen, damit ein Klick im Nav-Baum darauf nicht ins Leere läuft.
       html += '<div' + idAttr + '></div>';
     }
-    if(node.children.length){ html += lcRenderZfOutline(node.children, subs, anchorPrefix); }
+    if(node.children.length){ html += lcRenderZfOutline(node.children, subs, anchorPrefix, ratingCtx); }
   });
   return html;
+}
+// Verstehens-Bewertung -- Optik/Klick-Verhalten 1:1 aus dem Prototyp
+// (.ampel/.sel-ok/.sel-mid/.sel-bad, siehe dortiges Script). "Gut
+// verstanden"/"Geht so"/"Nicht verstanden" (ok/mid/bad) sind reine
+// UI-Werte, intern beim Speichern auf gut/mittel/schlecht gemappt.
+var LC_RATING_SEL_CLASS = { gut: 'sel-ok', mittel: 'sel-mid', schlecht: 'sel-bad' };
+function lcRenderAmpel(chapterId, path, existingRating){
+  var selClass = LC_RATING_SEL_CLASS[existingRating] || '';
+  function btn(v, cls, label){ return '<button type="button" class="' + cls + '" data-v="' + v + '">' + label + '</button>'; }
+  return '<div class="ampel" data-key="' + escapeHtmlMy(path) + '" data-rating-chapter="' + escapeHtmlMy(chapterId) + '">' +
+    btn('ok', existingRating === 'gut' ? selClass : '', 'Gut verstanden') +
+    btn('mid', existingRating === 'mittel' ? selClass : '', 'Geht so') +
+    btn('bad', existingRating === 'schlecht' ? selClass : '', 'Nicht verstanden') +
+  '</div>';
+}
+function wireZfRatingButtons(container, courseId){
+  var RATING_FOR_V = { ok: 'gut', mid: 'mittel', bad: 'schlecht' };
+  container.querySelectorAll('.ampel[data-rating-chapter]').forEach(function(row){
+    row.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        // Exaktes Klick-Muster aus dem Prototyp: erst alle Buttons der
+        // Zeile zurücksetzen, dann dem geklickten die sel-*-Klasse geben.
+        row.querySelectorAll('button').forEach(function(b){ b.className = ''; });
+        btn.className = 'sel-' + btn.dataset.v;
+        var chapterId = row.dataset.ratingChapter;
+        var path = row.dataset.key;
+        var rating = RATING_FOR_V[btn.dataset.v];
+        window.KFCatalog.setProgressItem(courseId, 'zusammenfassung_rating', chapterId + ':' + path, { rating: rating }).catch(function(err){
+          showToast('Bewertung konnte nicht gespeichert werden: ' + ((err && err.message) || 'unbekannt'));
+        });
+      });
+    });
+  });
 }
 async function lcCardImageHtml(path){
   var url = await window.KFStore.getCardImageUrl(path);
   return url ? '<br><img src="' + escapeHtmlMy(url) + '" style="max-width:100%;max-height:280px;border-radius:6px;margin-top:6px;display:block">' : '';
 }
-async function lcBodyKk(k){
-  var cards = k.cards.filter(function(c){ return (c.frage&&c.frage.trim()) || (c.antwort&&c.antwort.trim()) || c.frageBild || c.antwortBild; });
-  var parts = await Promise.all(cards.map(async function(c, i){
-    var frageImg = c.frageBild ? await lcCardImageHtml(c.frageBild) : '';
-    var antwortImg = c.antwortBild ? await lcCardImageHtml(c.antwortBild) : '';
-    return '<div class="lc-item"><strong>Karte ' + (i+1) + ':</strong> ' + escapeHtmlMy(c.frage||'') + frageImg + ' — ' + escapeHtmlMy(c.antwort||'') + antwortImg + '</div>';
-  }));
-  return parts.join('');
-}
 function lcBodyUeb(u){
   return u.items.filter(function(i){ return (i.aufgabe&&i.aufgabe.trim()) || (i.loesung&&i.loesung.trim()); }).map(function(it,i){
-    return '<div class="lc-item"><strong>Aufgabe ' + (i+1) + ':</strong> ' + escapeHtmlMy(it.aufgabe||'') + '<br><em>Lösungsweg:</em> ' + escapeHtmlMy(it.loesung||'') + '</div>';
-  }).join('');
-}
-function lcBodyAlt(a){
-  return a.items.filter(function(x){ return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()); }).map(function(x){
-    return '<div class="lc-item">' + escapeHtmlMy(x.semester||'') + ' ' + escapeHtmlMy(x.jahr||'') + ' · ' + escapeHtmlMy(x.thema||'') + '<br>' + escapeHtmlMy(x.loesung||'') + '</div>';
+    return '<div class="block"><strong>Aufgabe ' + (i+1) + ':</strong> ' + escapeHtmlMy(it.aufgabe||'') + '<br><em>Lösungsweg:</em> ' + escapeHtmlMy(it.loesung||'') + '</div>';
   }).join('');
 }
 function lcBodyTut(t){
   return t.items.filter(function(x){ return (x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()); }).map(function(x){
-    return '<div class="lc-item"><strong>' + escapeHtmlMy(x.blatt||'') + ':</strong> ' + escapeHtmlMy(x.loesung||'') + '</div>';
+    return '<div class="block"><strong>' + escapeHtmlMy(x.blatt||'') + ':</strong> ' + escapeHtmlMy(x.loesung||'') + '</div>';
   }).join('');
 }
 function lcBodyZus(z){
-  return z.modules.map(function(m){ return '<div class="lc-item"><strong>' + escapeHtmlMy(m.art||'') + (m.titel ? ' — ' + escapeHtmlMy(m.titel) : '') + ':</strong> ' + escapeHtmlMy(m.hinweise||'') + '</div>'; }).join('');
-}
-function lcBodyLp(l, progress){
-  return l.items.map(function(x, i){
-    if(!((x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim()))){ return ''; }
-    var done = !!(progress && progress['lernplan:' + i] && progress['lernplan:' + i].done);
-    return '<div class="lc-item lc-lernplan-item">' +
-      '<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer">' +
-      '<input type="checkbox" class="lc-lp-check" data-lp-index="' + i + '"' + (done ? ' checked' : '') + '>' +
-      '<span><strong>' + escapeHtmlMy(x.tag||'') + ':</strong> ' + escapeHtmlMy(x.aufgabe||'') +
-      (x.dauer ? ' <span class="hint-sm">(' + escapeHtmlMy(x.dauer) + ')</span>' : '') + '</span>' +
-      '</label></div>';
-  }).join('');
+  return z.modules.map(function(m){ return '<div class="block"><strong>' + escapeHtmlMy(m.art||'') + (m.titel ? ' — ' + escapeHtmlMy(m.titel) : '') + ':</strong> ' + escapeHtmlMy(m.hinweise||'') + '</div>'; }).join('');
 }
 
 function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
@@ -1719,24 +1745,6 @@ function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
       '<button type="button" class="cta" style="padding:7px 14px;font-size:12.5px" data-tf-submit="' + wid + '" data-course="' + escapeHtmlMy(courseId) + '" data-chapter="' + escapeHtmlMy(chapterId||'') + '" data-type="' + type + '">Frage abschicken</button>' +
     '</div>' +
   '</div>';
-}
-
-function lcBausteinBox(label, bodyHtml, tfWidgetHtml){
-  return '<div class="lc-baustein"><div class="lc-label">' + escapeHtmlMy(label) + '</div>' + bodyHtml + tfWidgetHtml + '</div>';
-}
-
-// Klartext-Export statt echtem .apkg: gleiche Tab-getrennte Zeilenform, die
-// der Karteikarten-Import im Wizard auch einliest -- Import/Export sind so
-// symmetrisch, und der Lernende importiert in Anki einfach über
-// „Datei" → „Importieren" mit Notiztyp „Basic".
-function lcAnkiExportButton(chapterTitle, karteikarten){
-  var cards = ((karteikarten && karteikarten.cards) || []).filter(function(c){
-    return (c.frage && c.frage.trim()) || (c.antwort && c.antwort.trim()) || c.frageBild || c.antwortBild;
-  });
-  if(!cards.length){ return ''; }
-  var payload = escapeHtmlMy(JSON.stringify(cards));
-  var filename = escapeHtmlMy(chapterTitle || 'Karteikarten');
-  return '<button type="button" class="linklike" style="display:block; margin-top:8px; font-size:12.5px" data-anki-export="' + payload + '" data-anki-filename="' + filename + '">⬇ Als Anki-Karten exportieren (.txt)</button>';
 }
 
 // ---- Mindmap: gesamter freigegebener Stoff eines Kurses auf einen Blick,
@@ -1853,6 +1861,43 @@ function lcHasForArea(key, cc){
 var LC_CHAPTER_AREAS = ['zusammenfassung', 'karteikarten', 'uebungen'];
 var LC_COURSE_AREAS = ['altklausuren', 'tutorien', 'zusatz', 'lernplan'];
 
+// Echter Lernfortschritt für die Zusammenfassung-Kachel der Kursübersicht:
+// jeder Outline-Knoten mit eigenem Text (= jeder Punkt, der in der
+// Bereichs-Ansicht eine .ampel bekommt) zählt als ein bewertbarer Punkt.
+// Gewichtung gut=1/mittel=0.5/schlecht+unbewertet=0, Durchschnitt über alle
+// bewertbaren Punkte des Kurses (nicht nur des aktuell offenen Kapitels).
+var LC_RATING_WEIGHT = { gut: 1, mittel: 0.5, schlecht: 0 };
+async function lcZfProgress(courseId, data){
+  var allRatings = await window.KFCatalog.getProgress(courseId);
+  var total = 0, ok = 0, mid = 0, bad = 0, weightSum = 0;
+  function walk(nodes, subs, chapterId){
+    nodes.forEach(function(node){
+      var text = subs[node.path];
+      if(text && text.trim()){
+        total++;
+        var rating = (allRatings['zusammenfassung_rating:' + chapterId + ':' + node.path] || {}).rating;
+        if(rating === 'gut'){ ok++; } else if(rating === 'mittel'){ mid++; } else if(rating === 'schlecht'){ bad++; }
+        weightSum += LC_RATING_WEIGHT[rating] || 0;
+      }
+      if(node.children.length){ walk(node.children, subs, chapterId); }
+    });
+  }
+  data.chapters.forEach(function(ch){
+    var cc = data.contentByChapter[ch.id] || {};
+    if(!lcHasZf(cc.zusammenfassung)){ return; }
+    var tree = window.KFOutline ? window.KFOutline.parse(ch.subchapters || '') : [];
+    var subs = window.KFOutline ? window.KFOutline.normalizeSubs(cc.zusammenfassung.subs, tree) : (cc.zusammenfassung.subs || {});
+    walk(tree, subs, ch.id);
+  });
+  if(!total){ return null; }
+  return {
+    percent: Math.round((weightSum / total) * 100),
+    okPct: Math.round((ok / total) * 100),
+    midPct: Math.round((mid / total) * 100),
+    badPct: Math.round((bad / total) * 100)
+  };
+}
+
 // Gemeinsamer Kauf-Mechanismus für "Kurs buchen" (Kursübersicht-Header +
 // jede Zugriffssperre) -- derselbe Login-Gate/Platzhalter-Kauf wie bei den
 // bestehenden Kursvorschlägen (wireLearnerPurchaseSuggestions), nur mit
@@ -1881,6 +1926,20 @@ function wireBuyCourseInlineButtons(container, onSuccess){
   });
 }
 
+// Kurzbeschreibungen je Kachel -- rein optisch, wie die statischen
+// Beschreibungstexte im Prototyp ("Der komplette Klausurstoff ..."), keine
+// echten Kennzahlen.
+var LC_AREA_DESCRIPTIONS = {
+  zusammenfassung: 'Der gesamte Stoff, kompakt und klausurorientiert aufbereitet.',
+  karteikarten: 'Begriffe aktiv abfragen, mit Anki-Export.',
+  uebungen: 'Eigene Übungsaufgaben mit Lösungsweg.',
+  altklausuren: 'Lösungswege zu bisherigen Klausuren.',
+  tutorien: 'Lösungswege zu den offiziellen Tutoriumsblättern.',
+  zusatz: 'Zusätzliche Prüfungs- oder Aufgabenform dieses Fachs.',
+  lernplan: 'Dein Lernplan bis zum Klausurtermin.',
+  mindmap: 'Alle Zusammenhänge auf einen Blick, Knoten aufklappbar.'
+};
+
 async function renderCourseOverviewHtml(courseId){
   var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
   if(!course){ return '<p class="hint-sm">Kurs nicht gefunden.</p>'; }
@@ -1895,9 +1954,16 @@ async function renderCourseOverviewHtml(courseId){
       ? '<span class="co-purchased-badge">Gekauft ✓</span>'
       : '<button type="button" class="cta" data-buy-course-inline="' + escapeHtmlMy(courseId) + '">Kurs buchen – ' + escapeHtmlMy(coursePrice) + ' €</button>';
 
-  function tile(key, label, hint){
-    return '<div class="tile" data-open-area="' + key + '"><h3>' + escapeHtmlMy(label) + '</h3>' +
-      '<p class="tile-hint">' + escapeHtmlMy(hint) + '</p></div>';
+  // 1:1 aus dem Prototyp: <div class="tile"><span class="tag">...</span>
+  // <h3>...</h3><p>...</p></div> -- der Tag zeigt hier (statt einer
+  // hartcodierten Stückzahl wie im Prototyp) die Verfügbarkeit für genau
+  // diese:n Nutzer:in an.
+  var areaKeys = [];
+  function tile(key, tag){
+    areaKeys.push(key);
+    return '<div class="tile" data-open-area="' + key + '"><span class="tag">' + escapeHtmlMy(tag) + '</span>' +
+      '<h3>' + escapeHtmlMy(window.KF_BAUSTEIN_LABELS[key] || (key === 'mindmap' ? 'Übersicht / Mindmap' : key)) + '</h3>' +
+      '<p>' + escapeHtmlMy(LC_AREA_DESCRIPTIONS[key] || '') + '</p></div>';
   }
 
   var tilesHtml = '';
@@ -1907,12 +1973,12 @@ async function renderCourseOverviewHtml(courseId){
       if(access.purchased){
         var totalWithContent = data.chapters.filter(function(ch){ return lcHasForArea(key, data.contentByChapter[ch.id]); }).length;
         if(!totalWithContent){ return; }
-        tilesHtml += tile(key, window.KF_BAUSTEIN_LABELS[key], totalWithContent + (totalWithContent === 1 ? ' Kapitel verfügbar' : ' Kapitel verfügbar'));
+        tilesHtml += tile(key, totalWithContent + (totalWithContent === 1 ? ' Kapitel' : ' Kapitel'));
       } else {
         var previewAvailable = data.chapters.filter(function(ch){
           return !lcChapterLocked(ch, access) && lcHasForArea(key, data.contentByChapter[ch.id]);
         }).length;
-        tilesHtml += tile(key, window.KF_BAUSTEIN_LABELS[key], previewAvailable + ' von ' + totalChapters + ' Kapiteln als Vorschau verfügbar');
+        tilesHtml += tile(key, previewAvailable + ' von ' + totalChapters + ' als Vorschau');
       }
     });
   }
@@ -1924,19 +1990,53 @@ async function renderCourseOverviewHtml(courseId){
     // (damit erkennbar bleibt, dass es mehr gibt), Käufern nur, wenn
     // wirklich Inhalt vorhanden ist.
     if(access.purchased && !lcHasForArea(key, data.courseContent)){ return; }
-    tilesHtml += tile(key, window.KF_BAUSTEIN_LABELS[key], access.purchased ? 'Verfügbar' : 'Nur mit Kauf verfügbar');
+    tilesHtml += tile(key, access.purchased ? 'Verfügbar' : 'Nur mit Kauf');
   });
   if(totalChapters){
-    tilesHtml += tile('mindmap', 'Übersicht / Mindmap', access.purchased ? 'Alle Kapitel' : 'Vorschau-Kapitel');
+    tilesHtml += tile('mindmap', access.purchased ? 'Alle Kapitel' : 'Vorschau-Kapitel');
   }
   if(!tilesHtml){ tilesHtml = '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
 
-  return '<div class="co-head"><div>' +
+  // Fortschritts-Zeilen wie im Prototyp (.progress-line/.segbar) -- echte
+  // Daten gibt es bisher nur für Zusammenfassung (Verstehens-Bewertung,
+  // Teil 2 dieser Spec); alle anderen Bereiche bleiben bewusst Platzhalter
+  // ("Tracking folgt"), bis Teil 3/4 sie mit echten Daten füllen.
+  var zfProgress = (access.purchased && access.userId) ? await lcZfProgress(courseId, data) : null;
+  var kkProgress = (access.purchased && access.userId) ? await lcKkProgress(courseId, data) : null;
+  var areaProgress = { zusammenfassung: zfProgress, karteikarten: kkProgress };
+  // Gesamtfortschritt: Durchschnitt über alle Bereiche, die bereits echte
+  // Werte liefern (bisher Zusammenfassung + Karteikarten) -- Übungsaufgaben/
+  // Altklausuren/Tutorien/Zusatzmodule/Lernplan fließen erst mit ein, sobald
+  // sie in einem späteren Teil ihr eigenes Tracking bekommen.
+  var realProgresses = [zfProgress, kkProgress].filter(function(p){ return !!p; });
+  var overallProgress = realProgresses.length ? {
+    percent: Math.round(realProgresses.reduce(function(s,p){ return s + p.percent; }, 0) / realProgresses.length),
+    okPct: Math.round(realProgresses.reduce(function(s,p){ return s + p.okPct; }, 0) / realProgresses.length),
+    midPct: Math.round(realProgresses.reduce(function(s,p){ return s + p.midPct; }, 0) / realProgresses.length),
+    badPct: Math.round(realProgresses.reduce(function(s,p){ return s + p.badPct; }, 0) / realProgresses.length)
+  } : null;
+  function progressRowHtml(label, pct){
+    return '<div style="margin-bottom:16px">' +
+      '<div class="progress-line"><span>' + escapeHtmlMy(label) + '</span><span>' + (pct ? pct.percent + ' % verstanden' : 'Tracking folgt') + '</span></div>' +
+      '<div class="segbar"><span class="seg-ok" style="width:' + (pct ? pct.okPct : 0) + '%"></span><span class="seg-mid" style="width:' + (pct ? pct.midPct : 0) + '%"></span><span class="seg-bad" style="width:' + (pct ? pct.badPct : 0) + '%"></span></div>' +
+    '</div>';
+  }
+  var progressHtml = areaKeys.length
+    ? '<h2 style="margin-bottom:12px">Fortschritt nach Bereich</h2>' +
+      (overallProgress ? progressRowHtml('Gesamtfortschritt', overallProgress) : '') +
+      areaKeys.map(function(key){
+        var label = window.KF_BAUSTEIN_LABELS[key] || (key === 'mindmap' ? 'Übersicht / Mindmap' : key);
+        return progressRowHtml(label, areaProgress[key] || null);
+      }).join('')
+    : '';
+
+  return '<div class="page-head"><div>' +
       '<div class="crumb">Kurse / ' + escapeHtmlMy(course.title) + '</div>' +
       '<h1>' + escapeHtmlMy(course.title) + '</h1>' +
-      '<p class="lede" style="margin-bottom:0">' + escapeHtmlMy(course.prof||'') + (course.prof && course.hochschule ? ' · ' : '') + escapeHtmlMy(course.hochschule||'') + '</p>' +
     '</div>' + buyOrOwnedHtml + '</div>' +
-    '<div class="grid" style="margin-top:22px">' + tilesHtml + '</div>';
+    '<p class="lede">' + escapeHtmlMy(course.prof||'') + (course.prof && course.hochschule ? ' · ' : '') + escapeHtmlMy(course.hochschule||'') + '</p>' +
+    '<div class="grid">' + tilesHtml + '</div>' +
+    progressHtml;
 }
 
 window.renderCourseOverviewView = async function(){
@@ -1952,6 +2052,7 @@ window.renderCourseOverviewView = async function(){
       window.currentLearnerAreaKey = t.dataset.openArea;
       window.currentLearnerZfChapterId = null;
       window.currentLearnerZfAnchor = null;
+      window.currentLearnerKkChapterId = null;
       showView('view-course-area');
     });
   });
@@ -1989,21 +2090,39 @@ async function renderZfAreaHtml(courseId, data, access, userId, curChapterId){
   }
   var ch = data.chapters.filter(function(c){ return c.id === curChapterId; })[0];
   var navHtml = buildZfNavHtml(data.chapters, access, curChapterId);
+  var crumbHtml = '<div class="crumb">Zusammenfassung / Kapitel ' + (ch.chapterIndex+1) + '</div>';
   var contentHtml;
   if(lcChapterLocked(ch, access)){
-    contentHtml = '<h1>Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
+    contentHtml = crumbHtml + '<h1 style="margin-bottom:20px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
       lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.');
   } else {
     var cc = data.contentByChapter[ch.id] || {};
     var qZf = await window.KFQuestions.getForBaustein(courseId, ch.id, 'zusammenfassung');
+    // Bewertung ist eine Lernfunktion für Käufer (inkl. Admin-Vorschau,
+    // beides deckt access.purchased ab), keine Vorschau-Funktion -- ohne
+    // Kauf/Login bleibt ratingCtx undefined und lcRenderZfOutline zeigt
+    // keine .ampel-Zeile.
+    var ratingCtx;
+    if(access.purchased && userId){
+      var allRatings = await window.KFCatalog.getProgress(courseId);
+      var prefix = 'zusammenfassung_rating:' + ch.id + ':';
+      var chapterRatings = {};
+      Object.keys(allRatings).forEach(function(key){
+        if(key.indexOf(prefix) === 0){ chapterRatings[key.slice(prefix.length)] = (allRatings[key] || {}).rating; }
+      });
+      ratingCtx = { chapterId: ch.id, ratings: chapterRatings };
+    }
     var bodyHtml = lcHasZf(cc.zusammenfassung)
-      ? lcBodyZf(cc.zusammenfassung, ch.subchapters, 'zf-anchor-' + ch.id)
+      ? lcBodyZf(cc.zusammenfassung, ch.subchapters, 'zf-anchor-' + ch.id, ratingCtx)
       : '<p class="hint-sm">Noch keine Zusammenfassung für dieses Kapitel.</p>';
-    contentHtml = '<h1>Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
+    contentHtml = crumbHtml + '<h1 style="margin-bottom:20px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h1>' +
       bodyHtml + lcTutorfragenWidget(courseId, ch.id, 'zusammenfassung', qZf, userId);
   }
+  // .zf-content grenzt die table.data-Optik für KFTables.render()-Tabellen
+  // (siehe CSS) auf genau diese Ansicht ein, ohne die geteilte Funktion
+  // selbst (Wizard/Prüf-Dashboard nutzen sie ebenfalls) anzufassen.
   return '<div class="two-col"><div class="chapter-nav">' + navHtml + '</div>' +
-    '<div>' + contentHtml + '</div></div>';
+    '<div class="zf-content">' + contentHtml + '</div></div>';
 }
 function wireZfAreaNav(container){
   container.querySelectorAll('[data-zf-chapter]').forEach(function(btn){
@@ -2013,6 +2132,542 @@ function wireZfAreaNav(container){
       window.renderCourseAreaView();
     });
   });
+}
+
+// ---- Karteikarten: interaktives Flip-Quiz statt reiner Liste (Teil 3),
+// 1:1 aus dem Prototyp: .flashcard/.srs-Klassen + Klick-zum-Umdrehen-Logik.
+// Der Kartenstapel wird beim Rendern einmal gebaut und in kkLastRun
+// zwischengespeichert -- Flip/Bewertung/Weiterblättern läuft danach rein per
+// DOM-Manipulation in wireKkArea() (wie im Prototyp-Skript), ohne dass jede
+// einzelne Karte einen kompletten Re-Render (und damit einen erneuten
+// Server-Rundtrip für Kapitel/Content) auslöst.
+var kkLastRun = null;
+var LC_KK_RATING_ITEM_TYPE = 'karteikarten_rating';
+function lcKkCardHasContent(c){ return !!((c.frage&&c.frage.trim()) || (c.antwort&&c.antwort.trim()) || c.frageBild || c.antwortBild); }
+
+// Gleiche Gewichtung/Durchschnittsbildung wie lcZfProgress, nur über das
+// flache Karten-Array statt den Outline-Baum -- eigene kleine Funktion statt
+// einer gemeinsamen Abstraktion, weil die beiden Durchlaufformen (Baum vs.
+// Array) genug unterschiedlich sind, dass eine Zusammenlegung mehr Komplexität
+// als Ersparnis bringen würde.
+async function lcKkProgress(courseId, data){
+  var allRatings = await window.KFCatalog.getProgress(courseId);
+  var total = 0, ok = 0, mid = 0, bad = 0, weightSum = 0;
+  data.chapters.forEach(function(ch){
+    var kk = (data.contentByChapter[ch.id] || {}).karteikarten;
+    if(!lcHasKk(kk)){ return; }
+    kk.cards.forEach(function(c, idx){
+      if(!lcKkCardHasContent(c)){ return; }
+      total++;
+      var rating = (allRatings[LC_KK_RATING_ITEM_TYPE + ':' + ch.id + ':' + idx] || {}).rating;
+      if(rating === 'gut'){ ok++; } else if(rating === 'mittel'){ mid++; } else if(rating === 'schlecht'){ bad++; }
+      weightSum += LC_RATING_WEIGHT[rating] || 0;
+    });
+  });
+  if(!total){ return null; }
+  return {
+    percent: Math.round((weightSum / total) * 100),
+    okPct: Math.round((ok / total) * 100),
+    midPct: Math.round((mid / total) * 100),
+    badPct: Math.round((bad / total) * 100)
+  };
+}
+
+async function renderKkAreaHtml(courseId, data, access){
+  var chaptersWithCards = data.chapters.filter(function(ch){
+    return lcHasKk((data.contentByChapter[ch.id] || {}).karteikarten);
+  });
+  if(!chaptersWithCards.length){
+    return '<h1>Karteikarten</h1><p class="hint-sm">Noch keine Karteikarten verfügbar.</p>';
+  }
+  if(window.currentLearnerKkChapterId && !chaptersWithCards.some(function(c){ return c.id === window.currentLearnerKkChapterId; })){
+    window.currentLearnerKkChapterId = null;
+  }
+  var selectedChapterId = window.currentLearnerKkChapterId || null;
+
+  // item_key = Index der Karte im Rohdaten-Array des Kapitels (String) --
+  // muss VOR jedem Content-Filter ermittelt werden, sonst würde eine
+  // Bewertung nach dem Herausfiltern leerer Karten am falschen Index landen.
+  var fullDeck = [], lockedCount = 0, perChapterCount = {};
+  chaptersWithCards.forEach(function(ch){
+    var kk = data.contentByChapter[ch.id].karteikarten;
+    var locked = lcChapterLocked(ch, access);
+    var n = 0;
+    kk.cards.forEach(function(c, idx){
+      if(!lcKkCardHasContent(c)){ return; }
+      n++;
+      if(locked){ lockedCount++; return; }
+      fullDeck.push({ chapterId: ch.id, chapterTitle: ch.chapterTitle, chapterIndex: ch.chapterIndex, cardIndex: idx, frage: c.frage||'', antwort: c.antwort||'', frageBild: c.frageBild||'', antwortBild: c.antwortBild||'' });
+    });
+    perChapterCount[ch.id] = n;
+  });
+
+  var chipsHtml = '<p>Kartenstapel</p>' +
+    '<button type="button" class="chip' + (!selectedChapterId ? ' on' : '') + '" data-kk-chip="">Alle Kapitel (' + fullDeck.length + ')</button>' +
+    chaptersWithCards.map(function(ch){
+      var locked = lcChapterLocked(ch, access);
+      var isCur = selectedChapterId === ch.id;
+      return '<button type="button" class="chip' + (isCur ? ' on' : '') + '" data-kk-chip="' + escapeHtmlMy(ch.id) + '">Kapitel ' + (ch.chapterIndex+1) + (locked ? ' 🔒' : ' (' + perChapterCount[ch.id] + ')') + '</button>';
+    }).join('');
+
+  var selectedChapter = selectedChapterId ? chaptersWithCards.filter(function(c){ return c.id === selectedChapterId; })[0] : null;
+  var selectedLocked = selectedChapter ? lcChapterLocked(selectedChapter, access) : false;
+  var runDeck = selectedChapterId ? fullDeck.filter(function(c){ return c.chapterId === selectedChapterId; }) : fullDeck;
+  var crumbHtml = '<div class="crumb">Karteikarten' + (selectedChapter ? ' / Kapitel ' + (selectedChapter.chapterIndex+1) : '') + '</div>';
+
+  var exportCards = runDeck.map(function(c){ return { frage: c.frage, antwort: c.antwort, frageBild: c.frageBild, antwortBild: c.antwortBild }; });
+  var exportFilename = selectedChapter ? selectedChapter.chapterTitle : chaptersWithCards[0].courseTitle;
+  var exportHtml = exportCards.length
+    ? '<button type="button" class="linklike" style="display:block; margin-top:14px; font-size:12.5px" data-anki-export="' + escapeHtmlMy(JSON.stringify(exportCards)) + '" data-anki-filename="' + escapeHtmlMy(exportFilename) + '">⬇ Als Anki-Karten exportieren (.txt)</button>'
+    : '';
+
+  var mainHtml;
+  if(selectedLocked){
+    mainHtml = crumbHtml + '<h1 style="margin-bottom:6px">Karteikarten-Quiz</h1>' + lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.');
+  } else if(!runDeck.length){
+    mainHtml = crumbHtml + '<h1 style="margin-bottom:6px">Karteikarten-Quiz</h1><p class="hint-sm">Keine Karten in dieser Auswahl.</p>' +
+      (!access.purchased && lockedCount ? lcLockCardHtml(courseId, lockedCount + ' weitere Karten nach Kauf verfügbar.') : '');
+  } else {
+    // Bild-URLs für den ganzen Durchlauf im Voraus auflösen (statt bei jedem
+    // Umdrehen neu), damit das Umdrehen ein reiner Sofort-Wechsel bleibt --
+    // genau wie im Prototyp, wo dafür kein Nachladen nötig ist.
+    await Promise.all(runDeck.map(async function(c){
+      c.frageImgHtml = c.frageBild ? await lcCardImageHtml(c.frageBild) : '';
+      c.antwortImgHtml = c.antwortBild ? await lcCardImageHtml(c.antwortBild) : '';
+    }));
+    var first = runDeck[0];
+    mainHtml = crumbHtml + '<h1 style="margin-bottom:6px">Karteikarten-Quiz</h1>' +
+      '<div class="progress-line" style="margin:14px 0 5px"><span>Karte <span id="kkCardNum">1</span> von ' + runDeck.length + '</span><span id="kkChapterLabel">Kapitel ' + (first.chapterIndex+1) + ' – ' + escapeHtmlMy(first.chapterTitle) + '</span></div>' +
+      '<div class="bar" style="background:var(--line); margin-bottom:22px"><i id="kkBar" style="width:' + Math.round(100/runDeck.length) + '%"></i></div>' +
+      '<div class="flashcard" id="kkFlashcard">' + escapeHtmlMy(first.frage) + first.frageImgHtml + '</div>' +
+      '<p class="hint">Karte anklicken zum Umdrehen</p>' +
+      '<div class="srs" id="kkSrsRow" style="display:none">' +
+        '<button type="button" class="r-bad">Nicht verstanden</button><button type="button" class="r-mid">Geht so</button><button type="button" class="r-ok">Gut verstanden</button>' +
+      '</div>' +
+      '<div id="kkSummary"></div>';
+  }
+
+  kkLastRun = { deck: runDeck, lockedCount: lockedCount, purchased: access.purchased };
+  return '<div class="two-col"><div class="filter-col">' + chipsHtml + exportHtml + '</div><div>' + mainHtml + '</div></div>';
+}
+
+function wireKkArea(container, courseId){
+  container.querySelectorAll('[data-kk-chip]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      window.currentLearnerKkChapterId = btn.dataset.kkChip || null;
+      window.renderCourseAreaView();
+    });
+  });
+  var run = kkLastRun;
+  var fc = container.querySelector('#kkFlashcard');
+  var srs = container.querySelector('#kkSrsRow');
+  if(!run || !fc || !srs || !run.deck.length){ return; }
+  var deck = run.deck;
+  var idx = 0, flipped = false, ratedCount = 0;
+  var tally = { gut: 0, mittel: 0, schlecht: 0 };
+  var cardNumEl = container.querySelector('#kkCardNum');
+  var chapterLabelEl = container.querySelector('#kkChapterLabel');
+  var barEl = container.querySelector('#kkBar');
+  var progressLineEl = container.querySelector('.progress-line');
+  var hintEl = container.querySelector('.hint');
+
+  fc.addEventListener('click', function(){
+    var card = deck[idx];
+    flipped = !flipped;
+    fc.innerHTML = flipped ? (escapeHtmlMy(card.antwort) + card.antwortImgHtml) : (escapeHtmlMy(card.frage) + card.frageImgHtml);
+    fc.classList.toggle('back', flipped);
+    srs.style.display = flipped ? 'grid' : 'none';
+  });
+
+  var ratingForClass = { 'r-bad': 'schlecht', 'r-mid': 'mittel', 'r-ok': 'gut' };
+  srs.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var card = deck[idx];
+      var rating = ratingForClass[btn.className];
+      tally[rating]++; ratedCount++;
+      window.KFCatalog.setProgressItem(courseId, LC_KK_RATING_ITEM_TYPE, card.chapterId + ':' + card.cardIndex, { rating: rating }).catch(function(err){
+        showToast('Bewertung konnte nicht gespeichert werden: ' + ((err && err.message) || 'unbekannt'));
+      });
+      idx++;
+      flipped = false;
+      if(idx >= deck.length){ showKkSummary(); return; }
+      var next = deck[idx];
+      fc.innerHTML = escapeHtmlMy(next.frage) + next.frageImgHtml;
+      fc.classList.remove('back');
+      srs.style.display = 'none';
+      if(cardNumEl){ cardNumEl.textContent = idx + 1; }
+      if(chapterLabelEl){ chapterLabelEl.textContent = 'Kapitel ' + (next.chapterIndex+1) + ' – ' + next.chapterTitle; }
+      if(barEl){ barEl.style.width = Math.round(((idx+1)/deck.length)*100) + '%'; }
+    });
+  });
+
+  function showKkSummary(){
+    if(progressLineEl){ progressLineEl.style.display = 'none'; }
+    if(barEl && barEl.parentElement){ barEl.parentElement.style.display = 'none'; }
+    if(hintEl){ hintEl.style.display = 'none'; }
+    fc.style.display = 'none';
+    srs.style.display = 'none';
+    var summaryEl = container.querySelector('#kkSummary');
+    if(!summaryEl){ return; }
+    var lockHint = (!run.purchased && run.lockedCount) ? lcLockCardHtml(courseId, run.lockedCount + ' weitere Karten nach Kauf verfügbar.') : '';
+    summaryEl.innerHTML = '<div class="block">Du hast ' + ratedCount + ' Karten bewertet — ' + tally.gut + ' gut, ' + tally.mittel + ' geht so, ' + tally.schlecht + ' nicht verstanden.</div>' +
+      lockHint +
+      '<div style="margin-top:14px; display:flex; gap:10px">' +
+        '<button type="button" class="cta" data-kk-restart>Nochmal von vorne</button>' +
+        '<button type="button" class="ghost" data-kk-goto-overview>Zurück zur Kursübersicht</button>' +
+      '</div>';
+    wireBuyCourseInlineButtons(summaryEl, function(){ window.renderCourseAreaView(); });
+    summaryEl.querySelector('[data-kk-restart]').addEventListener('click', function(){ window.renderCourseAreaView(); });
+    summaryEl.querySelector('[data-kk-goto-overview]').addEventListener('click', function(){ showView('view-course-overview'); });
+  }
+}
+
+// ---- Altklausuren: nach Termin (Semester+Jahr) gruppiert, mit Thema-/
+// Termin-Chip-Filtern und pro Termin aufklappbaren Einzelaufgaben (Teil 4).
+// 1:1 aus dem Prototyp: .filter-col/.chip/.exam-row/.notice-Klassen + die
+// Filter-Logik (Klick auf Chip setzt .on um, filterExams() blendet
+// nicht-passende .exam-row aus). Altklausur-Einträge haben laut Datenschema
+// (kf-supabase.js: {semester,jahr,aufgabennummer,thema,loesung}) weder eine
+// Kapitel- noch eine is_free_preview-Verknüpfung -- der Baustein bleibt
+// daher wie bisher rein kaufgebunden (kein Termin ist einzeln als Vorschau
+// sichtbar), nur die Darstellung für Käufer ändert sich.
+function lcAltThemaKey(themaList, thema){
+  var t = (thema && thema.trim()) || '(ohne Thema)';
+  var idx = themaList.indexOf(t);
+  if(idx === -1){ idx = themaList.push(t) - 1; }
+  return 'th' + idx;
+}
+async function renderAltklausurenAreaHtml(courseId, data, access){
+  var crumbHtml = '<div class="crumb">Altklausuren</div>';
+  if(!access.purchased){
+    return crumbHtml + '<h1>Altklausuren</h1>' + lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
+  }
+  var items = ((data.courseContent.altklausuren && data.courseContent.altklausuren.items) || []).filter(function(x){
+    return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim());
+  });
+  if(!items.length){
+    return crumbHtml + '<h1>Altklausuren</h1><p class="hint-sm">Noch keine Altklausuren verfügbar.</p>';
+  }
+
+  var themaList = [];
+  var groups = {}, groupOrder = [];
+  items.forEach(function(a){
+    var terminKey = 'term_' + (a.semester||'').replace(/\s+/g,'') + '_' + (a.jahr||'').replace(/\s+/g,'');
+    if(!groups[terminKey]){
+      groups[terminKey] = { terminKey: terminKey, semester: a.semester||'', jahr: a.jahr||'', items: [], themaKeys: [] };
+      groupOrder.push(terminKey);
+    }
+    var g = groups[terminKey];
+    var tk = lcAltThemaKey(themaList, a.thema);
+    g.items.push({ aufgabennummer: a.aufgabennummer||'', thema: a.thema||'', loesung: a.loesung||'' });
+    if(g.themaKeys.indexOf(tk) === -1){ g.themaKeys.push(tk); }
+  });
+
+  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
+
+  var themaChipsHtml = '<p>Thema</p><button type="button" class="chip on" data-thema="alle">Alle Themen</button>' +
+    themaList.map(function(t, i){ return '<button type="button" class="chip" data-thema="th' + i + '">' + escapeHtmlMy(t) + '</button>'; }).join('');
+  var terminChipsHtml = '<p>Termin</p><button type="button" class="chip on" data-termin="alle">Alle Termine</button>' +
+    groupOrder.map(function(tk){
+      var g = groups[tk];
+      return '<button type="button" class="chip" data-termin="' + escapeHtmlMy(tk) + '">' + escapeHtmlMy((g.semester + ' ' + g.jahr).trim()) + '</button>';
+    }).join('');
+
+  var examListHtml = groupOrder.map(function(tk){
+    var g = groups[tk];
+    var themenLabel = g.items.map(function(it){ return it.thema; }).filter(function(t, i, arr){ return t && arr.indexOf(t) === i; }).join(', ');
+    var countLabel = g.items.length + (g.items.length === 1 ? ' Aufgabe' : ' Aufgaben');
+    var titleHtml = escapeHtmlMy((g.semester + ' ' + g.jahr).trim()) + (course && course.prof ? ' – Klausur ' + escapeHtmlMy(course.prof) : '');
+    var detailHtml = g.items.map(function(it){
+      return '<div class="block"><strong>' + escapeHtmlMy(it.aufgabennummer || 'Aufgabe') + (it.thema ? ' · ' + escapeHtmlMy(it.thema) : '') + '</strong>' +
+        window.KFTables.render(it.loesung) + '</div>';
+    }).join('');
+    return '<div class="exam-row" data-termin="' + escapeHtmlMy(tk) + '" data-themen="' + escapeHtmlMy(g.themaKeys.join(' ')) + '" data-exam-toggle="' + escapeHtmlMy(tk) + '">' +
+        '<div class="info"><h3>' + titleHtml + '</h3><p>' + countLabel + (themenLabel ? ' · ' + escapeHtmlMy(themenLabel) : '') + '</p></div>' +
+        '<span class="status">' + countLabel + '</span>' +
+      '</div>' +
+      '<div class="exam-detail" data-exam-detail="' + escapeHtmlMy(tk) + '" style="display:none; margin:-4px 0 12px">' + detailHtml + '</div>';
+  }).join('');
+
+  return '<div class="two-col"><div class="filter-col">' + themaChipsHtml + terminChipsHtml + '</div><div>' +
+    crumbHtml + '<h1>Altklausuren</h1>' +
+    '<p class="lede">Eigene Lösungswege zu ' + groupOrder.length + (groupOrder.length === 1 ? ' Klausur' : ' Klausuren') + ' – klick auf eine Klausur, um die Aufgaben einzeln zu öffnen.</p>' +
+    '<div id="exam-list">' + examListHtml + '</div>' +
+    '<div class="notice">ⓘ Gezeigt werden ausschließlich selbst erstellte Lösungswege der Kursautoren – keine Original-Aufgabenblätter.</div>' +
+  '</div></div>';
+}
+function wireAltklausurenArea(container){
+  var examList = container.querySelector('#exam-list');
+  if(!examList){ return; }
+  var themaSel = 'alle', terminSel = 'alle';
+  function filterExams(){
+    examList.querySelectorAll('.exam-row').forEach(function(r){
+      var okThema = themaSel === 'alle' || r.dataset.themen.split(' ').indexOf(themaSel) >= 0;
+      var okTermin = terminSel === 'alle' || r.dataset.termin === terminSel;
+      var visible = okThema && okTermin;
+      r.style.display = visible ? 'flex' : 'none';
+      var detail = examList.querySelector('[data-exam-detail="' + r.dataset.termin + '"]');
+      if(detail){ detail.style.display = (visible && detail.classList.contains('open')) ? 'block' : 'none'; }
+    });
+  }
+  container.querySelectorAll('[data-thema]').forEach(function(c){
+    c.addEventListener('click', function(){
+      container.querySelectorAll('[data-thema]').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on'); themaSel = c.dataset.thema; filterExams();
+    });
+  });
+  container.querySelectorAll('[data-termin].chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      container.querySelectorAll('[data-termin].chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on'); terminSel = c.dataset.termin; filterExams();
+    });
+  });
+  examList.querySelectorAll('.exam-row[data-exam-toggle]').forEach(function(row){
+    row.addEventListener('click', function(){
+      var detail = examList.querySelector('[data-exam-detail="' + row.dataset.examToggle + '"]');
+      if(!detail){ return; }
+      var open = !detail.classList.contains('open');
+      detail.classList.toggle('open', open);
+      detail.style.display = open ? 'block' : 'none';
+    });
+  });
+}
+
+// ---- Lernplan: terminbasierte Datumsberechnung + ICS-Export (Teil 5).
+// 1:1 aus dem Prototyp: .plan-week/.check-row/.cal-btn-Klassen sowie die
+// Datums-/ICS-Logik (computeDates/assignPlanDates/buildICS/downloadICS) fast
+// wörtlich übernommen, nur an unser Datenschema angepasst:
+// - Kein Wochen-/Phasen-Feld im Schema (lernplan.items = {tag,aufgabe,
+//   bausteinRef,dauer}, siehe kf-supabase.js:618-620) -- Wochen werden daher
+//   rein nach Position gebildet (LP_WEEK_SIZE Einträge pro Woche), Titel
+//   generisch "Woche N" statt der frei erfundenen Prototyp-Titel.
+// - bausteinRef ist ein Anzeige-String wie "Kapitel 2: Zusammenfassung"
+//   (siehe bausteinOptionsList()), kein strukturierter Verweis -- wird hier
+//   zurück in {area, chapterId} geparst, damit der Klick draufspringen kann.
+// - Erledigt-Haken bleiben wie bisher in learning_progress (item_type=
+//   'lernplan', state={done:bool}) statt der im Prompt vorgeschlagenen
+//   "gut"-Markierung -- ein reines erledigt/nicht-erledigt-Flag ist für den
+//   Lernplan klarer als eine dreistufige Bewertung, die hier keinen Sinn
+//   ergibt (siehe Teil 2/3: dieselbe Tabelle wird schon wiederverwendet,
+//   nur mit dem für den jeweiligen Baustein passenden State-Shape).
+// - Zusätzlich (über den Prompt hinaus, aber nötig für echten Nutzen):
+//   der eingegebene Klausurtermin wird ebenfalls in learning_progress
+//   gespeichert (item_type='lernplan_exam_date'), sonst wäre der ganze
+//   berechnete Plan nach jedem Neuladen wieder leer.
+var LP_WEEK_SIZE = 7;
+var lpLastCourseTitle = '';
+function lcLernplanBausteinRef(ref, chapters){
+  ref = (ref || '').trim();
+  if(!ref || ref === '— kein Bezug —'){ return null; }
+  if(ref === 'Altklausuren'){ return { area: 'altklausuren', chapterId: null }; }
+  if(ref === 'Tutorien'){ return { area: 'tutorien', chapterId: null }; }
+  if(ref === 'Zusatzmodule'){ return { area: 'zusatz', chapterId: null }; }
+  var m = /^(.*): (Zusammenfassung|Karteikarten|Übungsaufgaben)$/.exec(ref);
+  if(!m){ return null; }
+  var areaKey = m[2] === 'Zusammenfassung' ? 'zusammenfassung' : m[2] === 'Karteikarten' ? 'karteikarten' : 'uebungen';
+  var ch = chapters.filter(function(c){ return c.chapterTitle === m[1]; })[0];
+  return { area: areaKey, chapterId: ch ? ch.id : null };
+}
+async function renderLernplanAreaHtml(courseId, data, access, userId){
+  var crumbHtml = '<div class="crumb">Lernplan</div>';
+  if(!access.purchased){
+    return crumbHtml + '<h1>Lernplan</h1>' + lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
+  }
+  var items = ((data.courseContent.lernplan && data.courseContent.lernplan.items) || []).filter(function(x){
+    return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim());
+  });
+  if(!items.length){
+    return crumbHtml + '<h1>Lernplan</h1><p class="hint-sm">Noch kein Lernplan verfügbar.</p>';
+  }
+
+  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
+  lpLastCourseTitle = (course && course.title) || '';
+  var progress = userId ? await window.KFCatalog.getProgress(courseId) : {};
+  var savedExamDate = (progress['lernplan_exam_date:exam'] || {}).date || '';
+
+  var weeks = [];
+  for(var i=0;i<items.length;i+=LP_WEEK_SIZE){ weeks.push(items.slice(i, i+LP_WEEK_SIZE)); }
+
+  var globalIdx = 0;
+  var weeksHtml = weeks.map(function(weekItems, wi){
+    var weekDone = 0;
+    var rowsHtml = weekItems.map(function(it){
+      var idx = globalIdx++;
+      var done = !!(progress['lernplan:' + idx] || {}).done;
+      if(done){ weekDone++; }
+      var ref = lcLernplanBausteinRef(it.bausteinRef, data.chapters);
+      var taskHtml = ref
+        ? '<a href="#" data-lp-goto-area="' + escapeHtmlMy(ref.area) + '"' + (ref.chapterId ? ' data-lp-goto-chapter="' + escapeHtmlMy(ref.chapterId) + '"' : '') + '>' + escapeHtmlMy(it.aufgabe||'') + '</a>'
+        : escapeHtmlMy(it.aufgabe||'');
+      return '<label class="check-row' + (done ? ' done' : '') + '">' +
+        '<input type="checkbox" class="lc-lp-check" data-lp-index="' + idx + '"' + (done ? ' checked' : '') + '>' +
+        '<button type="button" class="cal-btn" data-lp-cal aria-label="Zum Kalender hinzufügen" title="Zum Kalender hinzufügen">🗓</button>' +
+        '<span class="day"></span><span class="date-label"></span>' +
+        '<span class="task">' + taskHtml + '</span>' +
+        '<span class="dur">' + escapeHtmlMy(it.dauer||'') + '</span>' +
+      '</label>';
+    }).join('');
+    var allDone = weekDone === weekItems.length;
+    return '<div class="plan-week' + (allDone ? ' done collapsed' : '') + '">' +
+      '<div class="week-head"><h2>Woche ' + (wi+1) + '</h2><span class="week-range"></span><span class="week-status">' + (allDone ? '✓ erledigt' : weekDone + '/' + weekItems.length) + '</span></div>' +
+      '<div class="checklist">' + rowsHtml + '</div>' +
+    '</div>';
+  }).join('');
+
+  return crumbHtml + '<h1>Lernplan</h1><div class="two-col"><div class="filter-col">' +
+    '<p>Klausurtermin</p>' +
+    '<input type="date" id="lpExamDateInput" value="' + escapeHtmlMy(savedExamDate) + '" style="width:100%; font:inherit; font-size:13px; padding:7px 8px; border:1px solid var(--line); border-radius:7px; background:var(--card)">' +
+    '<button type="button" class="ghost" id="lpAdjustPlanBtn" style="width:100%; margin-top:10px">↻ Plan an Klausurtermin anpassen</button>' +
+    '<button type="button" class="ghost" id="lpExportAllBtn" style="width:100%; margin-top:8px">🗓 Alle Termine exportieren</button>' +
+    '<p style="margin-top:16px">Klick auf eine Aufgabe springt direkt zur passenden Stelle im Kurs. Ist eine Woche komplett abgehakt, klappt sie automatisch zusammen.</p>' +
+  '</div><div>' +
+    '<div class="progress-line" style="margin:14px 0 5px"><span>Gesamt-Fortschritt Plan</span><span id="lpPlanCount">0 von ' + items.length + ' erledigt</span></div>' +
+    '<div class="bar" style="background:var(--line); margin-bottom:8px"><i id="lpPlanBar" style="width:0%"></i></div>' +
+    weeksHtml +
+  '</div></div>';
+}
+function wireLernplanArea(container, courseId){
+  if(!container.querySelector('.plan-week')){ return; }
+  var examInput = container.querySelector('#lpExamDateInput');
+  var adjustBtn = container.querySelector('#lpAdjustPlanBtn');
+  var exportAllBtn = container.querySelector('#lpExportAllBtn');
+  var planCountEl = container.querySelector('#lpPlanCount');
+  var planBarEl = container.querySelector('#lpPlanBar');
+
+  function pad2(n){ return n<10 ? '0'+n : ''+n; }
+  function fmtDate(d){ return pad2(d.getDate()) + '.' + pad2(d.getMonth()+1) + '.'; }
+  function isoDate(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+  var weekdayShort = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  function updateWeekRanges(){
+    container.querySelectorAll('.plan-week').forEach(function(week){
+      var rows = week.querySelectorAll('.check-row');
+      var rangeEl = week.querySelector('.week-range');
+      if(rangeEl && rows.length && rows[0].dataset.date){
+        var firstD = new Date(rows[0].dataset.date + 'T00:00:00');
+        var lastD = new Date(rows[rows.length-1].dataset.date + 'T00:00:00');
+        rangeEl.textContent = rows.length > 1 ? (fmtDate(firstD) + ' – ' + fmtDate(lastD)) : fmtDate(firstD);
+      }
+    });
+  }
+  function assignPlanDates(){
+    if(!examInput || !examInput.value){ return; }
+    var exam = new Date(examInput.value + 'T00:00:00');
+    if(isNaN(exam.getTime())){ return; }
+    var lastDate = new Date(exam.getTime()); lastDate.setDate(lastDate.getDate()-1);
+    var rows = Array.prototype.slice.call(container.querySelectorAll('.check-row'));
+    var n = rows.length;
+    rows.forEach(function(row, i){
+      var offset = (n - 1 - i);
+      var d = new Date(lastDate.getTime() - offset*86400000);
+      row.dataset.date = isoDate(d);
+      row.querySelector('.date-label').textContent = fmtDate(d);
+      row.querySelector('.day').textContent = weekdayShort[d.getDay()];
+    });
+    updateWeekRanges();
+  }
+  function updatePlanUI(){
+    var boxes = container.querySelectorAll('.lc-lp-check');
+    var done = 0;
+    boxes.forEach(function(b){ b.closest('.check-row').classList.toggle('done', b.checked); if(b.checked){ done++; } });
+    if(planCountEl){ planCountEl.textContent = done + ' von ' + boxes.length + ' erledigt'; }
+    if(planBarEl){ planBarEl.style.width = boxes.length ? Math.round((done/boxes.length)*100) + '%' : '0%'; }
+    container.querySelectorAll('.plan-week').forEach(function(week){
+      var wboxes = Array.prototype.slice.call(week.querySelectorAll('.lc-lp-check'));
+      if(!wboxes.length){ return; }
+      var wdone = wboxes.filter(function(b){ return b.checked; }).length;
+      var allDone = wdone === wboxes.length;
+      var wasDone = week.classList.contains('done');
+      week.classList.toggle('done', allDone);
+      var badge = week.querySelector('.week-status');
+      if(badge){ badge.textContent = allDone ? '✓ erledigt' : wdone + '/' + wboxes.length; }
+      if(allDone && !wasDone){ week.classList.add('collapsed'); }
+      if(!allDone){ week.classList.remove('collapsed'); }
+    });
+  }
+  function icsEscape(s){ return s.replace(/[\\;,]/g, function(m){ return '\\'+m; }); }
+  function buildICS(events){
+    var lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Klausurfuchs//DE'];
+    var stamp = isoDate(new Date()).replace(/-/g,'');
+    events.forEach(function(ev, i){
+      var start = new Date(ev.date + 'T00:00:00');
+      var end = new Date(start.getTime()); end.setDate(end.getDate()+1);
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:' + Date.now() + '-' + i + '@klausurfuchs');
+      lines.push('DTSTAMP:' + stamp + 'T000000Z');
+      lines.push('DTSTART;VALUE=DATE:' + ev.date.replace(/-/g,''));
+      lines.push('DTEND;VALUE=DATE:' + isoDate(end).replace(/-/g,''));
+      lines.push('SUMMARY:' + icsEscape(ev.title));
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n');
+  }
+  function downloadICS(filename, content){
+    var blob = new Blob([content], { type: 'text/calendar' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+  function rowTitle(row){
+    var link = row.querySelector('.task a');
+    return link ? link.textContent.trim() : row.querySelector('.task').textContent.trim();
+  }
+
+  container.querySelectorAll('.week-head').forEach(function(h){
+    h.addEventListener('click', function(){ h.closest('.plan-week').classList.toggle('collapsed'); });
+  });
+  container.querySelectorAll('.lc-lp-check').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      updatePlanUI();
+      window.KFCatalog.setProgressItem(courseId, 'lernplan', cb.dataset.lpIndex, { done: cb.checked }).catch(function(err){
+        cb.checked = !cb.checked; updatePlanUI();
+        showToast('Fortschritt konnte nicht gespeichert werden: ' + ((err && err.message) || 'unbekannt'));
+      });
+    });
+  });
+  container.querySelectorAll('[data-lp-cal]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var row = btn.closest('.check-row');
+      if(!row.dataset.date){ showToast('Bitte zuerst einen Klausurtermin eingeben.'); return; }
+      downloadICS('lernplan-aufgabe.ics', buildICS([{ title: rowTitle(row), date: row.dataset.date }]));
+    });
+  });
+  container.querySelectorAll('[data-lp-goto-area]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var area = a.dataset.lpGotoArea;
+      var chapterId = a.dataset.lpGotoChapter || null;
+      window.currentLearnerAreaKey = area;
+      window.currentLearnerZfChapterId = area === 'zusammenfassung' ? chapterId : null;
+      window.currentLearnerZfAnchor = null;
+      window.currentLearnerKkChapterId = area === 'karteikarten' ? chapterId : null;
+      showView('view-course-area');
+    });
+  });
+  if(adjustBtn){
+    adjustBtn.addEventListener('click', function(){
+      assignPlanDates();
+      if(examInput && examInput.value){
+        window.KFCatalog.setProgressItem(courseId, 'lernplan_exam_date', 'exam', { date: examInput.value }).catch(function(){});
+        showToast('Plan aktualisiert – Zieltermin ' + examInput.value.split('-').reverse().join('.'));
+      }
+    });
+  }
+  if(exportAllBtn){
+    exportAllBtn.addEventListener('click', function(){
+      var rows = Array.prototype.slice.call(container.querySelectorAll('.check-row')).filter(function(r){ return r.dataset.date; });
+      if(!rows.length){ showToast('Bitte zuerst einen Klausurtermin eingeben.'); return; }
+      var events = rows.map(function(r){ return { title: rowTitle(r), date: r.dataset.date }; });
+      downloadICS('lernplan-' + (lpLastCourseTitle||'kurs').replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g,'').trim().replace(/\s+/g,'_') + '.ics', buildICS(events));
+    });
+  }
+
+  assignPlanDates();
+  updatePlanUI();
 }
 
 // Alle anderen Bereiche: einfachere Einspalten-Ansicht, im Kern dieselben
@@ -2034,7 +2689,7 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
     return html;
   }
 
-  if(LC_CHAPTER_AREAS.indexOf(areaKey) !== -1){
+  if(areaKey === 'uebungen'){
     var any = false;
     for(var i=0;i<data.chapters.length;i++){
       var ch = data.chapters[i];
@@ -2045,14 +2700,10 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
         continue;
       }
       var cc = data.contentByChapter[ch.id] || {};
-      var content = areaKey === 'karteikarten' ? cc.karteikarten : cc.uebungen;
       if(!lcHasForArea(areaKey, cc)){ continue; }
       any = true;
       var q = await window.KFQuestions.getForBaustein(courseId, ch.id, areaKey);
-      var body = areaKey === 'karteikarten'
-        ? (await lcBodyKk(content)) + lcAnkiExportButton(ch.chapterTitle, content)
-        : lcBodyUeb(content);
-      html += chHeadHtml + lcBausteinBox(label, body, lcTutorfragenWidget(courseId, ch.id, areaKey, q, userId));
+      html += chHeadHtml + lcBodyUeb(cc.uebungen) + lcTutorfragenWidget(courseId, ch.id, areaKey, q, userId);
     }
     if(!any){ html += '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
     return html;
@@ -2069,12 +2720,8 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
     return html;
   }
   var q2 = await window.KFQuestions.getForBaustein(courseId, null, areaKey);
-  var body2;
-  if(areaKey === 'altklausuren'){ body2 = lcBodyAlt(data.courseContent.altklausuren); }
-  else if(areaKey === 'tutorien'){ body2 = lcBodyTut(data.courseContent.tutorien); }
-  else if(areaKey === 'zusatz'){ body2 = lcBodyZus(data.courseContent.zusatz); }
-  else { var progress = await window.KFCatalog.getProgress(courseId); body2 = lcBodyLp(data.courseContent.lernplan, progress); }
-  html += lcBausteinBox(label, body2, lcTutorfragenWidget(courseId, null, areaKey, q2, userId));
+  var body2 = areaKey === 'tutorien' ? lcBodyTut(data.courseContent.tutorien) : lcBodyZus(data.courseContent.zusatz);
+  html += body2 + lcTutorfragenWidget(courseId, null, areaKey, q2, userId);
   return html;
 }
 
@@ -2083,6 +2730,15 @@ async function renderCourseAreaHtml(courseId, areaKey){
   var data = await lcLoadCourseData(courseId);
   if(areaKey === 'zusammenfassung'){
     return await renderZfAreaHtml(courseId, data, access, access.userId, window.currentLearnerZfChapterId);
+  }
+  if(areaKey === 'karteikarten'){
+    return await renderKkAreaHtml(courseId, data, access);
+  }
+  if(areaKey === 'altklausuren'){
+    return await renderAltklausurenAreaHtml(courseId, data, access);
+  }
+  if(areaKey === 'lernplan'){
+    return await renderLernplanAreaHtml(courseId, data, access, access.userId);
   }
   return await renderSimpleAreaHtml(courseId, areaKey, data, access, access.userId);
 }
@@ -2098,24 +2754,18 @@ window.renderCourseAreaView = async function(){
   wireBuyCourseInlineButtons(body, function(){ window.renderCourseAreaView(); });
   wireTutorfragenWidgets(body);
   wireAnkiExportButtons(body);
-  wireLernplanCheckboxes(body, courseId);
+  wireLernplanArea(body, courseId);
   wireMindmapEvents(body);
   wireZfAreaNav(body);
+  wireZfRatingButtons(body, courseId);
+  wireKkArea(body, courseId);
+  wireAltklausurenArea(body);
   if(window.currentLearnerZfAnchor){
     var target = document.getElementById(window.currentLearnerZfAnchor);
     if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
     window.currentLearnerZfAnchor = null;
   }
 };
-
-function wireLernplanCheckboxes(box, courseId){
-  box.querySelectorAll('.lc-lp-check').forEach(function(cb){
-    cb.addEventListener('change', function(){
-      window.KFCatalog.setProgressItem(courseId, 'lernplan', cb.dataset.lpIndex, { done: cb.checked })
-        .catch(function(){ cb.checked = !cb.checked; showToast('Fortschritt konnte nicht gespeichert werden.'); });
-    });
-  });
-}
 
 // RFC-4180-Quoting fürs Exportformat, symmetrisch zum Import-Parser
 // (parseTabQuotedRecords) oben: ein Feld mit Tab/Zeilenumbruch/" wird
