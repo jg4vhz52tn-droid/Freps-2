@@ -6099,7 +6099,23 @@ window.renderSubjectsForHochschule = async function(){
     try{
       var raw = localStorage.getItem(currentStorageKey());
       if(raw){
-        restoreState(JSON.parse(raw));
+        var savedState = JSON.parse(raw);
+        // Muss VOR restoreState() gesetzt werden: restoreState() ruft am Ende
+        // synchron renderChapterPackList() auf, das seinerseits sofort (noch
+        // vor jedem await) ensureCourseId() aufruft -- dessen Vergleich
+        // "resolvedCourseKey !== key" liefe sonst hier immer "geändert",
+        // weil resolvedCourseKey für diesen Tab noch nie gesetzt wurde,
+        // obwohl der Wiedereinstieg selbst keine Änderung ist. Das würde
+        // ensureCourseId() sofort beim Laden zu getOrCreateDraftCourse()
+        // greifen lassen, das den hier nur lokal zwischengespeicherten
+        // (ggf. inzwischen veralteten) Titel zurück in die DB schreibt und so
+        // eine zwischenzeitliche Admin-Umbenennung wieder rückgängig macht.
+        // Erst eine ECHTE Änderung im Formular lässt den Schlüssel danach
+        // wieder abweichen.
+        if(resolvedCourseId){
+          resolvedCourseKey = (savedState.hochschule || '') + '|' + (savedState.fach || '');
+        }
+        restoreState(savedState);
         updateAllSaveStatus('Zuletzt gespeicherter Entwurf geladen.');
       } else {
         renderChapterPackList();
