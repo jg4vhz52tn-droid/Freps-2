@@ -56,7 +56,10 @@ a{color:var(--accent);}
 .tile h3{margin:6px 0 3px;}
 .tile p{font-size:13px; color:var(--muted);}
 .tile .tag{display:inline-block; font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--accent); padding:2px 9px; border-radius:20px;}
-.block{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:8px;}
+/* pre-wrap statt normal: Browser fassen sonst mehrere Leerzeichen/
+   Zeilenumbrüche im Creator-Freitext zu einem einzigen zusammen -- die Daten
+   selbst waren nie das Problem, nur die Darstellung ignorierte sie. */
+.block{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:8px; white-space:pre-wrap;}
 .block.def{border-left:4px solid var(--accent); border-radius:0 var(--radius) var(--radius) 0;}
 .block.merke{background:#FDF8EE; border-left:4px solid var(--amber); border-radius:0 var(--radius) var(--radius) 0;}
 .block .kicker{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:6px;}
@@ -1541,10 +1544,19 @@ async function renderMyCoursesLearner(){
     var purchaseLineHtml = course.__adminPreview
       ? ' · Admin-Vorschau — kein Kauf'
       : ' · gekauft am ' + fmtPurchaseDate(course.purchasedAt);
+    // Derselbe Gesamtfortschritt wie in der Kursübersicht (lcCourseProgress),
+    // hier je Kurs einmal beim Laden von "Meine Kurse" berechnet -- 1:1 aus
+    // dem Prototyp (.fach-progress in der Fächerliste).
+    var courseAccess = await lcCourseAccess(course.id);
+    var courseData = await lcLoadCourseData(course.id);
+    var courseProgress = await lcCourseProgress(course.id, courseData, courseAccess);
+    var progressPct = courseProgress.overall ? courseProgress.overall.percent : 0;
+    var progressHtml = '<div class="fach-progress"><div class="bar" style="background:var(--line)"><i style="width:' + progressPct + '%"></i></div></div>' +
+      '<p style="font-size:11px; color:var(--muted); margin-top:4px">' + progressPct + ' % bearbeitet</p>';
     cards += '<div class="mycourse-card">' +
       '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
       '<p>' + escapeHtmlMy(course.hochschule) + purchaseLineHtml + '</p></div></div>' +
-      bundleHtml +
+      bundleHtml + progressHtml +
       '<div style="margin-top:10px"><button type="button" class="cta" data-open-course="' + escapeHtmlMy(course.id) + '" style="padding:8px 16px;font-size:13px">Kurs öffnen ›</button></div>' +
       '</div>';
   }
@@ -1661,7 +1673,7 @@ function lcRenderZfOutline(nodes, subs, anchorPrefix, ratingCtx){
     if(text && text.trim()){
       html += '<h4' + idAttr + '>' + (node.number ? escapeHtmlMy(node.number) + ' ' : '') + escapeHtmlMy(node.title) + '</h4>' +
         '<div class="block">' + window.KFTables.render(text) + '</div>';
-      if(ratingCtx){ html += lcRenderAmpel(ratingCtx.chapterId, node.path, ratingCtx.ratings[node.path]); }
+      if(ratingCtx){ html += lcRenderAmpel('zusammenfassung_rating', ratingCtx.chapterId + ':' + node.path, ratingCtx.ratings[node.path]); }
     } else if(anchorPrefix){
       // Noch textleeres Unterkapitel: trotzdem einen (unsichtbaren) Anker
       // setzen, damit ein Klick im Nav-Baum darauf nicht ins Leere läuft.
@@ -1676,31 +1688,52 @@ function lcRenderZfOutline(nodes, subs, anchorPrefix, ratingCtx){
 // verstanden"/"Geht so"/"Nicht verstanden" (ok/mid/bad) sind reine
 // UI-Werte, intern beim Speichern auf gut/mittel/schlecht gemappt.
 var LC_RATING_SEL_CLASS = { gut: 'sel-ok', mittel: 'sel-mid', schlecht: 'sel-bad' };
-function lcRenderAmpel(chapterId, path, existingRating){
+// itemType/itemKey entsprechen 1:1 dem item_type/item_key-Paar, unter dem
+// KFCatalog.setProgressItem() die Bewertung speichert (z.B. itemType
+// 'uebungen_rating', itemKey chapterId+':'+aufgabenIndex) -- dieselbe .ampel
+// wird so für Zusammenfassung, Übungsaufgaben, Tutorien und Altklausuren
+// wiederverwendet, nur mit je eigenem item_type/Schlüssel-Schema.
+function lcRenderAmpel(itemType, itemKey, existingRating){
   var selClass = LC_RATING_SEL_CLASS[existingRating] || '';
   function btn(v, cls, label){ return '<button type="button" class="' + cls + '" data-v="' + v + '">' + label + '</button>'; }
-  return '<div class="ampel" data-key="' + escapeHtmlMy(path) + '" data-rating-chapter="' + escapeHtmlMy(chapterId) + '">' +
+  return '<div class="ampel" data-rating-type="' + escapeHtmlMy(itemType) + '" data-rating-key="' + escapeHtmlMy(itemKey) + '">' +
     btn('ok', existingRating === 'gut' ? selClass : '', 'Gut verstanden') +
     btn('mid', existingRating === 'mittel' ? selClass : '', 'Geht so') +
     btn('bad', existingRating === 'schlecht' ? selClass : '', 'Nicht verstanden') +
   '</div>';
 }
-function wireZfRatingButtons(container, courseId){
+function wireRatingButtons(container, courseId){
   var RATING_FOR_V = { ok: 'gut', mid: 'mittel', bad: 'schlecht' };
-  container.querySelectorAll('.ampel[data-rating-chapter]').forEach(function(row){
+  container.querySelectorAll('.ampel[data-rating-type]').forEach(function(row){
     row.querySelectorAll('button').forEach(function(btn){
       btn.addEventListener('click', function(){
         // Exaktes Klick-Muster aus dem Prototyp: erst alle Buttons der
         // Zeile zurücksetzen, dann dem geklickten die sel-*-Klasse geben.
         row.querySelectorAll('button').forEach(function(b){ b.className = ''; });
         btn.className = 'sel-' + btn.dataset.v;
-        var chapterId = row.dataset.ratingChapter;
-        var path = row.dataset.key;
+        var itemType = row.dataset.ratingType;
+        var itemKey = row.dataset.ratingKey;
         var rating = RATING_FOR_V[btn.dataset.v];
-        window.KFCatalog.setProgressItem(courseId, 'zusammenfassung_rating', chapterId + ':' + path, { rating: rating }).catch(function(err){
+        window.KFCatalog.setProgressItem(courseId, itemType, itemKey, { rating: rating }).catch(function(err){
           showToast('Bewertung konnte nicht gespeichert werden: ' + ((err && err.message) || 'unbekannt'));
         });
       });
+    });
+  });
+}
+// Ein-/Ausklapp-Mechanismus für "Lösung anzeigen" (Übungsaufgaben +
+// Altklausuren) -- kein gespeicherter Zustand, rein visuell pro Seitenaufruf,
+// wie im Prototyp-Flip-Muster der Karteikarten, nur ohne Dreh-Effekt. Die
+// Lösung liegt in der Markup-Konvention (lcBodyUeb/renderAltklausurenAreaHtml)
+// immer direkt als nextElementSibling des Buttons.
+function wireShowSolutionButtons(container){
+  container.querySelectorAll('.show-solution-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var solEl = btn.nextElementSibling;
+      if(!solEl){ return; }
+      var willShow = solEl.style.display === 'none';
+      solEl.style.display = willShow ? 'block' : 'none';
+      btn.textContent = willShow ? 'Lösung ausblenden ▴' : 'Lösung anzeigen ▾';
     });
   });
 }
@@ -1708,18 +1741,46 @@ async function lcCardImageHtml(path){
   var url = await window.KFStore.getCardImageUrl(path);
   return url ? '<br><img src="' + escapeHtmlMy(url) + '" style="max-width:100%;max-height:280px;border-radius:6px;margin-top:6px;display:block">' : '';
 }
-function lcBodyUeb(u){
-  return u.items.filter(function(i){ return (i.aufgabe&&i.aufgabe.trim()) || (i.loesung&&i.loesung.trim()); }).map(function(it,i){
-    return '<div class="block"><strong>Aufgabe ' + (i+1) + ':</strong> ' + escapeHtmlMy(it.aufgabe||'') + '<br><em>Lösungsweg:</em> ' + escapeHtmlMy(it.loesung||'') + '</div>';
-  }).join('');
+// itemKey nutzt den rohen (unfilterten) Array-Index, damit eine Bewertung
+// auch dann noch am richtigen Punkt landet, wenn ein anderer Eintrag später
+// leer wird/dazukommt und sich die gefilterte Anzeige-Reihenfolge verschiebt
+// (gleiches Prinzip wie beim Karteikarten-Index in lcKkProgress).
+// Aufgabenstellung zuerst sichtbar, Lösung erst nach Klick auf
+// show-solution-btn (wireShowSolutionButtons) -- analog zum Flip-Muster der
+// Karteikarten, nur ohne Dreh-Effekt. Die Ampel-Bewertung steckt bewusst
+// INNERHALB von .solution-text, erscheint also erst zusammen mit der Lösung
+// (genau wie bei den Karteikarten: erst sehen, dann bewerten).
+function lcBodyUeb(u, chapterId, allRatings){
+  var out = '', n = 0;
+  u.items.forEach(function(it, rawIdx){
+    if(!((it.aufgabe&&it.aufgabe.trim()) || (it.loesung&&it.loesung.trim()))){ return; }
+    n++;
+    var itemKey = chapterId + ':' + rawIdx;
+    var rating = allRatings ? (allRatings['uebungen_rating:' + itemKey] || {}).rating : undefined;
+    var schwierigkeit = (it.schwierigkeit || '').trim().toLowerCase();
+    var schwierigkeitLabel = schwierigkeit ? schwierigkeit.charAt(0).toUpperCase() + schwierigkeit.slice(1) : '';
+    out += '<div class="block ueb-item" data-schwierigkeit="' + escapeHtmlMy(schwierigkeit) + '" data-kapitel="' + escapeHtmlMy(chapterId) + '">' +
+      '<strong>Aufgabe ' + n + (schwierigkeitLabel ? ' · ' + escapeHtmlMy(schwierigkeitLabel) : '') + '</strong>' +
+      '<div class="task-text">' + window.KFTables.render(it.aufgabe||'') + '</div>' +
+      '<button type="button" class="linklike show-solution-btn">Lösung anzeigen ▾</button>' +
+      '<div class="solution-text" style="display:none"><em>Lösungsweg:</em><br>' + window.KFTables.render(it.loesung||'') +
+        (allRatings ? lcRenderAmpel('uebungen_rating', itemKey, rating) : '') + '</div>' +
+    '</div>';
+  });
+  return out;
 }
-function lcBodyTut(t){
-  return t.items.filter(function(x){ return (x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()); }).map(function(x){
-    return '<div class="block"><strong>' + escapeHtmlMy(x.blatt||'') + ':</strong> ' + escapeHtmlMy(x.loesung||'') + '</div>';
-  }).join('');
+function lcBodyTut(t, allRatings){
+  var out = '';
+  t.items.forEach(function(x, rawIdx){
+    if(!((x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()))){ return; }
+    var rating = allRatings ? (allRatings['tutorien_rating:' + rawIdx] || {}).rating : undefined;
+    out += '<div class="block"><strong>' + escapeHtmlMy(x.blatt||'') + ':</strong> ' + window.KFTables.render(x.loesung||'') +
+      (allRatings ? lcRenderAmpel('tutorien_rating', ''+rawIdx, rating) : '') + '</div>';
+  });
+  return out;
 }
 function lcBodyZus(z){
-  return z.modules.map(function(m){ return '<div class="block"><strong>' + escapeHtmlMy(m.art||'') + (m.titel ? ' — ' + escapeHtmlMy(m.titel) : '') + ':</strong> ' + escapeHtmlMy(m.hinweise||'') + '</div>'; }).join('');
+  return z.modules.map(function(m){ return '<div class="block"><strong>' + escapeHtmlMy(m.art||'') + (m.titel ? ' — ' + escapeHtmlMy(m.titel) : '') + ':</strong> ' + window.KFTables.render(m.hinweise||'') + '</div>'; }).join('');
 }
 
 function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
@@ -1877,6 +1938,10 @@ function lcHasForArea(key, cc){
 // Bereiche mit Kapitel-Granularität (und damit Vorschau-Logik je Kapitel);
 // alles andere in LC_AREA_ORDER ist kursweit und rein kaufgebunden.
 var LC_CHAPTER_AREAS = ['zusammenfassung', 'karteikarten', 'uebungen'];
+// Bereiche mit eigenem Bewertungs-/Erledigt-Konzept -- bekommen eine
+// Fortschritts-Zeile in der Kursübersicht. Mindmap (reine Navigation) und
+// Zusatzmodule (kein Bewertungskonzept) bleiben bewusst außen vor.
+var LC_PROGRESS_AREAS = ['zusammenfassung', 'uebungen', 'tutorien', 'altklausuren', 'karteikarten', 'lernplan'];
 
 // Echter Lernfortschritt für die Zusammenfassung-Kachel der Kursübersicht:
 // jeder Outline-Knoten mit eigenem Text (= jeder Punkt, der in der
@@ -1913,6 +1978,96 @@ async function lcZfProgress(courseId, data){
     midPct: Math.round((mid / total) * 100),
     badPct: Math.round((bad / total) * 100)
   };
+}
+
+// Gleiche Gewichtung/Durchschnittsbildung wie lcZfProgress, nur über die
+// (kapitelweise) Übungsaufgaben-Liste statt den Outline-Baum.
+async function lcUebProgress(courseId, data){
+  var allRatings = await window.KFCatalog.getProgress(courseId);
+  var total = 0, ok = 0, mid = 0, bad = 0, weightSum = 0;
+  data.chapters.forEach(function(ch){
+    var u = (data.contentByChapter[ch.id] || {}).uebungen;
+    if(!lcHasUeb(u)){ return; }
+    u.items.forEach(function(it, rawIdx){
+      if(!((it.aufgabe&&it.aufgabe.trim()) || (it.loesung&&it.loesung.trim()))){ return; }
+      total++;
+      var rating = (allRatings['uebungen_rating:' + ch.id + ':' + rawIdx] || {}).rating;
+      if(rating === 'gut'){ ok++; } else if(rating === 'mittel'){ mid++; } else if(rating === 'schlecht'){ bad++; }
+      weightSum += LC_RATING_WEIGHT[rating] || 0;
+    });
+  });
+  if(!total){ return null; }
+  return {
+    percent: Math.round((weightSum / total) * 100),
+    okPct: Math.round((ok / total) * 100),
+    midPct: Math.round((mid / total) * 100),
+    badPct: Math.round((bad / total) * 100)
+  };
+}
+
+// Tutorien sind kursweit (keine Kapitel-Granularität), sonst dieselbe
+// Gewichtung/Durchschnittsbildung wie lcUebProgress.
+async function lcTutProgress(courseId, data){
+  if(!lcHasTut(data.courseContent.tutorien)){ return null; }
+  var allRatings = await window.KFCatalog.getProgress(courseId);
+  var total = 0, ok = 0, mid = 0, bad = 0, weightSum = 0;
+  data.courseContent.tutorien.items.forEach(function(x, rawIdx){
+    if(!((x.blatt&&x.blatt.trim()) || (x.loesung&&x.loesung.trim()))){ return; }
+    total++;
+    var rating = (allRatings['tutorien_rating:' + rawIdx] || {}).rating;
+    if(rating === 'gut'){ ok++; } else if(rating === 'mittel'){ mid++; } else if(rating === 'schlecht'){ bad++; }
+    weightSum += LC_RATING_WEIGHT[rating] || 0;
+  });
+  if(!total){ return null; }
+  return {
+    percent: Math.round((weightSum / total) * 100),
+    okPct: Math.round((ok / total) * 100),
+    midPct: Math.round((mid / total) * 100),
+    badPct: Math.round((bad / total) * 100)
+  };
+}
+
+// Nutzt dieselbe Termin-Gruppierung wie renderAltklausurenAreaHtml
+// (lcAltGroupedItems), damit item_key hier und beim Speichern der Bewertung
+// garantiert übereinstimmen.
+async function lcAltProgress(courseId, data){
+  var grouped = lcAltGroupedItems(data);
+  if(!grouped.groupOrder.length){ return null; }
+  var allRatings = await window.KFCatalog.getProgress(courseId);
+  var total = 0, ok = 0, mid = 0, bad = 0, weightSum = 0;
+  grouped.groupOrder.forEach(function(tk){
+    grouped.groups[tk].items.forEach(function(it){
+      total++;
+      var rating = (allRatings['altklausuren_rating:' + tk + ':' + it.idx] || {}).rating;
+      if(rating === 'gut'){ ok++; } else if(rating === 'mittel'){ mid++; } else if(rating === 'schlecht'){ bad++; }
+      weightSum += LC_RATING_WEIGHT[rating] || 0;
+    });
+  });
+  if(!total){ return null; }
+  return {
+    percent: Math.round((weightSum / total) * 100),
+    okPct: Math.round((ok / total) * 100),
+    midPct: Math.round((mid / total) * 100),
+    badPct: Math.round((bad / total) * 100)
+  };
+}
+
+// Lernplan trackt nur erledigt/nicht-erledigt (kein "geht so"), siehe
+// renderLernplanAreaHtml -- der Fortschritt ist daher ein reiner
+// Erledigt-Anteil statt einer dreistufigen Bewertung. Für die zweifarbige
+// .segbar-Darstellung wird "erledigt" als okPct geführt, der Rest als badPct.
+async function lcLpProgress(courseId, data){
+  var items = ((data.courseContent.lernplan && data.courseContent.lernplan.items) || []).filter(function(x){
+    return (x.tag&&x.tag.trim()) || (x.aufgabe&&x.aufgabe.trim());
+  });
+  if(!items.length){ return null; }
+  var progress = await window.KFCatalog.getProgress(courseId);
+  var done = 0;
+  items.forEach(function(x, idx){
+    if((progress['lernplan:' + idx] || {}).done){ done++; }
+  });
+  var pct = Math.round((done / items.length) * 100);
+  return { percent: pct, okPct: pct, midPct: 0, badPct: 100 - pct };
 }
 
 // Gemeinsamer Kauf-Mechanismus für "Kurs buchen" (Kursübersicht-Header +
@@ -2007,20 +2162,33 @@ function lcAvailableAreas(data, access){
   return out;
 }
 
-// Fortschritt je Bereich + Gesamtwert in einem Rutsch. Echte Daten gibt es
-// bisher nur für Zusammenfassung und Karteikarten (Verstehens-Bewertung);
-// alle anderen Bereiche bleiben bewusst Platzhalter, bis sie ein eigenes
-// Tracking-Konzept bekommen.
+// Fortschritt je Bereich + Gesamtwert in einem Rutsch. Der Gesamtwert ist der
+// Durchschnitt der BEREICHS-Prozentsätze (nicht der Einzelpunkte über alle
+// Bereiche hinweg gemischt) -- sonst würde ein Bereich mit vielen Punkten
+// (z.B. 40 Karteikarten) automatisch stärker wiegen als einer mit wenigen
+// (z.B. 3 Übungsaufgaben). Nur Bereiche, die im Kurs tatsächlich Inhalte
+// haben, fließen ein (kein Fach ohne Tutorien würde sonst nie 100% erreichen
+// können) -- lcXProgress() gibt dafür bewusst null statt 0% zurück, wenn der
+// jeweilige Bereich leer ist.
 async function lcCourseProgress(courseId, data, access){
   if(!(access.purchased && access.userId)){ return { byArea: {}, overall: null }; }
-  var zf = await lcZfProgress(courseId, data);
-  var kk = await lcKkProgress(courseId, data);
-  var real = [zf, kk].filter(function(p){ return !!p; });
-  function avg(field){ return Math.round(real.reduce(function(s,p){ return s + p[field]; }, 0) / real.length); }
-  return {
-    byArea: { zusammenfassung: zf, karteikarten: kk },
-    overall: real.length ? { percent: avg('percent'), okPct: avg('okPct'), midPct: avg('midPct'), badPct: avg('badPct') } : null
+  var results = await Promise.all([
+    lcZfProgress(courseId, data),
+    lcUebProgress(courseId, data),
+    lcTutProgress(courseId, data),
+    lcAltProgress(courseId, data),
+    lcKkProgress(courseId, data),
+    lcLpProgress(courseId, data)
+  ]);
+  var byArea = {
+    zusammenfassung: results[0], uebungen: results[1], tutorien: results[2],
+    altklausuren: results[3], karteikarten: results[4], lernplan: results[5]
   };
+  var real = Object.keys(byArea).map(function(k){ return byArea[k]; }).filter(function(p){ return !!p; });
+  var overall = real.length
+    ? { percent: Math.round(real.reduce(function(s,p){ return s + p.percent; }, 0) / real.length) }
+    : null;
+  return { byArea: byArea, overall: overall };
 }
 
 // Kurzbeschreibungen je Kachel -- rein optisch, wie die statischen
@@ -2083,17 +2251,22 @@ function renderCourseOverviewHtml(courseId, course, data, access, areas, progres
 
   // Fortschritts-Zeilen wie im Prototyp (.progress-line/.segbar), inkl. der
   // Farb-Legende darunter. Der Gesamtwert steht -- ebenfalls wie im Prototyp
-  // -- nicht hier, sondern in der Seitenleiste (.side-progress).
-  var progressHtml = areas.length
+  // -- nicht hier, sondern in der Seitenleiste (.side-progress). Nur Bereiche
+  // mit echtem Bewertungs-/Erledigt-Konzept bekommen eine Zeile -- Mindmap
+  // ist reine Navigation ohne "Stoff" zum Abhaken, Zusatzmodule haben (noch)
+  // kein Bewertungskonzept.
+  var progressAreas = areas.filter(function(a){ return LC_PROGRESS_AREAS.indexOf(a.key) !== -1; });
+  var progressHtml = progressAreas.length
     ? '<h2 style="margin-bottom:12px">Fortschritt nach Bereich</h2>' +
-      areas.map(function(a){
+      progressAreas.map(function(a){
         var pct = progress.byArea[a.key] || null;
+        var suffix = a.key === 'lernplan' ? ' % erledigt' : ' % verstanden';
         return '<div style="margin-bottom:16px">' +
-          '<div class="progress-line"><span>' + escapeHtmlMy(lcAreaLabel(a.key)) + '</span><span>' + (pct ? pct.percent + ' % verstanden' : 'Tracking folgt') + '</span></div>' +
+          '<div class="progress-line"><span>' + escapeHtmlMy(lcAreaLabel(a.key)) + '</span><span>' + (pct ? pct.percent + suffix : 'Tracking folgt') + '</span></div>' +
           '<div class="segbar"><span class="seg-ok" style="width:' + (pct ? pct.okPct : 0) + '%"></span><span class="seg-mid" style="width:' + (pct ? pct.midPct : 0) + '%"></span><span class="seg-bad" style="width:' + (pct ? pct.badPct : 0) + '%"></span></div>' +
         '</div>';
       }).join('') +
-      '<p style="font-size:12px; color:var(--muted); margin-bottom:20px;"><span style="color:#3B6D11">●</span> gut verstanden &nbsp; <span style="color:#854F0B">●</span> geht so &nbsp; <span style="color:var(--danger)">●</span> nicht verstanden</p>'
+      '<p style="font-size:12px; color:var(--muted); margin-bottom:20px;"><span style="color:#3B6D11">●</span> gut verstanden/erledigt &nbsp; <span style="color:#854F0B">●</span> geht so &nbsp; <span style="color:var(--danger)">●</span> nicht verstanden/offen</p>'
     : '';
 
   return '<div class="page-head"><div>' +
@@ -2384,18 +2557,14 @@ function lcAltThemaKey(themaList, thema){
   if(idx === -1){ idx = themaList.push(t) - 1; }
   return 'th' + idx;
 }
-async function renderAltklausurenAreaHtml(courseId, data, access){
-  var crumbHtml = lcCourseCrumb();
-  if(!access.purchased){
-    return crumbHtml + '<h1>Altklausuren</h1>' + lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
-  }
+// Gruppiert die Altklausur-Einträge nach Termin (Semester+Jahr) und vergibt
+// je Gruppe einen stabilen 0-basierten Index (it.idx) -- gemeinsam genutzt
+// von der Bereichs-Ansicht (Ampel-Bewertung je Aufgabe) UND lcAltProgress(),
+// damit beide exakt dieselbe Gruppierung/denselben item_key sehen.
+function lcAltGroupedItems(data){
   var items = ((data.courseContent.altklausuren && data.courseContent.altklausuren.items) || []).filter(function(x){
     return (x.thema&&x.thema.trim()) || (x.loesung&&x.loesung.trim()) || (x.aufgabennummer&&x.aufgabennummer.trim()) || (x.jahr&&x.jahr.trim());
   });
-  if(!items.length){
-    return crumbHtml + '<h1>Altklausuren</h1><p class="hint-sm">Noch keine Altklausuren verfügbar.</p>';
-  }
-
   var themaList = [];
   var groups = {}, groupOrder = [];
   items.forEach(function(a){
@@ -2406,9 +2575,23 @@ async function renderAltklausurenAreaHtml(courseId, data, access){
     }
     var g = groups[terminKey];
     var tk = lcAltThemaKey(themaList, a.thema);
-    g.items.push({ aufgabennummer: a.aufgabennummer||'', thema: a.thema||'', loesung: a.loesung||'' });
+    var idx = g.items.length;
+    g.items.push({ aufgabennummer: a.aufgabennummer||'', thema: a.thema||'', loesung: a.loesung||'', idx: idx });
     if(g.themaKeys.indexOf(tk) === -1){ g.themaKeys.push(tk); }
   });
+  return { themaList: themaList, groups: groups, groupOrder: groupOrder };
+}
+async function renderAltklausurenAreaHtml(courseId, data, access){
+  var crumbHtml = lcCourseCrumb();
+  if(!access.purchased){
+    return crumbHtml + '<h1>Altklausuren</h1>' + lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
+  }
+  var grouped = lcAltGroupedItems(data);
+  var themaList = grouped.themaList, groups = grouped.groups, groupOrder = grouped.groupOrder;
+  if(!groupOrder.length){
+    return crumbHtml + '<h1>Altklausuren</h1><p class="hint-sm">Noch keine Altklausuren verfügbar.</p>';
+  }
+  var allRatings = access.userId ? await window.KFCatalog.getProgress(courseId) : null;
 
   var themaChipsHtml = '<p>Thema</p><button type="button" class="chip on" data-thema="alle">Alle Themen</button>' +
     themaList.map(function(t, i){ return '<button type="button" class="chip" data-thema="th' + i + '">' + escapeHtmlMy(t) + '</button>'; }).join('');
@@ -2423,9 +2606,19 @@ async function renderAltklausurenAreaHtml(courseId, data, access){
     var themenLabel = g.items.map(function(it){ return it.thema; }).filter(function(t, i, arr){ return t && arr.indexOf(t) === i; }).join(', ');
     var countLabel = g.items.length + (g.items.length === 1 ? ' Aufgabe' : ' Aufgaben');
     var titleHtml = escapeHtmlMy((g.semester + ' ' + g.jahr).trim()) + (lcCourse && lcCourse.prof ? ' – Klausur ' + escapeHtmlMy(lcCourse.prof) : '');
+    // Bei Altklausuren gibt es (bewusst, aus Copyright-Gründen -- siehe
+    // Kursbau-Schritt "Altklausuren") kein separates Aufgabenstellungs-Feld,
+    // nur Aufgabennummer+Thema als Bezeichner -- der dient hier als bereits
+    // immer sichtbarer "Aufgabentext"-Ersatz, geklappt wird nur der eigene
+    // Lösungsweg (samt Ampel, analog zu lcBodyUeb).
     var detailHtml = g.items.map(function(it){
+      var itemKey = tk + ':' + it.idx;
+      var rating = allRatings ? (allRatings['altklausuren_rating:' + itemKey] || {}).rating : undefined;
       return '<div class="block"><strong>' + escapeHtmlMy(it.aufgabennummer || 'Aufgabe') + (it.thema ? ' · ' + escapeHtmlMy(it.thema) : '') + '</strong>' +
-        window.KFTables.render(it.loesung) + '</div>';
+        '<button type="button" class="linklike show-solution-btn">Lösung anzeigen ▾</button>' +
+        '<div class="solution-text" style="display:none">' + window.KFTables.render(it.loesung) +
+          (allRatings ? lcRenderAmpel('altklausuren_rating', itemKey, rating) : '') + '</div>' +
+      '</div>';
     }).join('');
     return '<div class="exam-row" data-termin="' + escapeHtmlMy(tk) + '" data-themen="' + escapeHtmlMy(g.themaKeys.join(' ')) + '" data-exam-toggle="' + escapeHtmlMy(tk) + '">' +
         '<div class="info"><h3>' + titleHtml + '</h3><p>' + countLabel + (themenLabel ? ' · ' + escapeHtmlMy(themenLabel) : '') + '</p></div>' +
@@ -2712,6 +2905,89 @@ function wireLernplanArea(container, courseId){
   updatePlanUI();
 }
 
+// Übungsaufgaben: Zwei-Spalten-Ansicht wie Altklausuren (Teil 4) -- links
+// Chip-Filter nach Schwierigkeit UND Kapitel, rechts die Aufgaben je Kapitel
+// gruppiert (Kapitel-Überschrift + Tutorfragen-Widget bleiben chapterweise,
+// da Fragen serverseitig chapterweise abgefragt werden -- gefiltert wird
+// innerhalb dieser Gruppierung auf Item- bzw. Sektionsebene).
+async function renderUebungenAreaHtml(courseId, data, access, userId){
+  var crumbHtml = lcCourseCrumb();
+  // Bewertung ist wie bei der Zusammenfassung eine Lernfunktion für Käufer,
+  // keine Vorschau-Funktion -- ohne Kauf/Login bleibt allRatings null und
+  // lcBodyUeb zeigt keine .ampel-Zeile.
+  var allRatings = (access.purchased && userId) ? await window.KFCatalog.getProgress(courseId) : null;
+  var sectionsHtml = '', chipChapters = [];
+  for(var i=0;i<data.chapters.length;i++){
+    var ch = data.chapters[i];
+    var chHeadHtml = '<h3 style="margin-top:22px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h3>';
+    if(lcChapterLocked(ch, access)){
+      chipChapters.push(ch);
+      sectionsHtml += '<div class="ueb-chapter-section" data-kapitel="' + escapeHtmlMy(ch.id) + '">' +
+        chHeadHtml + lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.') + '</div>';
+      continue;
+    }
+    var cc = data.contentByChapter[ch.id] || {};
+    if(!lcHasForArea('uebungen', cc)){ continue; }
+    chipChapters.push(ch);
+    var q = await window.KFQuestions.getForBaustein(courseId, ch.id, 'uebungen');
+    sectionsHtml += '<div class="ueb-chapter-section" data-kapitel="' + escapeHtmlMy(ch.id) + '">' + chHeadHtml +
+      lcBodyUeb(cc.uebungen, ch.id, allRatings) + lcTutorfragenWidget(courseId, ch.id, 'uebungen', q, userId) + '</div>';
+  }
+  if(!chipChapters.length){
+    return crumbHtml + '<h1>Übungsaufgaben</h1><p class="hint-sm">Noch keine Inhalte verfügbar.</p>';
+  }
+
+  var schwierigkeitChipsHtml = '<p>Schwierigkeit</p><button type="button" class="chip on" data-schwierigkeit="alle">Alle</button>' +
+    ['leicht', 'mittel', 'schwer'].map(function(s){
+      return '<button type="button" class="chip" data-schwierigkeit="' + s + '">' + s.charAt(0).toUpperCase() + s.slice(1) + '</button>';
+    }).join('');
+  var kapitelChipsHtml = '<p>Kapitel</p><button type="button" class="chip on" data-kapitel="alle">Alle Kapitel</button>' +
+    chipChapters.map(function(ch){
+      return '<button type="button" class="chip" data-kapitel="' + escapeHtmlMy(ch.id) + '">Kapitel ' + (ch.chapterIndex+1) + '</button>';
+    }).join('');
+
+  return '<div class="two-col"><div class="filter-col">' + schwierigkeitChipsHtml + kapitelChipsHtml + '</div><div>' +
+    crumbHtml + '<h1>Übungsaufgaben</h1>' +
+    '<div id="ueb-list">' + sectionsHtml + '</div>' +
+  '</div></div>';
+}
+function wireUebungenArea(container){
+  var list = container.querySelector('#ueb-list');
+  if(!list){ return; }
+  var schwierigkeitSel = 'alle', kapitelSel = 'alle';
+  function applyFilter(){
+    list.querySelectorAll('.ueb-chapter-section').forEach(function(section){
+      var kapitelOk = kapitelSel === 'alle' || section.dataset.kapitel === kapitelSel;
+      var items = section.querySelectorAll('.ueb-item');
+      if(!items.length){
+        // Gesperrtes Kapitel (nur Lock-Card, keine .ueb-item) -- Sichtbarkeit
+        // hängt allein vom Kapitel-Filter ab, Schwierigkeit greift hier nicht.
+        section.style.display = kapitelOk ? '' : 'none';
+        return;
+      }
+      var anyVisible = false;
+      items.forEach(function(item){
+        var itemOk = kapitelOk && (schwierigkeitSel === 'alle' || item.dataset.schwierigkeit === schwierigkeitSel);
+        item.style.display = itemOk ? '' : 'none';
+        if(itemOk){ anyVisible = true; }
+      });
+      section.style.display = anyVisible ? '' : 'none';
+    });
+  }
+  container.querySelectorAll('[data-schwierigkeit].chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      container.querySelectorAll('[data-schwierigkeit].chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on'); schwierigkeitSel = c.dataset.schwierigkeit; applyFilter();
+    });
+  });
+  container.querySelectorAll('[data-kapitel].chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      container.querySelectorAll('[data-kapitel].chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on'); kapitelSel = c.dataset.kapitel; applyFilter();
+    });
+  });
+}
+
 // Alle anderen Bereiche: einfachere Einspalten-Ansicht, im Kern dieselben
 // lcBody*-Renderer wie zuvor im flachen Durchlauf, nur isoliert je Bereich.
 async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
@@ -2730,26 +3006,6 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
     return html;
   }
 
-  if(areaKey === 'uebungen'){
-    var any = false;
-    for(var i=0;i<data.chapters.length;i++){
-      var ch = data.chapters[i];
-      var chHeadHtml = '<h3 style="margin-top:22px">Kapitel ' + (ch.chapterIndex+1) + ' – ' + escapeHtmlMy(ch.chapterTitle) + '</h3>';
-      if(lcChapterLocked(ch, access)){
-        any = true;
-        html += chHeadHtml + lcLockCardHtml(courseId, 'Dieses Kapitel ist nur mit Kauf verfügbar.');
-        continue;
-      }
-      var cc = data.contentByChapter[ch.id] || {};
-      if(!lcHasForArea(areaKey, cc)){ continue; }
-      any = true;
-      var q = await window.KFQuestions.getForBaustein(courseId, ch.id, areaKey);
-      html += chHeadHtml + lcBodyUeb(cc.uebungen) + lcTutorfragenWidget(courseId, ch.id, areaKey, q, userId);
-    }
-    if(!any){ html += '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
-    return html;
-  }
-
   // Kursweite Bereiche (Altklausuren/Tutorien/Zusatzmodule/Lernplan): rein
   // kaufgebunden, keine Kapitel-Granularität (siehe lcLoadCourseData/RLS).
   if(!access.purchased){
@@ -2761,7 +3017,8 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
     return html;
   }
   var q2 = await window.KFQuestions.getForBaustein(courseId, null, areaKey);
-  var body2 = areaKey === 'tutorien' ? lcBodyTut(data.courseContent.tutorien) : lcBodyZus(data.courseContent.zusatz);
+  var allRatingsTut = (areaKey === 'tutorien' && userId) ? await window.KFCatalog.getProgress(courseId) : null;
+  var body2 = areaKey === 'tutorien' ? lcBodyTut(data.courseContent.tutorien, allRatingsTut) : lcBodyZus(data.courseContent.zusatz);
   html += body2 + lcTutorfragenWidget(courseId, null, areaKey, q2, userId);
   return html;
 }
@@ -2775,6 +3032,9 @@ async function renderCourseAreaHtml(courseId, areaKey, data, access){
   }
   if(areaKey === 'altklausuren'){
     return await renderAltklausurenAreaHtml(courseId, data, access);
+  }
+  if(areaKey === 'uebungen'){
+    return await renderUebungenAreaHtml(courseId, data, access, access.userId);
   }
   if(areaKey === 'lernplan'){
     return await renderLernplanAreaHtml(courseId, data, access, access.userId);
@@ -2834,9 +3094,11 @@ window.renderCourseView = async function(){
   wireLernplanArea(body, courseId);
   wireMindmapEvents(body);
   wireZfAreaNav(body);
-  wireZfRatingButtons(body, courseId);
+  wireRatingButtons(body, courseId);
   wireKkArea(body, courseId);
   wireAltklausurenArea(body);
+  wireUebungenArea(body);
+  wireShowSolutionButtons(body);
   if(window.currentLearnerZfAnchor){
     var target = document.getElementById(window.currentLearnerZfAnchor);
     if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }

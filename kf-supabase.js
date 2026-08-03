@@ -192,10 +192,14 @@ function splitTextAndTableBlocks(raw) {
   return out;
 }
 function renderTextWithTables(raw) {
+  // Nur noch HTML-escapen -- Zeilenumbrüche/Einrückungen kommen jetzt direkt
+  // aus dem Text selbst, per white-space:pre-wrap auf .block/.kf-text-content
+  // (app.html). Ein zusätzliches <br> hier würde sonst zu doppelten
+  // Zeilenumbrüchen führen (einmal durch das echte \n, einmal durch <br>).
   var parts = String(raw || "").split(/\[table\]([\s\S]*?)\[\/table\]/);
   return parts.map(function (part, i) {
     if (i % 2 === 1) { return renderTableBlock(part); }
-    return escTableText(part).replace(/\n/g, "<br>");
+    return escTableText(part);
   }).join("");
 }
 window.KFTables = {
