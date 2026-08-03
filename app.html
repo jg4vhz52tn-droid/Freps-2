@@ -20,8 +20,13 @@ h1{font-size:24px; font-weight:700;}
 h2{font-size:18px; font-weight:600;}
 h3{font-size:15px; font-weight:600;}
 a{color:var(--accent);}
-.layout{display:grid; grid-template-columns:240px 1fr; min-height:100vh;}
-.sidebar{background:var(--ink); color:#E9EDF2; padding:28px 20px; position:sticky; top:0; height:100vh; overflow-y:auto;}
+/* Kurs-Shell aus dem Prototyp (#view-course): feste dunkle Seitenleiste +
+   Inhaltsspalte. Einziger Unterschied zum Prototyp: dort gibt es keine
+   globale Kopfzeile, hier schon -- die klebende Seitenleiste muss deshalb
+   (wie .step-nav im Creator-Wizard) um --header-h nach unten versetzt sein,
+   sonst verschwindet ihr oberer Rand hinter dem App-Header. */
+.layout{display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - var(--header-h));}
+.sidebar{background:var(--ink); color:#E9EDF2; padding:28px 20px; position:sticky; top:var(--header-h); height:calc(100vh - var(--header-h)); overflow-y:auto;}
 .brand{font-family:'Sora',sans-serif; font-weight:700; font-size:17px; margin-bottom:4px;}
 .brand span{color:var(--amber);}
 .brand-sub{font-size:12px; color:#9AA7B5; margin-bottom:28px;}
@@ -152,6 +157,7 @@ a{color:var(--accent);}
 .notice{background:var(--accent-soft); border-radius:var(--radius); padding:12px 16px; font-size:13px; color:var(--accent); margin-top:18px;}
 .support-bar{display:flex; gap:20px; margin-top:28px; padding-top:18px; border-top:1px solid var(--line); font-size:13px;}
 .support-bar a{text-decoration:none; font-weight:500;}
+.support-bar .linklike{font-size:13px; font-weight:500;}
 .footer-nav{display:flex; justify-content:flex-end; margin-top:20px;}
 .ghost{background:var(--card); border:1px solid var(--line); font:inherit; font-size:13px; padding:9px 16px; border-radius:8px; cursor:pointer;}
 .ghost:hover{border-color:var(--accent); color:var(--accent);}
@@ -486,6 +492,13 @@ ul.plain li{margin-bottom:5px;}
   .step-nav{position:static; height:auto; padding:20px 18px;}
   .step-nav .side-progress{margin-top:20px; padding-top:14px;}
   .creator-main{padding:24px 18px;}
+  /* Kurs-Shell: gleiche Behandlung wie die Wizard-Seitenleiste -- gestapelt
+     statt zweispaltig, Seitenleiste scrollt normal mit. */
+  .layout{grid-template-columns:1fr;}
+  .sidebar{position:static; height:auto; padding:20px 18px;}
+  .sidebar .side-progress{margin-top:20px; padding-top:14px;}
+  .main{padding:24px 18px;}
+  .two-col{grid-template-columns:1fr;}
   .field-row{grid-template-columns:1fr;}
   .save-fab, .save-status{position:static;}
 }
@@ -572,19 +585,16 @@ ul.plain li{margin-bottom:5px;}
   </div>
 </div>
 
-<!-- ANSICHT: KURSÜBERSICHT (Lernende) -->
-<div class="view" id="view-course-overview">
-  <div class="portal">
-    <button class="back-link" data-goto-view="view-my-courses">‹ Meine Kurse</button>
-    <div id="courseOverviewBody"><p class="hint-sm">Lade …</p></div>
-  </div>
-</div>
-
-<!-- ANSICHT: KURS-BEREICH (Lernende) -->
-<div class="view" id="view-course-area">
-  <div class="portal">
-    <button class="back-link" data-goto-view="view-course-overview">‹ Kursübersicht</button>
-    <div id="courseAreaBody"><p class="hint-sm">Lade …</p></div>
+<!-- ANSICHT: KURS (Lernende) -- Aufbau 1:1 aus klausurfuchs-prototyp.html
+     (#view-course): .layout > .sidebar (Kursbereichs-Navigation, bleibt
+     immer sichtbar) + .main (die jeweils aktive Bereichs-Seite). Seitenleiste
+     und Inhalt werden von renderCourseView() befüllt; der Wechsel zwischen
+     Kursübersicht und Bereichen passiert dadurch innerhalb dieser einen
+     View, statt wie vorher über zwei getrennte Views mit Zurück-Link. -->
+<div class="view" id="view-course">
+  <div class="layout">
+    <aside class="sidebar" id="courseSidebar"></aside>
+    <main class="main"><div id="courseMainBody"><p class="hint-sm">Lade …</p></div></main>
   </div>
 </div>
 
@@ -1056,8 +1066,7 @@ function showView(id){
   if(id === 'view-creator-wizard' && typeof window.markCreatorSeen === 'function'){ window.markCreatorSeen(); }
   if(id === 'view-my-courses' && typeof window.renderMyCourses === 'function'){ window.renderMyCourses(); }
   if(id === 'view-creator-intro' && window.__kfReady && window.KFAuth){ window.KFAuth.becomeCreator().catch(function(){}); }
-  if(id === 'view-course-overview' && typeof window.renderCourseOverviewView === 'function'){ window.renderCourseOverviewView(); }
-  if(id === 'view-course-area' && typeof window.renderCourseAreaView === 'function'){ window.renderCourseAreaView(); }
+  if(id === 'view-course' && typeof window.renderCourseView === 'function'){ window.renderCourseView(); }
 }
 (function(){
   var burgerBtn = document.getElementById('appHeaderBurger');
@@ -1736,8 +1745,14 @@ function lcTutorfragenWidget(courseId, chapterId, type, questions, userId){
       }).join('')
     : (ownHtml ? '' : '<p class="hint-sm">Noch keine öffentlichen Antworten zu diesem Baustein.</p>');
   var countLabel = publicAnswered.length ? ' (' + publicAnswered.length + ' öffentliche ' + (publicAnswered.length===1?'Antwort':'Antworten') + ')' : '';
-  return '<div class="tutorfragen">' +
-    '<button type="button" class="linklike tf-toggle" data-tf-toggle="' + wid + '">💬 Tutorfragen' + countLabel + '</button>' +
+  // .support-bar ist die Leiste, die im Prototyp unter jedem Abschnitt steht
+  // ("💬 Tutor/in fragen"). Bei uns hängt daran die echte Tutorfragen-Funktion
+  // (eigene Fragen + öffentliche Antworten + Formular) statt eines Mockups.
+  // Den zweiten Prototyp-Link "✦ KI fragen" gibt es hier bewusst nicht --
+  // dafür existiert keine Funktion, und ein toter Link wäre eine Attrappe.
+  return '<div class="tutorfragen"><div class="support-bar">' +
+    '<button type="button" class="linklike tf-toggle" data-tf-toggle="' + wid + '">💬 Tutor/in fragen' + countLabel + '</button>' +
+    '</div>' +
     '<div class="tf-panel" data-tf-panel="' + wid + '" style="display:none">' +
       ownHtml +
       faqHtml +
@@ -1808,7 +1823,8 @@ function wireLearnerCourseOpenButtons(container){
   container.querySelectorAll('[data-open-course]').forEach(function(btn){
     btn.addEventListener('click', function(){
       window.currentLearnerCourseId = btn.dataset.openCourse;
-      showView('view-course-overview');
+      lcResetAreaState(null);
+      showView('view-course');
     });
   });
 }
@@ -1858,8 +1874,9 @@ function lcHasForArea(key, cc){
   if(key === 'lernplan'){ return lcHasLp(cc.lernplan); }
   return false;
 }
+// Bereiche mit Kapitel-Granularität (und damit Vorschau-Logik je Kapitel);
+// alles andere in LC_AREA_ORDER ist kursweit und rein kaufgebunden.
 var LC_CHAPTER_AREAS = ['zusammenfassung', 'karteikarten', 'uebungen'];
-var LC_COURSE_AREAS = ['altklausuren', 'tutorien', 'zusatz', 'lernplan'];
 
 // Echter Lernfortschritt für die Zusammenfassung-Kachel der Kursübersicht:
 // jeder Outline-Knoten mit eigenem Text (= jeder Punkt, der in der
@@ -1926,6 +1943,86 @@ function wireBuyCourseInlineButtons(container, onSuccess){
   });
 }
 
+// Reihenfolge der Kursbereiche -- exakt die Reihenfolge der nav-btn-Zeilen
+// im Prototyp (#view-course), damit Seitenleiste und Kacheln dieselbe
+// Abfolge haben. 'zusatz' kennt der Prototyp nicht und steht deshalb vor
+// dem Lernplan als letztem Eintrag.
+var LC_AREA_ORDER = ['zusammenfassung', 'tutorien', 'uebungen', 'altklausuren', 'mindmap', 'karteikarten', 'zusatz', 'lernplan'];
+function lcAreaLabel(key){
+  return key === 'mindmap' ? 'Übersicht / Mindmap' : (window.KF_BAUSTEIN_LABELS[key] || key);
+}
+// Der gerade geöffnete Kurs, von renderCourseView() gesetzt. Im Prototyp
+// trägt jede Bereichs-Seite die Brotkrume "Kurse / {Kursname}" (einzige
+// Ausnahme: die Zusammenfassung, die stattdessen das Kapitel nennt) -- über
+// diese eine Variable kommen die Bereichs-Renderer an den Kursnamen, ohne
+// dass er durch jede einzelne Signatur gereicht werden muss.
+var lcCourse = null;
+function lcCourseCrumb(){
+  return '<div class="crumb">Kurse / ' + escapeHtmlMy((lcCourse && lcCourse.title) || '') + '</div>';
+}
+// Setzt den aktiven Bereich und verwirft die bereichseigenen Unterzustände
+// (gewähltes Kapitel/Sprungmarke), damit ein Bereichswechsel nie mit dem
+// Kapitel des vorherigen Bereichs startet.
+function lcResetAreaState(areaKey){
+  window.currentLearnerAreaKey = areaKey || null;
+  window.currentLearnerZfChapterId = null;
+  window.currentLearnerZfAnchor = null;
+  window.currentLearnerKkChapterId = null;
+}
+
+// Welche Bereiche dieser Kurs für diese:n Nutzer:in überhaupt hat, in
+// LC_AREA_ORDER-Reihenfolge, inkl. des Kachel-Tags. Wird von der Seitenleiste
+// (nav-btn je Bereich) und der Kursübersicht (Kachel je Bereich) gemeinsam
+// genutzt, damit beide garantiert dieselben Bereiche zeigen.
+function lcAvailableAreas(data, access){
+  var out = [];
+  var totalChapters = data.chapters.length;
+  LC_AREA_ORDER.forEach(function(key){
+    if(key === 'mindmap'){
+      if(totalChapters){ out.push({ key: key, tag: access.purchased ? 'Alle Kapitel' : 'Vorschau-Kapitel' }); }
+      return;
+    }
+    if(LC_CHAPTER_AREAS.indexOf(key) !== -1){
+      if(!totalChapters){ return; }
+      if(access.purchased){
+        var withContent = data.chapters.filter(function(ch){ return lcHasForArea(key, data.contentByChapter[ch.id]); }).length;
+        if(withContent){ out.push({ key: key, tag: withContent + ' Kapitel' }); }
+      } else {
+        var preview = data.chapters.filter(function(ch){
+          return !lcChapterLocked(ch, access) && lcHasForArea(key, data.contentByChapter[ch.id]);
+        }).length;
+        out.push({ key: key, tag: preview + ' von ' + totalChapters + ' als Vorschau' });
+      }
+      return;
+    }
+    // Kursweite Inhalte sind rein kaufgebunden (kein is_free_preview auf
+    // course_content) -- ob ein Nicht-Käufer hier überhaupt Inhalt hätte,
+    // ist serverseitig unsichtbar (RLS liefert dafür einfach nichts), daher
+    // bleibt der Bereich für Nicht-Käufer immer als "gesperrt" sichtbar
+    // (damit erkennbar bleibt, dass es mehr gibt), Käufern nur, wenn
+    // wirklich Inhalt vorhanden ist.
+    if(access.purchased && !lcHasForArea(key, data.courseContent)){ return; }
+    out.push({ key: key, tag: access.purchased ? 'Verfügbar' : 'Nur mit Kauf' });
+  });
+  return out;
+}
+
+// Fortschritt je Bereich + Gesamtwert in einem Rutsch. Echte Daten gibt es
+// bisher nur für Zusammenfassung und Karteikarten (Verstehens-Bewertung);
+// alle anderen Bereiche bleiben bewusst Platzhalter, bis sie ein eigenes
+// Tracking-Konzept bekommen.
+async function lcCourseProgress(courseId, data, access){
+  if(!(access.purchased && access.userId)){ return { byArea: {}, overall: null }; }
+  var zf = await lcZfProgress(courseId, data);
+  var kk = await lcKkProgress(courseId, data);
+  var real = [zf, kk].filter(function(p){ return !!p; });
+  function avg(field){ return Math.round(real.reduce(function(s,p){ return s + p[field]; }, 0) / real.length); }
+  return {
+    byArea: { zusammenfassung: zf, karteikarten: kk },
+    overall: real.length ? { percent: avg('percent'), okPct: avg('okPct'), midPct: avg('midPct'), badPct: avg('badPct') } : null
+  };
+}
+
 // Kurzbeschreibungen je Kachel -- rein optisch, wie die statischen
 // Beschreibungstexte im Prototyp ("Der komplette Klausurstoff ..."), keine
 // echten Kennzahlen.
@@ -1940,14 +2037,34 @@ var LC_AREA_DESCRIPTIONS = {
   mindmap: 'Alle Zusammenhänge auf einen Blick, Knoten aufklappbar.'
 };
 
-async function renderCourseOverviewHtml(courseId){
-  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
-  if(!course){ return '<p class="hint-sm">Kurs nicht gefunden.</p>'; }
-  var access = await lcCourseAccess(courseId);
-  var data = await lcLoadCourseData(courseId);
-  var settings = await window.KFCatalog.getSettings();
-  var coursePrice = settings.course_price || '29';
+// Seitenleiste des Kursbereichs -- Aufbau exakt wie <aside class="sidebar">
+// im Prototyp: Zurück-Link, Marke, Kurs-Untertitel, "Kursbereiche"-Label,
+// ein nav-btn je Bereich (plus Kursübersicht als erster Eintrag) und unten
+// der Gesamtfortschritt. Im Prototyp ist die Bereichsliste hartcodiert, hier
+// kommt sie aus lcAvailableAreas(), zeigt also nur real vorhandene Bereiche.
+function renderCourseSidebarHtml(course, areas, activeKey, overallProgress){
+  var navHtml = '<button class="nav-btn' + (activeKey ? '' : ' active') + '" data-course-nav=""><span class="dot"></span>Kursübersicht</button>' +
+    areas.map(function(a){
+      return '<button class="nav-btn' + (activeKey === a.key ? ' active' : '') + '" data-course-nav="' + escapeHtmlMy(a.key) + '">' +
+        '<span class="dot"></span>' + escapeHtmlMy(lcAreaLabel(a.key)) + '</button>';
+    }).join('');
+  var pct = overallProgress ? overallProgress.percent : null;
+  var subLine = escapeHtmlMy(course.title) + (course.prof ? ' · ' + escapeHtmlMy(course.prof) : '') +
+    (course.hochschule ? '<br>' + escapeHtmlMy(course.hochschule) : '');
+  return '<button type="button" class="back-link" data-course-back style="color:#9AA7B5; margin-bottom:14px">‹ Meine Kurse</button>' +
+    '<div class="brand">Klausur<span>fuchs</span></div>' +
+    '<div class="brand-sub">' + subLine + '</div>' +
+    '<div class="nav-label">Kursbereiche</div>' + navHtml +
+    '<div class="side-progress">' +
+      '<p>Mein Gesamtfortschritt</p>' +
+      '<div class="bar"><i style="width:' + (pct || 0) + '%"></i></div>' +
+      '<p style="margin:6px 0 0; font-size:12px; color:#C7CFD8">' +
+        (pct === null ? 'Noch kein Fortschritt' : pct + ' % verstanden') +
+      '</p>' +
+    '</div>';
+}
 
+function renderCourseOverviewHtml(courseId, course, data, access, areas, progress, coursePrice){
   var buyOrOwnedHtml = access.isAdminPreview
     ? '<span class="co-purchased-badge">Admin-Vorschau — kein Kauf</span>'
     : access.purchased
@@ -1958,105 +2075,35 @@ async function renderCourseOverviewHtml(courseId){
   // <h3>...</h3><p>...</p></div> -- der Tag zeigt hier (statt einer
   // hartcodierten Stückzahl wie im Prototyp) die Verfügbarkeit für genau
   // diese:n Nutzer:in an.
-  var areaKeys = [];
-  function tile(key, tag){
-    areaKeys.push(key);
-    return '<div class="tile" data-open-area="' + key + '"><span class="tag">' + escapeHtmlMy(tag) + '</span>' +
-      '<h3>' + escapeHtmlMy(window.KF_BAUSTEIN_LABELS[key] || (key === 'mindmap' ? 'Übersicht / Mindmap' : key)) + '</h3>' +
-      '<p>' + escapeHtmlMy(LC_AREA_DESCRIPTIONS[key] || '') + '</p></div>';
-  }
+  var tilesHtml = areas.map(function(a){
+    return '<div class="tile" data-open-area="' + escapeHtmlMy(a.key) + '"><span class="tag">' + escapeHtmlMy(a.tag) + '</span>' +
+      '<h3>' + escapeHtmlMy(lcAreaLabel(a.key)) + '</h3>' +
+      '<p>' + escapeHtmlMy(LC_AREA_DESCRIPTIONS[a.key] || '') + '</p></div>';
+  }).join('') || '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>';
 
-  var tilesHtml = '';
-  var totalChapters = data.chapters.length;
-  if(totalChapters){
-    LC_CHAPTER_AREAS.forEach(function(key){
-      if(access.purchased){
-        var totalWithContent = data.chapters.filter(function(ch){ return lcHasForArea(key, data.contentByChapter[ch.id]); }).length;
-        if(!totalWithContent){ return; }
-        tilesHtml += tile(key, totalWithContent + (totalWithContent === 1 ? ' Kapitel' : ' Kapitel'));
-      } else {
-        var previewAvailable = data.chapters.filter(function(ch){
-          return !lcChapterLocked(ch, access) && lcHasForArea(key, data.contentByChapter[ch.id]);
-        }).length;
-        tilesHtml += tile(key, previewAvailable + ' von ' + totalChapters + ' als Vorschau');
-      }
-    });
-  }
-  LC_COURSE_AREAS.forEach(function(key){
-    // Kursweite Inhalte sind rein kaufgebunden (kein is_free_preview auf
-    // course_content) -- ob ein Nicht-Käufer hier überhaupt Inhalt hätte,
-    // ist serverseitig unsichtbar (RLS liefert dafür einfach nichts), daher
-    // bleibt die Kachel für Nicht-Käufer immer als "gesperrt" sichtbar
-    // (damit erkennbar bleibt, dass es mehr gibt), Käufern nur, wenn
-    // wirklich Inhalt vorhanden ist.
-    if(access.purchased && !lcHasForArea(key, data.courseContent)){ return; }
-    tilesHtml += tile(key, access.purchased ? 'Verfügbar' : 'Nur mit Kauf');
-  });
-  if(totalChapters){
-    tilesHtml += tile('mindmap', access.purchased ? 'Alle Kapitel' : 'Vorschau-Kapitel');
-  }
-  if(!tilesHtml){ tilesHtml = '<p class="hint-sm">Noch keine Inhalte verfügbar.</p>'; }
-
-  // Fortschritts-Zeilen wie im Prototyp (.progress-line/.segbar) -- echte
-  // Daten gibt es bisher nur für Zusammenfassung (Verstehens-Bewertung,
-  // Teil 2 dieser Spec); alle anderen Bereiche bleiben bewusst Platzhalter
-  // ("Tracking folgt"), bis Teil 3/4 sie mit echten Daten füllen.
-  var zfProgress = (access.purchased && access.userId) ? await lcZfProgress(courseId, data) : null;
-  var kkProgress = (access.purchased && access.userId) ? await lcKkProgress(courseId, data) : null;
-  var areaProgress = { zusammenfassung: zfProgress, karteikarten: kkProgress };
-  // Gesamtfortschritt: Durchschnitt über alle Bereiche, die bereits echte
-  // Werte liefern (bisher Zusammenfassung + Karteikarten) -- Übungsaufgaben/
-  // Altklausuren/Tutorien/Zusatzmodule/Lernplan fließen erst mit ein, sobald
-  // sie in einem späteren Teil ihr eigenes Tracking bekommen.
-  var realProgresses = [zfProgress, kkProgress].filter(function(p){ return !!p; });
-  var overallProgress = realProgresses.length ? {
-    percent: Math.round(realProgresses.reduce(function(s,p){ return s + p.percent; }, 0) / realProgresses.length),
-    okPct: Math.round(realProgresses.reduce(function(s,p){ return s + p.okPct; }, 0) / realProgresses.length),
-    midPct: Math.round(realProgresses.reduce(function(s,p){ return s + p.midPct; }, 0) / realProgresses.length),
-    badPct: Math.round(realProgresses.reduce(function(s,p){ return s + p.badPct; }, 0) / realProgresses.length)
-  } : null;
-  function progressRowHtml(label, pct){
-    return '<div style="margin-bottom:16px">' +
-      '<div class="progress-line"><span>' + escapeHtmlMy(label) + '</span><span>' + (pct ? pct.percent + ' % verstanden' : 'Tracking folgt') + '</span></div>' +
-      '<div class="segbar"><span class="seg-ok" style="width:' + (pct ? pct.okPct : 0) + '%"></span><span class="seg-mid" style="width:' + (pct ? pct.midPct : 0) + '%"></span><span class="seg-bad" style="width:' + (pct ? pct.badPct : 0) + '%"></span></div>' +
-    '</div>';
-  }
-  var progressHtml = areaKeys.length
+  // Fortschritts-Zeilen wie im Prototyp (.progress-line/.segbar), inkl. der
+  // Farb-Legende darunter. Der Gesamtwert steht -- ebenfalls wie im Prototyp
+  // -- nicht hier, sondern in der Seitenleiste (.side-progress).
+  var progressHtml = areas.length
     ? '<h2 style="margin-bottom:12px">Fortschritt nach Bereich</h2>' +
-      (overallProgress ? progressRowHtml('Gesamtfortschritt', overallProgress) : '') +
-      areaKeys.map(function(key){
-        var label = window.KF_BAUSTEIN_LABELS[key] || (key === 'mindmap' ? 'Übersicht / Mindmap' : key);
-        return progressRowHtml(label, areaProgress[key] || null);
-      }).join('')
+      areas.map(function(a){
+        var pct = progress.byArea[a.key] || null;
+        return '<div style="margin-bottom:16px">' +
+          '<div class="progress-line"><span>' + escapeHtmlMy(lcAreaLabel(a.key)) + '</span><span>' + (pct ? pct.percent + ' % verstanden' : 'Tracking folgt') + '</span></div>' +
+          '<div class="segbar"><span class="seg-ok" style="width:' + (pct ? pct.okPct : 0) + '%"></span><span class="seg-mid" style="width:' + (pct ? pct.midPct : 0) + '%"></span><span class="seg-bad" style="width:' + (pct ? pct.badPct : 0) + '%"></span></div>' +
+        '</div>';
+      }).join('') +
+      '<p style="font-size:12px; color:var(--muted); margin-bottom:20px;"><span style="color:#3B6D11">●</span> gut verstanden &nbsp; <span style="color:#854F0B">●</span> geht so &nbsp; <span style="color:var(--danger)">●</span> nicht verstanden</p>'
     : '';
 
   return '<div class="page-head"><div>' +
       '<div class="crumb">Kurse / ' + escapeHtmlMy(course.title) + '</div>' +
-      '<h1>' + escapeHtmlMy(course.title) + '</h1>' +
+      '<h1>Kursübersicht</h1>' +
     '</div>' + buyOrOwnedHtml + '</div>' +
     '<p class="lede">' + escapeHtmlMy(course.prof||'') + (course.prof && course.hochschule ? ' · ' : '') + escapeHtmlMy(course.hochschule||'') + '</p>' +
     '<div class="grid">' + tilesHtml + '</div>' +
     progressHtml;
 }
-
-window.renderCourseOverviewView = async function(){
-  var body = document.getElementById('courseOverviewBody');
-  if(!body){ return; }
-  var courseId = window.currentLearnerCourseId;
-  if(!courseId){ body.innerHTML = '<p class="hint-sm">Kein Kurs ausgewählt.</p>'; return; }
-  body.innerHTML = '<p class="hint-sm">Lade …</p>';
-  body.innerHTML = await renderCourseOverviewHtml(courseId);
-  wireBuyCourseInlineButtons(body, function(){ window.renderCourseOverviewView(); });
-  body.querySelectorAll('[data-open-area]').forEach(function(t){
-    t.addEventListener('click', function(){
-      window.currentLearnerAreaKey = t.dataset.openArea;
-      window.currentLearnerZfChapterId = null;
-      window.currentLearnerZfAnchor = null;
-      window.currentLearnerKkChapterId = null;
-      showView('view-course-area');
-    });
-  });
-};
 
 // Zusammenfassung: Zwei-Spalten-Ansicht wie im alten Prototyp -- linke
 // Kapitel-Navigation (Struktur aus KFOutline.parse(), unabhängig davon, ob
@@ -2129,7 +2176,7 @@ function wireZfAreaNav(container){
     btn.addEventListener('click', function(){
       window.currentLearnerZfChapterId = btn.dataset.zfChapter;
       window.currentLearnerZfAnchor = btn.dataset.zfAnchor || null;
-      window.renderCourseAreaView();
+      window.renderCourseView();
     });
   });
 }
@@ -2213,7 +2260,7 @@ async function renderKkAreaHtml(courseId, data, access){
   var selectedChapter = selectedChapterId ? chaptersWithCards.filter(function(c){ return c.id === selectedChapterId; })[0] : null;
   var selectedLocked = selectedChapter ? lcChapterLocked(selectedChapter, access) : false;
   var runDeck = selectedChapterId ? fullDeck.filter(function(c){ return c.chapterId === selectedChapterId; }) : fullDeck;
-  var crumbHtml = '<div class="crumb">Karteikarten' + (selectedChapter ? ' / Kapitel ' + (selectedChapter.chapterIndex+1) : '') + '</div>';
+  var crumbHtml = lcCourseCrumb();
 
   var exportCards = runDeck.map(function(c){ return { frage: c.frage, antwort: c.antwort, frageBild: c.frageBild, antwortBild: c.antwortBild }; });
   var exportFilename = selectedChapter ? selectedChapter.chapterTitle : chaptersWithCards[0].courseTitle;
@@ -2255,7 +2302,7 @@ function wireKkArea(container, courseId){
   container.querySelectorAll('[data-kk-chip]').forEach(function(btn){
     btn.addEventListener('click', function(){
       window.currentLearnerKkChapterId = btn.dataset.kkChip || null;
-      window.renderCourseAreaView();
+      window.renderCourseView();
     });
   });
   var run = kkLastRun;
@@ -2316,9 +2363,9 @@ function wireKkArea(container, courseId){
         '<button type="button" class="cta" data-kk-restart>Nochmal von vorne</button>' +
         '<button type="button" class="ghost" data-kk-goto-overview>Zurück zur Kursübersicht</button>' +
       '</div>';
-    wireBuyCourseInlineButtons(summaryEl, function(){ window.renderCourseAreaView(); });
-    summaryEl.querySelector('[data-kk-restart]').addEventListener('click', function(){ window.renderCourseAreaView(); });
-    summaryEl.querySelector('[data-kk-goto-overview]').addEventListener('click', function(){ showView('view-course-overview'); });
+    wireBuyCourseInlineButtons(summaryEl, function(){ window.renderCourseView(); });
+    summaryEl.querySelector('[data-kk-restart]').addEventListener('click', function(){ window.renderCourseView(); });
+    summaryEl.querySelector('[data-kk-goto-overview]').addEventListener('click', function(){ lcResetAreaState(null); window.renderCourseView(); });
   }
 }
 
@@ -2338,7 +2385,7 @@ function lcAltThemaKey(themaList, thema){
   return 'th' + idx;
 }
 async function renderAltklausurenAreaHtml(courseId, data, access){
-  var crumbHtml = '<div class="crumb">Altklausuren</div>';
+  var crumbHtml = lcCourseCrumb();
   if(!access.purchased){
     return crumbHtml + '<h1>Altklausuren</h1>' + lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
   }
@@ -2363,8 +2410,6 @@ async function renderAltklausurenAreaHtml(courseId, data, access){
     if(g.themaKeys.indexOf(tk) === -1){ g.themaKeys.push(tk); }
   });
 
-  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
-
   var themaChipsHtml = '<p>Thema</p><button type="button" class="chip on" data-thema="alle">Alle Themen</button>' +
     themaList.map(function(t, i){ return '<button type="button" class="chip" data-thema="th' + i + '">' + escapeHtmlMy(t) + '</button>'; }).join('');
   var terminChipsHtml = '<p>Termin</p><button type="button" class="chip on" data-termin="alle">Alle Termine</button>' +
@@ -2377,7 +2422,7 @@ async function renderAltklausurenAreaHtml(courseId, data, access){
     var g = groups[tk];
     var themenLabel = g.items.map(function(it){ return it.thema; }).filter(function(t, i, arr){ return t && arr.indexOf(t) === i; }).join(', ');
     var countLabel = g.items.length + (g.items.length === 1 ? ' Aufgabe' : ' Aufgaben');
-    var titleHtml = escapeHtmlMy((g.semester + ' ' + g.jahr).trim()) + (course && course.prof ? ' – Klausur ' + escapeHtmlMy(course.prof) : '');
+    var titleHtml = escapeHtmlMy((g.semester + ' ' + g.jahr).trim()) + (lcCourse && lcCourse.prof ? ' – Klausur ' + escapeHtmlMy(lcCourse.prof) : '');
     var detailHtml = g.items.map(function(it){
       return '<div class="block"><strong>' + escapeHtmlMy(it.aufgabennummer || 'Aufgabe') + (it.thema ? ' · ' + escapeHtmlMy(it.thema) : '') + '</strong>' +
         window.KFTables.render(it.loesung) + '</div>';
@@ -2455,7 +2500,6 @@ function wireAltklausurenArea(container){
 //   gespeichert (item_type='lernplan_exam_date'), sonst wäre der ganze
 //   berechnete Plan nach jedem Neuladen wieder leer.
 var LP_WEEK_SIZE = 7;
-var lpLastCourseTitle = '';
 function lcLernplanBausteinRef(ref, chapters){
   ref = (ref || '').trim();
   if(!ref || ref === '— kein Bezug —'){ return null; }
@@ -2469,7 +2513,7 @@ function lcLernplanBausteinRef(ref, chapters){
   return { area: areaKey, chapterId: ch ? ch.id : null };
 }
 async function renderLernplanAreaHtml(courseId, data, access, userId){
-  var crumbHtml = '<div class="crumb">Lernplan</div>';
+  var crumbHtml = lcCourseCrumb();
   if(!access.purchased){
     return crumbHtml + '<h1>Lernplan</h1>' + lcLockCardHtml(courseId, 'Dieser Bereich ist nur mit Kauf verfügbar.');
   }
@@ -2480,8 +2524,6 @@ async function renderLernplanAreaHtml(courseId, data, access, userId){
     return crumbHtml + '<h1>Lernplan</h1><p class="hint-sm">Noch kein Lernplan verfügbar.</p>';
   }
 
-  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
-  lpLastCourseTitle = (course && course.title) || '';
   var progress = userId ? await window.KFCatalog.getProgress(courseId) : {};
   var savedExamDate = (progress['lernplan_exam_date:exam'] || {}).date || '';
 
@@ -2641,11 +2683,11 @@ function wireLernplanArea(container, courseId){
       e.preventDefault();
       var area = a.dataset.lpGotoArea;
       var chapterId = a.dataset.lpGotoChapter || null;
-      window.currentLearnerAreaKey = area;
+      lcResetAreaState(area);
       window.currentLearnerZfChapterId = area === 'zusammenfassung' ? chapterId : null;
-      window.currentLearnerZfAnchor = null;
       window.currentLearnerKkChapterId = area === 'karteikarten' ? chapterId : null;
-      showView('view-course-area');
+      window.scrollTo(0, 0);
+      window.renderCourseView();
     });
   });
   if(adjustBtn){
@@ -2662,7 +2704,7 @@ function wireLernplanArea(container, courseId){
       var rows = Array.prototype.slice.call(container.querySelectorAll('.check-row')).filter(function(r){ return r.dataset.date; });
       if(!rows.length){ showToast('Bitte zuerst einen Klausurtermin eingeben.'); return; }
       var events = rows.map(function(r){ return { title: rowTitle(r), date: r.dataset.date }; });
-      downloadICS('lernplan-' + (lpLastCourseTitle||'kurs').replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g,'').trim().replace(/\s+/g,'_') + '.ics', buildICS(events));
+      downloadICS('lernplan-' + ((lcCourse && lcCourse.title)||'kurs').replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g,'').trim().replace(/\s+/g,'_') + '.ics', buildICS(events));
     });
   }
 
@@ -2673,8 +2715,7 @@ function wireLernplanArea(container, courseId){
 // Alle anderen Bereiche: einfachere Einspalten-Ansicht, im Kern dieselben
 // lcBody*-Renderer wie zuvor im flachen Durchlauf, nur isoliert je Bereich.
 async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
-  var label = areaKey === 'mindmap' ? 'Übersicht / Mindmap' : window.KF_BAUSTEIN_LABELS[areaKey];
-  var html = '<h1>' + escapeHtmlMy(label) + '</h1>';
+  var html = lcCourseCrumb() + '<h1>' + escapeHtmlMy(lcAreaLabel(areaKey)) + '</h1>';
 
   if(areaKey === 'mindmap'){
     var visibleChapters = data.chapters.filter(function(ch){ return !lcChapterLocked(ch, access); });
@@ -2725,9 +2766,7 @@ async function renderSimpleAreaHtml(courseId, areaKey, data, access, userId){
   return html;
 }
 
-async function renderCourseAreaHtml(courseId, areaKey){
-  var access = await lcCourseAccess(courseId);
-  var data = await lcLoadCourseData(courseId);
+async function renderCourseAreaHtml(courseId, areaKey, data, access){
   if(areaKey === 'zusammenfassung'){
     return await renderZfAreaHtml(courseId, data, access, access.userId, window.currentLearnerZfChapterId);
   }
@@ -2743,15 +2782,53 @@ async function renderCourseAreaHtml(courseId, areaKey){
   return await renderSimpleAreaHtml(courseId, areaKey, data, access, access.userId);
 }
 
-window.renderCourseAreaView = async function(){
-  var body = document.getElementById('courseAreaBody');
-  if(!body){ return; }
+// Rendert den kompletten Kursbereich: Seitenleiste (immer gleich) + die
+// aktive Seite in .main. window.currentLearnerAreaKey === null bedeutet
+// Kursübersicht, sonst der jeweilige Bereich -- der Wechsel ist damit ein
+// reiner Re-Render dieser einen View, ohne Sprung in eine andere View.
+window.renderCourseView = async function(){
+  var sidebarEl = document.getElementById('courseSidebar');
+  var body = document.getElementById('courseMainBody');
+  if(!sidebarEl || !body){ return; }
   var courseId = window.currentLearnerCourseId;
-  var areaKey = window.currentLearnerAreaKey;
-  if(!courseId || !areaKey){ body.innerHTML = '<p class="hint-sm">Kein Bereich ausgewählt.</p>'; return; }
+  if(!courseId){ body.innerHTML = '<p class="hint-sm">Kein Kurs ausgewählt.</p>'; return; }
   body.innerHTML = '<p class="hint-sm">Lade …</p>';
-  body.innerHTML = await renderCourseAreaHtml(courseId, areaKey);
-  wireBuyCourseInlineButtons(body, function(){ window.renderCourseAreaView(); });
+
+  var course = (await window.KFCatalog.getAllCourses()).filter(function(c){ return c.id === courseId; })[0];
+  if(!course){ body.innerHTML = '<p class="hint-sm">Kurs nicht gefunden.</p>'; return; }
+  lcCourse = course;
+  // Zugriff/Inhalte/Fortschritt einmal laden und an Seitenleiste UND Inhalt
+  // weiterreichen, statt sie je Teilbereich erneut abzufragen.
+  var access = await lcCourseAccess(courseId);
+  var data = await lcLoadCourseData(courseId);
+  var areas = lcAvailableAreas(data, access);
+  var progress = await lcCourseProgress(courseId, data, access);
+
+  // Ein Bereich, den es (mehr) nicht gibt, fällt auf die Kursübersicht
+  // zurück -- sonst bliebe nach einem Inhaltswechsel eine leere Seite stehen.
+  var areaKey = window.currentLearnerAreaKey;
+  if(areaKey && !areas.some(function(a){ return a.key === areaKey; })){
+    areaKey = null;
+    window.currentLearnerAreaKey = null;
+  }
+
+  sidebarEl.innerHTML = renderCourseSidebarHtml(course, areas, areaKey, progress.overall);
+  var settings = await window.KFCatalog.getSettings();
+  var contentHtml = areaKey
+    ? await renderCourseAreaHtml(courseId, areaKey, data, access)
+    : renderCourseOverviewHtml(courseId, course, data, access, areas, progress, settings.course_price || '29');
+  // .page/.page.active kommen aus dem Prototyp und bringen die dortige
+  // Einblend-Animation beim Bereichswechsel mit.
+  body.innerHTML = '<section class="page active">' + contentHtml + '</section>';
+
+  wireCourseSidebar(sidebarEl);
+  wireBuyCourseInlineButtons(body, function(){ window.renderCourseView(); });
+  body.querySelectorAll('[data-open-area]').forEach(function(t){
+    t.addEventListener('click', function(){
+      lcResetAreaState(t.dataset.openArea);
+      window.renderCourseView();
+    });
+  });
   wireTutorfragenWidgets(body);
   wireAnkiExportButtons(body);
   wireLernplanArea(body, courseId);
@@ -2766,6 +2843,21 @@ window.renderCourseAreaView = async function(){
     window.currentLearnerZfAnchor = null;
   }
 };
+
+// Die Seitenleiste wird bei jedem Render neu erzeugt, ihre Buttons brauchen
+// deshalb eigene Handler -- die Parse-Zeit-Delegation für [data-goto-view]
+// greift bei nachträglich eingefügten Elementen nicht.
+function wireCourseSidebar(sidebarEl){
+  var backBtn = sidebarEl.querySelector('[data-course-back]');
+  if(backBtn){ backBtn.addEventListener('click', function(){ showView('view-my-courses'); }); }
+  sidebarEl.querySelectorAll('[data-course-nav]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      lcResetAreaState(btn.dataset.courseNav || null);
+      window.scrollTo(0, 0);
+      window.renderCourseView();
+    });
+  });
+}
 
 // RFC-4180-Quoting fürs Exportformat, symmetrisch zum Import-Parser
 // (parseTabQuotedRecords) oben: ein Feld mit Tab/Zeilenumbruch/" wird
