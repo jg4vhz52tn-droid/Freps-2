@@ -930,6 +930,204 @@ window.KFStore = (function () {
     });
   }
 
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Admin-only Kurs-Sicherungsdatei (Export). Liest denselben Datenbestand
+  // wie loadCourseState(), aber zusätzlich chapters.status/is_free_preview/
+  // current_round und chapter_comments (loadCourseState ist bewusst
+  // lernerorientiert und lässt beides weg) sowie Karteikarten-Bilder als
+  // eingebettete Base64-Data-URLs statt nur als Storage-Pfad -- eine
+  // Sicherungsdatei muss auch ohne Zugriff auf den ursprünglichen Storage-
+  // Bucket vollständig wiederherstellbar sein. onProgress(done, total) ist
+  // optional und wird nur für den (potenziell langsamen) Bild-Download
+  // aufgerufen.
+  async function exportCourseBackup(courseId, onProgress) {
+    const { data: course, error: courseErr } = await supabase.from("courses")
+      .select("title, professor, semester, status, hochschule:hochschulen(name), course_studiengaenge(studiengaenge(name))")
+      .eq("id", courseId).single();
+    if (courseErr) throw courseErr;
+
+    const { data: chapterRows, error: chErr } = await supabase.from("chapters")
+      .select("id, position, title, subchapters, status, is_free_preview, current_round")
+      .eq("course_id", courseId).order("position");
+    if (chErr) throw chErr;
+
+    const chapterIds = chapterRows.map(function (c) { return c.id; });
+    const [contentRes, commentRes, courseContentRes] = await Promise.all([
+      chapterIds.length ? supabase.from("chapter_content").select("chapter_id, type, content").in("chapter_id", chapterIds) : Promise.resolve({ data: [] }),
+      chapterIds.length ? supabase.from("chapter_comments").select("chapter_id, author, role, text, content_type, sub_key, round_no, created_at").in("chapter_id", chapterIds) : Promise.resolve({ data: [] }),
+      supabase.from("course_content").select("type, content").eq("course_id", courseId)
+    ]);
+    if (contentRes.error) throw contentRes.error;
+    if (commentRes.error) throw commentRes.error;
+    if (courseContentRes.error) throw courseContentRes.error;
+
+    var contentByChapter = {};
+    (contentRes.data || []).forEach(function (row) {
+      contentByChapter[row.chapter_id] = contentByChapter[row.chapter_id] || {};
+      contentByChapter[row.chapter_id][row.type] = row.content;
+    });
+    var commentsByChapter = {};
+    (commentRes.data || []).forEach(function (row) {
+      (commentsByChapter[row.chapter_id] = commentsByChapter[row.chapter_id] || []).push(row);
+    });
+    var courseContentByType = {};
+    (courseContentRes.data || []).forEach(function (row) { courseContentByType[row.type] = row.content; });
+
+    var imageJobs = [];
+    var chaptersOut = chapterRows.map(function (row) {
+      var c = contentByChapter[row.id] || {};
+      var cards = ((c.karteikarten && c.karteikarten.cards) || []).map(function (card) {
+        var out = { frage: card.frage || "", antwort: card.antwort || "", frageBild: null, antwortBild: null };
+        if (card.frageBild) { imageJobs.push({ path: card.frageBild, target: out, field: "frageBild" }); }
+        if (card.antwortBild) { imageJobs.push({ path: card.antwortBild, target: out, field: "antwortBild" }); }
+        return out;
+      });
+      return {
+        position: row.position, title: row.title, subchapters: row.subchapters || "",
+        status: row.status, isFreePreview: !!row.is_free_preview, currentRound: row.current_round,
+        content: {
+          zusammenfassung: c.zusammenfassung || {},
+          karteikarten: cards,
+          uebungen: (c.uebungen && c.uebungen.items) || []
+        },
+        comments: (commentsByChapter[row.id] || []).map(function (cm) {
+          return { author: cm.author, role: cm.role, text: cm.text, contentType: cm.content_type, subKey: cm.sub_key, roundNo: cm.round_no, createdAt: cm.created_at };
+        })
+      };
+    });
+
+    for (var i = 0; i < imageJobs.length; i++) {
+      var job = imageJobs[i];
+      if (onProgress) { onProgress(i, imageJobs.length); }
+      var url = await getCardImageUrl(job.path);
+      if (url) {
+        var blob = await (await fetch(url)).blob();
+        job.target[job.field] = await blobToDataUrl(blob);
+      }
+    }
+    if (onProgress) { onProgress(imageJobs.length, imageJobs.length); }
+
+    return {
+      backupVersion: 1,
+      exportedAt: new Date().toISOString(),
+      course: {
+        title: course.title, professor: course.professor || "", semester: course.semester || "",
+        hochschule: course.hochschule ? course.hochschule.name : "",
+        studiengaenge: (course.course_studiengaenge || []).map(function (x) { return x.studiengaenge.name; }),
+        status: course.status
+      },
+      chapters: chaptersOut,
+      courseWideContent: {
+        altklausuren: (courseContentByType.altklausuren && courseContentByType.altklausuren.items) || [],
+        tutorien: (courseContentByType.tutorien && courseContentByType.tutorien.items) || [],
+        zusatzmodule: courseContentByType.zusatz || { enabled: false, modules: [] },
+        lernplan: (courseContentByType.lernplan && courseContentByType.lernplan.items) || []
+      }
+    };
+  }
+
+  // Admin-only Wiederherstellung einer Sicherungsdatei -- legt IMMER einen
+  // neuen Kurs an, nie ein Überschreiben. Zwei Phasen, in dieser Reihenfolge:
+  //  1. restore_course_backup() (siehe Migration) legt Kurs/Kapitel/Inhalte/
+  //     Kommentare/kursweite Inhalte in einer Transaktion an -- Karteikarten
+  //     zunächst OHNE Bilder, und ein als "freigegeben" gesichertes Kapitel
+  //     zunächst nur als "pruefung" (Details siehe Kommentar in der Migration).
+  //  2. Hier (Client): pro Karteikarten-Bild hochladen (uploadCardImage(),
+  //     derselbe Mechanismus wie im Creator-Wizard) und den chapter_content-
+  //     Datensatz mit dem neuen Storage-Pfad aktualisieren -- erst DANACH
+  //     werden die als "freigegeben" gesicherten Kapitel tatsächlich auf
+  //     "freigegeben" gesetzt, damit der automatische Reopen-Trigger beim
+  //     Bild-Update nicht dazwischenfunkt (er reagiert nur auf bereits
+  //     "freigegeben"e Kapitel).
+  async function restoreCourseBackup(backup, onProgress) {
+    if (!backup || typeof backup !== "object") {
+      throw new Error("Ungültige Sicherungsdatei.");
+    }
+    if (backup.backupVersion !== 1) {
+      throw new Error("Nicht unterstützte Sicherungsdatei-Version (" + backup.backupVersion + ").");
+    }
+    var chapters = backup.chapters || [];
+
+    var chaptersForRpc = chapters.map(function (ch) {
+      var content = ch.content || {};
+      return {
+        position: ch.position, title: ch.title, subchapters: ch.subchapters,
+        status: ch.status, isFreePreview: ch.isFreePreview, currentRound: ch.currentRound,
+        content: {
+          zusammenfassung: content.zusammenfassung || {},
+          karteikarten: (content.karteikarten || []).map(function (c) { return { frage: c.frage || "", antwort: c.antwort || "" }; }),
+          uebungen: content.uebungen || []
+        },
+        comments: ch.comments || []
+      };
+    });
+
+    const { data: courseId, error } = await supabase.rpc("restore_course_backup", {
+      payload: { course: backup.course || {}, chapters: chaptersForRpc, courseWideContent: backup.courseWideContent || {} }
+    });
+    if (error) throw error;
+
+    const { data: newChapterRows, error: ncErr } = await supabase.from("chapters")
+      .select("id, position").eq("course_id", courseId);
+    if (ncErr) throw ncErr;
+    var chapterIdByPosition = {};
+    newChapterRows.forEach(function (r) { chapterIdByPosition[r.position] = r.id; });
+
+    var imageJobs = [];
+    chapters.forEach(function (ch) {
+      var cards = (ch.content && ch.content.karteikarten) || [];
+      if (cards.some(function (c) { return c.frageBild || c.antwortBild; })) {
+        imageJobs.push({ position: ch.position, cards: cards });
+      }
+    });
+
+    for (var i = 0; i < imageJobs.length; i++) {
+      if (onProgress) { onProgress(i, imageJobs.length); }
+      var job = imageJobs[i];
+      var chapterId = chapterIdByPosition[job.position];
+      if (!chapterId) { continue; }
+      var newCards = [];
+      for (var k = 0; k < job.cards.length; k++) {
+        var card = job.cards[k];
+        var frageBild = card.frageBild ? await uploadCardImage(courseId, await (await fetch(card.frageBild)).blob()) : null;
+        var antwortBild = card.antwortBild ? await uploadCardImage(courseId, await (await fetch(card.antwortBild)).blob()) : null;
+        newCards.push({ frage: card.frage || "", antwort: card.antwort || "", frageBild: frageBild, antwortBild: antwortBild });
+      }
+      const { error: upErr } = await supabase.from("chapter_content")
+        .upsert(
+          { chapter_id: chapterId, type: "karteikarten", content: { cards: newCards }, updated_at: new Date().toISOString() },
+          { onConflict: "chapter_id,type" }
+        );
+      if (upErr) throw upErr;
+    }
+    if (onProgress) { onProgress(imageJobs.length, imageJobs.length); }
+
+    // Erst jetzt (nach den Bild-Updates) die als "freigegeben" gesicherten
+    // Kapitel tatsächlich freigeben -- siehe Kommentar oben.
+    var freigegebenIds = chapters
+      .filter(function (ch) { return ch.status === "freigegeben"; })
+      .map(function (ch) { return chapterIdByPosition[ch.position]; })
+      .filter(Boolean);
+    if (freigegebenIds.length) {
+      const { data: updated, error: relErr } = await supabase.from("chapters")
+        .update({ status: "freigegeben" }).in("id", freigegebenIds).select("id");
+      if (relErr) throw relErr;
+      if (!updated || updated.length !== freigegebenIds.length) {
+        throw new Error("Freigabestatus konnte nicht für alle Kapitel wiederhergestellt werden.");
+      }
+    }
+
+    return courseId;
+  }
+
   return {
     getSubmissions: getSubmissions,
     getForCourse: getForCourse,
@@ -958,7 +1156,9 @@ window.KFStore = (function () {
     reviewTranscript: reviewTranscript,
     getAdminStats: getAdminStats,
     getRecentRegistrations: getRecentRegistrations,
-    getRecentCourses: getRecentCourses
+    getRecentCourses: getRecentCourses,
+    exportCourseBackup: exportCourseBackup,
+    restoreCourseBackup: restoreCourseBackup
   };
 })();
 

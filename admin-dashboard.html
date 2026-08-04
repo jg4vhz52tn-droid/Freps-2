@@ -87,6 +87,9 @@ a{color:var(--accent);}
 .confirm-delete-box .action-row{display:flex; gap:10px; flex-wrap:wrap;}
 .btn-danger{background:var(--danger); color:#fff; border:none; font:inherit; font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; cursor:pointer;}
 .btn-cancel{background:none; border:none; color:var(--muted); font:inherit; font-size:14px; cursor:pointer; padding:10px 8px;}
+
+.backup-import-box{background:var(--card); border:1px dashed var(--line); border-radius:var(--radius); padding:16px 18px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+.backup-import-box p{flex:1 1 260px; font-size:13px; color:var(--muted); margin:0;}
 </style>
 </head>
 <body>
@@ -119,9 +122,33 @@ a{color:var(--accent);}
     <div class="section-label">Neueste Registrierungen</div>
     <div class="list" id="recentUsersList"></div>
   </div>
+  <div style="margin-bottom:20px">
+    <div class="section-label">Kurs aus Sicherung wiederherstellen</div>
+    <div class="backup-import-box">
+      <p>Legt aus einer zuvor gesicherten .json-Datei einen komplett neuen Kurs an (Struktur, Inhalte, Bilder, Freigabestatus, Prüfer-Anmerkungen) -- ein bestehender Kurs wird dabei nie überschrieben.</p>
+      <button type="button" class="btn btn-approve" id="backupImportBtn">⬆ Kurs aus Sicherung wiederherstellen</button>
+      <input type="file" id="backupFileInput" accept="application/json,.json" style="display:none">
+    </div>
+  </div>
   <div>
     <div class="section-label">Neueste Kurse</div>
     <div class="list" id="recentCoursesList"></div>
+  </div>
+</div>
+
+<div class="confirm-delete-overlay" id="backupProgressOverlay" style="display:none">
+  <div class="confirm-delete-box">
+    <p id="backupProgressText">Bitte warten …</p>
+  </div>
+</div>
+
+<div class="confirm-delete-overlay" id="backupResultOverlay" style="display:none">
+  <div class="confirm-delete-box">
+    <p id="backupResultText"></p>
+    <div class="action-row">
+      <a id="backupResultLink" href="#" target="_blank" class="btn btn-approve" style="text-decoration:none">Kurs ansehen</a>
+      <button type="button" class="btn-cancel" id="backupResultClose">Schließen</button>
+    </div>
   </div>
 </div>
 
@@ -200,6 +227,7 @@ async function renderRecentLists(){
           '<div class="li-title-display" data-title-display="'+esc(c.id)+'">'+
             '<span class="li-title-text">'+esc(c.title)+'</span>'+
             '<button type="button" class="li-icon-btn" data-edit-course-meta="'+esc(c.id)+'" title="Bearbeiten" aria-label="Bearbeiten">&#9998;</button>'+
+            '<button type="button" class="li-icon-btn" data-export-course="'+esc(c.id)+'" data-course-title="'+esc(c.title)+'" title="Sichern" aria-label="Sichern">⬇</button>'+
             '<button type="button" class="li-icon-btn li-icon-danger" data-delete-course="'+esc(c.id)+'" data-course-title="'+esc(c.title)+'" data-course-status="'+esc(c.status)+'" title="Löschen" aria-label="Löschen">&#128465;</button>'+
           '</div>'+
         '</div>'+
@@ -371,6 +399,25 @@ function wireCourseRowActions(container){
     });
   });
 
+  container.querySelectorAll('[data-export-course]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = btn.dataset.exportCourse;
+      var title = btn.dataset.courseTitle;
+      showBackupProgress('Kurs wird gesichert …');
+      window.KFStore.exportCourseBackup(id, function(done, total){
+        showBackupProgress(total ? 'Bilder werden geladen … (' + done + ' / ' + total + ')' : 'Kurs wird gesichert …');
+      }).then(function(backup){
+        hideBackupProgress();
+        downloadJSON('kurs-backup-' + slugify(title) + '-' + isoDateSlug() + '.json', backup);
+        showToast('Sicherung heruntergeladen.');
+      }).catch(function(err){
+        hideBackupProgress();
+        showToast('Sicherung fehlgeschlagen: ' + ((err && err.message) || 'unbekannter Fehler'));
+      });
+    });
+  });
+
   container.querySelectorAll('[data-delete-course]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.stopPropagation();
@@ -416,6 +463,78 @@ function wireCourseRowActions(container){
   });
 }
 
+function slugify(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'kurs'; }
+function isoDateSlug(){ return new Date().toISOString().slice(0,10); }
+
+function downloadJSON(filename, obj){
+  var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+function showBackupProgress(text){
+  var textEl = document.getElementById('backupProgressText');
+  var overlay = document.getElementById('backupProgressOverlay');
+  if(textEl){ textEl.textContent = text; }
+  if(overlay){ overlay.style.display = 'flex'; }
+}
+function hideBackupProgress(){
+  var overlay = document.getElementById('backupProgressOverlay');
+  if(overlay){ overlay.style.display = 'none'; }
+}
+function showBackupResult(courseId){
+  var text = document.getElementById('backupResultText');
+  var link = document.getElementById('backupResultLink');
+  var overlay = document.getElementById('backupResultOverlay');
+  if(text){ text.textContent = 'Kurs erfolgreich aus der Sicherung wiederhergestellt.'; }
+  if(link){ link.href = 'app.html?goto=view-my-courses&adminPreviewCourse=' + encodeURIComponent(courseId); }
+  if(overlay){ overlay.style.display = 'flex'; }
+}
+
+// "Kurs aus Sicherung wiederherstellen": Datei einlesen, JSON parsen (klare
+// Fehlermeldung statt stillem Fehlschlag bei kaputter/ungültiger Datei),
+// dann KFStore.restoreCourseBackup() -- legt immer einen neuen Kurs an.
+function wireBackupImport(){
+  var importBtn = document.getElementById('backupImportBtn');
+  var fileInput = document.getElementById('backupFileInput');
+  var resultClose = document.getElementById('backupResultClose');
+  if(!importBtn || !fileInput){ return; }
+  importBtn.addEventListener('click', function(){ fileInput.click(); });
+  if(resultClose){
+    resultClose.addEventListener('click', function(){
+      var overlay = document.getElementById('backupResultOverlay');
+      if(overlay){ overlay.style.display = 'none'; }
+    });
+  }
+  fileInput.addEventListener('change', function(){
+    var file = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if(!file){ return; }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var backup;
+      try{ backup = JSON.parse(reader.result); }
+      catch(e){ showToast('Ungültige Sicherungsdatei -- kein lesbares JSON.'); return; }
+      showBackupProgress('Kurs wird angelegt …');
+      window.KFStore.restoreCourseBackup(backup, function(done, total){
+        showBackupProgress(total ? 'Bilder werden hochgeladen … (' + done + ' / ' + total + ')' : 'Kurs wird angelegt …');
+      }).then(function(courseId){
+        hideBackupProgress();
+        showBackupResult(courseId);
+        renderRecentLists();
+      }).catch(function(err){
+        hideBackupProgress();
+        showToast('Import fehlgeschlagen, bitte erneut versuchen: ' + ((err && err.message) || 'unbekannter Fehler'));
+      });
+    };
+    reader.onerror = function(){ showToast('Datei konnte nicht gelesen werden.'); };
+    reader.readAsText(file);
+  });
+}
+
 async function render(){
   await renderStats();
   await renderRecentLists();
@@ -438,6 +557,7 @@ async function init(){
   document.getElementById('topbarRole').textContent = session.email + ' · Admin';
   gate.style.display = 'none';
   mainWrap.style.display = '';
+  wireBackupImport();
   await render();
 }
 
