@@ -1303,6 +1303,7 @@ window.renderMyCourses = async function(){
   wireQuestionAnswerForms(list);
   wireLearnerPurchaseSuggestions(list);
   wireCourseDeleteButtons(list);
+  wireCompactCourseCards(list);
   notifyIfQuestionsAnswered(session);
   if(isCreator && mode === 'creator'){ notifyIfNewQuestions(session); }
 };
@@ -1333,6 +1334,20 @@ async function renderMyCoursesQuestions(){
       answerBlock +
       '</div>';
   }).join('');
+}
+
+// Optionales Aufklappen der Kapitelliste bei einem kompakt dargestellten
+// live-Kurs (Teil 9, Punkt 5) -- rein clientseitig, kein Re-Render nötig.
+function wireCompactCourseCards(container){
+  container.querySelectorAll('[data-toggle-chapters]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var panel = container.querySelector('[data-chapters-panel="' + btn.dataset.toggleChapters + '"]');
+      if(!panel){ return; }
+      var open = panel.style.display === 'none';
+      panel.style.display = open ? 'block' : 'none';
+      btn.textContent = (open ? '▴' : '▾') + ' Kapitel anzeigen';
+    });
+  });
 }
 
 // "Kurs löschen" braucht eine zweistufige Bestätigung (kein natives
@@ -1448,8 +1463,12 @@ async function renderMyCoursesCreator(session){
     }).length;
     localStorage.setItem(lastSeenKey, new Date().toISOString());
 
+    // s.chapterTitle kommt aus chapters.title und ist bereits der volle
+    // Anzeige-String ("Kapitel 1 – X"), siehe chapterTitles() im Kursbau --
+    // hier zusätzlich "Kapitel N – " davorzusetzen erzeugte den doppelten
+    // Präfix "Kapitel 1 – Kapitel 1 – X" (Teil 9, Punkt 6).
     var chaptersHtml = subs.map(function(s){
-      return '<div class="mycourse-chapter"><span>Kapitel ' + (s.chapterIndex+1) + ' – ' + escapeHtmlMy(s.chapterTitle) + '</span>' +
+      return '<div class="mycourse-chapter"><span>' + escapeHtmlMy(s.chapterTitle) + '</span>' +
         '<span class="mini-status ' + (STATUS_CLASS[s.status]||'open') + '">' + (STATUS_LABEL[s.status]||'In Arbeit') + '</span></div>';
     }).join('') || '<p style="font-size:13px;color:var(--muted)">Noch keine Kapitel eingereicht.</p>';
     var TRANSCRIPT_STATUS_LABEL = { ausstehend:'Notennachweis: wartet auf Prüfung', angenommen:'Notennachweis: angenommen ✓', abgelehnt:'Notennachweis: abgelehnt' };
@@ -1474,17 +1493,37 @@ async function renderMyCoursesCreator(session){
           '</div>' +
         '</div>';
     }
-    cards += '<div class="mycourse-card">' +
-      '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
-      '<p>' + escapeHtmlMy(course.hochschule) + '</p></div>' +
-      '<span class="mycourse-badge ' + (COURSE_STATUS_CLASS[course.status]||'draft') + '">' + (COURSE_STATUS_LABEL[course.status]||'Entwurf') + '</span></div>' +
-      '<div class="mycourse-chapters">' + chaptersHtml + '</div>' +
-      transcriptHtml +
-      '<div style="margin-top:14px; display:flex; align-items:center; gap:16px; flex-wrap:wrap">' +
-        '<a href="app.html?goto=view-creator-wizard&course=' + encodeURIComponent(course.id) + '" class="cta" style="display:inline-block;text-decoration:none;padding:8px 16px;font-size:13px">Weiter bearbeiten →</a>' +
-        deleteHtml +
-      '</div>' +
-      '</div>';
+    var weiterBtnHtml = '<a href="app.html?goto=view-creator-wizard&course=' + encodeURIComponent(course.id) + '" class="cta" style="display:inline-block;text-decoration:none;padding:8px 16px;font-size:13px">Weiter bearbeiten →</a>';
+    if(course.status === 'live'){
+      // Ein fertiger, live stehender Kurs muss dem Creator nicht mehr Kapitel
+      // für Kapitel zeigen (Teil 9, Punkt 5) -- kompakte Karte mit optional
+      // aufklappbarer Kapitelliste, statt sie immer voll auszuklappen. Gilt
+      // unabhängig davon, ob inzwischen neue, noch unfertige Kapitel
+      // ergänzt wurden -- "Weiter bearbeiten" führt ja direkt dorthin.
+      cards += '<div class="mycourse-card compact">' +
+        '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
+        '<p>' + escapeHtmlMy(course.hochschule) + '</p></div>' +
+        '<span class="mycourse-badge live">Live</span></div>' +
+        transcriptHtml +
+        '<div style="margin-top:14px; display:flex; align-items:center; gap:16px; flex-wrap:wrap">' +
+          weiterBtnHtml +
+          '<button type="button" class="btn-cancel" data-toggle-chapters="' + escapeHtmlMy(course.id) + '" style="padding:8px 4px;font-size:13px">▾ Kapitel anzeigen</button>' +
+        '</div>' +
+        '<div class="mycourse-chapters" data-chapters-panel="' + escapeHtmlMy(course.id) + '" style="display:none; margin-top:10px">' + chaptersHtml + '</div>' +
+        '</div>';
+    } else {
+      cards += '<div class="mycourse-card">' +
+        '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(course.title) + (course.prof ? ' — ' + escapeHtmlMy(course.prof) : '') + '</h3>' +
+        '<p>' + escapeHtmlMy(course.hochschule) + '</p></div>' +
+        '<span class="mycourse-badge ' + (COURSE_STATUS_CLASS[course.status]||'draft') + '">' + (COURSE_STATUS_LABEL[course.status]||'Entwurf') + '</span></div>' +
+        '<div class="mycourse-chapters">' + chaptersHtml + '</div>' +
+        transcriptHtml +
+        '<div style="margin-top:14px; display:flex; align-items:center; gap:16px; flex-wrap:wrap">' +
+          weiterBtnHtml +
+          deleteHtml +
+        '</div>' +
+        '</div>';
+    }
   }
 
   if(newUpdateCount > 0 && typeof showToast === 'function'){
@@ -2217,6 +2256,7 @@ function lcResetAreaState(areaKey){
   window.currentLearnerZfChapterId = null;
   window.currentLearnerZfAnchor = null;
   window.currentLearnerKkChapterId = null;
+  window.currentLearnerKkOnlyOpen = false;
 }
 
 // Welche Bereiche dieser Kurs für diese:n Nutzer:in überhaupt hat, in
@@ -2543,7 +2583,21 @@ async function renderKkAreaHtml(courseId, data, access){
 
   var selectedChapter = selectedChapterId ? chaptersWithCards.filter(function(c){ return c.id === selectedChapterId; })[0] : null;
   var selectedLocked = selectedChapter ? lcChapterLocked(selectedChapter, access) : false;
-  var runDeck = selectedChapterId ? fullDeck.filter(function(c){ return c.chapterId === selectedChapterId; }) : fullDeck;
+  var scopeDeck = selectedChapterId ? fullDeck.filter(function(c){ return c.chapterId === selectedChapterId; }) : fullDeck;
+
+  // Filter "Nur unbeantwortete/falsche zeigen" (Teil 9): Karten, die schon
+  // mit "gut" bewertet wurden, verschwinden aus dem Durchlauf -- die
+  // Bewertungen selbst kommen unverändert aus KFCatalog.getProgress() (kein
+  // neues Datenmodell), nur eine zusätzliche Filterebene auf scopeDeck.
+  var allRatings = await window.KFCatalog.getProgress(courseId);
+  function kkRatingOf(card){ return (allRatings[LC_KK_RATING_ITEM_TYPE + ':' + card.chapterId + ':' + card.cardIndex] || {}).rating; }
+  var onlyOpen = !!window.currentLearnerKkOnlyOpen;
+  var openCount = scopeDeck.filter(function(c){ return kkRatingOf(c) !== 'gut'; }).length;
+  var runDeck = onlyOpen ? scopeDeck.filter(function(c){ return kkRatingOf(c) !== 'gut'; }) : scopeDeck;
+  var openFilterHtml = '<div class="kk-open-filter" style="margin-top:12px">' +
+    '<button type="button" class="chip' + (onlyOpen ? ' on' : '') + '" data-kk-only-open>Nur unbeantwortete/falsche</button>' +
+    '<span id="kkOpenCounter" class="hint-sm" style="display:block; margin-top:6px">' + openCount + ' von ' + scopeDeck.length + ' Karten noch offen</span>' +
+  '</div>';
   var crumbHtml = lcCourseCrumb();
 
   var exportCards = runDeck.map(function(c){ return { frage: c.frage, antwort: c.antwort, frageBild: c.frageBild, antwortBild: c.antwortBild }; });
@@ -2578,14 +2632,20 @@ async function renderKkAreaHtml(courseId, data, access){
       '<div id="kkSummary"></div>';
   }
 
-  kkLastRun = { deck: runDeck, lockedCount: lockedCount, purchased: access.purchased };
-  return '<div class="two-col"><div class="filter-col">' + chipsHtml + exportHtml + '</div><div>' + mainHtml + '</div></div>';
+  kkLastRun = { deck: runDeck, lockedCount: lockedCount, purchased: access.purchased, allRatings: allRatings, scopeDeck: scopeDeck };
+  return '<div class="two-col"><div class="filter-col">' + chipsHtml + openFilterHtml + exportHtml + '</div><div>' + mainHtml + '</div></div>';
 }
 
 function wireKkArea(container, courseId){
   container.querySelectorAll('[data-kk-chip]').forEach(function(btn){
     btn.addEventListener('click', function(){
       window.currentLearnerKkChapterId = btn.dataset.kkChip || null;
+      window.renderCourseView();
+    });
+  });
+  container.querySelectorAll('[data-kk-only-open]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      window.currentLearnerKkOnlyOpen = !window.currentLearnerKkOnlyOpen;
       window.renderCourseView();
     });
   });
@@ -2601,6 +2661,16 @@ function wireKkArea(container, courseId){
   var barEl = container.querySelector('#kkBar');
   var progressLineEl = container.querySelector('.progress-line');
   var hintEl = container.querySelector('.hint');
+  // Live-Zähler "X von Y Karten noch offen" (Teil 9) -- aktualisiert sich
+  // sofort nach jeder Bewertung, ohne auf einen Neu-Render zu warten; das
+  // eigentliche Verschwinden einer frisch auf "gut" gesetzten Karte aus der
+  // gefilterten Liste selbst greift beim nächsten Render (Kapitel-/Filter-
+  // Wechsel oder erneutes Öffnen des Bereichs).
+  var openCounterEl = container.querySelector('#kkOpenCounter');
+  var allRatingsMap = run.allRatings || {};
+  var scopeDeckForCounter = run.scopeDeck || [];
+  function kkRatingOfLive(card){ return (allRatingsMap[LC_KK_RATING_ITEM_TYPE + ':' + card.chapterId + ':' + card.cardIndex] || {}).rating; }
+  var openRemaining = scopeDeckForCounter.filter(function(c){ return kkRatingOfLive(c) !== 'gut'; }).length;
 
   fc.addEventListener('click', function(){
     var card = deck[idx];
@@ -2616,6 +2686,11 @@ function wireKkArea(container, courseId){
       var card = deck[idx];
       var rating = ratingForClass[btn.className];
       tally[rating]++; ratedCount++;
+      var wasOpen = kkRatingOfLive(card) !== 'gut';
+      var isOpenNow = rating !== 'gut';
+      if(wasOpen && !isOpenNow){ openRemaining--; } else if(!wasOpen && isOpenNow){ openRemaining++; }
+      allRatingsMap[LC_KK_RATING_ITEM_TYPE + ':' + card.chapterId + ':' + card.cardIndex] = { rating: rating };
+      if(openCounterEl){ openCounterEl.textContent = openRemaining + ' von ' + scopeDeckForCounter.length + ' Karten noch offen'; }
       window.KFCatalog.setProgressItem(courseId, LC_KK_RATING_ITEM_TYPE, card.chapterId + ':' + card.cardIndex, { rating: rating }).catch(function(err){
         showToast('Bewertung konnte nicht gespeichert werden: ' + ((err && err.message) || 'unbekannt'));
       });
@@ -4295,6 +4370,19 @@ window.renderSubjectsForHochschule = async function(){
       linksEl.appendChild(link);
     });
   }
+  // Denselben "+ Tabelle einfügen"-Baustein (Teil 9, Punkt 3) auch an den
+  // Lösungsweg-Textfeldern von Übungsaufgaben/Altklausuren anhängen -- keine
+  // neue Logik, nur dieselbe makeTableInsertBtn()/refreshTableLinksFor()-
+  // Verdrahtung wie bei den Zusammenfassung-Feldern, hier auf den
+  // dynamisch erzeugten Zeilen statt statischem Markup.
+  function wireSolutionTableTool(row){
+    var solBlock = row.querySelector('.sol-block[data-mode-block="text"]');
+    var ta = solBlock ? solBlock.querySelector('textarea') : null;
+    if(!ta){ return; }
+    ta.addEventListener('blur', function(){ refreshTableLinksFor(ta); });
+    solBlock.appendChild(makeTableInsertBtn(ta));
+    refreshTableLinksFor(ta);
+  }
   function tblCreateGrid(rows, cols){
     var g = [];
     for(var r = 0; r < rows; r++){
@@ -5027,12 +5115,13 @@ window.renderSubjectsForHochschule = async function(){
       '<div class="field"><label>Eigene Aufgabenstellung</label><textarea placeholder="Formuliere eine eigene Aufgabe …"></textarea></div>' +
       '<div class="field"><label>Lösungsweg</label>' +
       '<div class="mode-toggle"><button type="button" class="on" data-mode="text">Text</button><button type="button" data-mode="bild">Bild</button></div>' +
-      '<div class="sol-block active" data-mode-block="text"><textarea placeholder="Schritt-für-Schritt-Lösung …"></textarea></div>' +
+      '<div class="sol-block active" data-mode-block="text"><div class="zf-table-links" style="display:none"></div><textarea placeholder="Schritt-für-Schritt-Lösung …"></textarea></div>' +
       '<div class="sol-block" data-mode-block="bild"><p class="hint-sm" style="margin:0">Datei-Upload folgt bald – bitte den Lösungsweg für jetzt oben im Textfeld beschreiben.</p></div></div>' +
       '<div class="field"><label>Erklärvideo (optional)</label><p class="hint-sm" style="margin:0">Video-Upload folgt bald.</p></div></div>';
     var row = wrap.firstElementChild;
     container.appendChild(row);
     enhanceRow(row, container);
+    wireSolutionTableTool(row);
     return row;
   }
   function addAltklausurRow(){
@@ -5047,12 +5136,13 @@ window.renderSubjectsForHochschule = async function(){
       '<div class="field"><label>Thema</label><input type="text" placeholder="z. B. Scrum"></div></div>' +
       '<div class="field"><label>Dein Lösungsweg</label>' +
       '<div class="mode-toggle"><button type="button" class="on" data-mode="text">Text</button><button type="button" data-mode="bild">Bild</button></div>' +
-      '<div class="sol-block active" data-mode-block="text"><textarea placeholder="Eigener Lösungsweg (nur Antwort, keine Originalfrage) …"></textarea></div>' +
+      '<div class="sol-block active" data-mode-block="text"><div class="zf-table-links" style="display:none"></div><textarea placeholder="Eigener Lösungsweg (nur Antwort, keine Originalfrage) …"></textarea></div>' +
       '<div class="sol-block" data-mode-block="bild"><p class="hint-sm" style="margin:0">Datei-Upload folgt bald – bitte den Lösungsweg für jetzt oben im Textfeld beschreiben.</p></div></div>' +
       '<div class="field"><label>Erklärvideo (optional)</label><p class="hint-sm" style="margin:0">Video-Upload folgt bald.</p></div></div>';
     var row = wrap.firstElementChild;
     container.appendChild(row);
     enhanceRow(row, container);
+    wireSolutionTableTool(row);
     return row;
   }
   function addTutRow(){
@@ -5627,15 +5717,25 @@ window.renderSubjectsForHochschule = async function(){
         } else if(st === 'ueberarbeitung'){
           statusHtml = '<span class="pack-status revise">Überarbeitung nötig</span>';
           btnHtml = '<button class="cta" style="padding:8px 16px; font-size:13px" data-submit-idx="' + i + '">Erneut einreichen</button>';
-          var reviewerComments = (sub.comments||[]).filter(function(c){ return c.role === 'reviewer'; });
-          if(reviewerComments.length){
-            feedbackHtml = '<div class="review-feedback"><div class="rf-title">Anmerkungen des Prüfers</div>' +
-              (await renderReviewerCommentsHtml(reviewerComments, i, sub)) +
-              '<p style="font-size:12.5px;color:var(--muted);margin:0">Passe die genannten Punkte in den entsprechenden Schritten an und reiche das Kapitel danach erneut ein.</p></div>';
-          }
         } else {
           statusHtml = '<span class="pack-status open">Bereit zur Einreichung</span>';
           btnHtml = '<button class="cta" style="padding:8px 16px; font-size:13px" data-submit-idx="' + i + '">Einreichen</button>';
+        }
+        // Anmerkungen des Prüfers unabhängig vom aktuellen Status anzeigen,
+        // sobald welche existieren -- vorher nur für 'ueberarbeitung'
+        // gerendert, wodurch eine Anmerkung bei direkter Freigabe (Prüfer
+        // gibt trotz Anmerkung frei, statt zur Überarbeitung zurückzuschicken)
+        // für den Creator komplett unsichtbar blieb, obwohl sie in
+        // chapter_comments längst gespeichert war.
+        if(sub){
+          var reviewerComments = (sub.comments||[]).filter(function(c){ return c.role === 'reviewer'; });
+          if(reviewerComments.length){
+            var feedbackNote = st === 'ueberarbeitung'
+              ? '<p style="font-size:12.5px;color:var(--muted);margin:0">Passe die genannten Punkte in den entsprechenden Schritten an und reiche das Kapitel danach erneut ein.</p>'
+              : '';
+            feedbackHtml = '<div class="review-feedback"><div class="rf-title">Anmerkungen des Prüfers</div>' +
+              (await renderReviewerCommentsHtml(reviewerComments, i, sub)) + feedbackNote + '</div>';
+          }
         }
         var freePreviewHtml = '';
         if(sub && sub.id){
@@ -5950,9 +6050,17 @@ window.renderSubjectsForHochschule = async function(){
 
     ensureRowCount('uebungRows', (state.uebungen||[]).length, function(){ addUebungRow(null); });
     fillRows('uebungRows', state.uebungen);
+    document.querySelectorAll('#uebungRows .repeat-row').forEach(function(row){
+      var ta = row.querySelector('.sol-block[data-mode-block="text"] textarea');
+      if(ta){ refreshTableLinksFor(ta); }
+    });
 
     ensureRowCount('altklausurRows', (state.altklausuren||[]).length, addAltklausurRow);
     fillRows('altklausurRows', state.altklausuren);
+    document.querySelectorAll('#altklausurRows .repeat-row').forEach(function(row){
+      var ta = row.querySelector('.sol-block[data-mode-block="text"] textarea');
+      if(ta){ refreshTableLinksFor(ta); }
+    });
 
     ensureRowCount('tutRows', (state.tutorien||[]).length, addTutRow);
     fillRows('tutRows', state.tutorien);
