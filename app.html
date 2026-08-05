@@ -201,6 +201,18 @@ a{color:var(--accent);}
 .subject-row h3{margin-bottom:2px;}
 .subject-row p{font-size:12px; color:var(--muted);}
 .subject-row .meta{font-size:11px; color:var(--muted); background:var(--paper); border:1px solid var(--line); padding:3px 10px; border-radius:20px; white-space:nowrap;}
+/* Bundle-Kachel (angelehnt an .tile.group im Admin-Dashboard): Rahmen in
+   Akzentfarbe + mehr Innenabstand, damit sie sich klar von einzelnen
+   .subject-row abhebt; flex-direction:column, da filterSubjects() weiterhin
+   display:flex setzt (nur das Umbrechen der Kinder ändert sich). */
+.subject-row.bundle{flex-direction:column; align-items:stretch; gap:0; cursor:default; border:1.5px solid var(--accent); padding:18px 20px;}
+.subject-row.bundle:hover{border-color:var(--accent);}
+.subject-row.bundle .bundle-badge{align-self:flex-start; background:var(--accent); color:#fff; margin-bottom:10px;}
+.subject-row.bundle .bundle-sub{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid var(--line);}
+.subject-row.bundle .bundle-sub:first-of-type{border-top:none;}
+.subject-row.bundle .bundle-sub h4{margin:0 0 2px; font-size:14.5px;}
+.subject-row.bundle .bundle-footer{margin-top:12px;}
+.subject-row.bundle .bundle-footer .cta{width:100%; padding:10px 14px; font-size:13px;}
 .no-results{font-size:13px; color:var(--muted); padding:14px 0;}
 .ch-content{display:none;}
 .ch-content.active{display:block;}
@@ -1293,14 +1305,17 @@ window.renderMyCourses = async function(){
   if(isCreator && mode === 'creator'){
     html += '<h2 style="margin:0 0 12px; font-size:19px">Meine Creator-Kurse</h2>';
     html += await renderMyCoursesCreator(session);
-    html += '<h2 style="margin:30px 0 12px; font-size:19px">Fragen von Lernenden</h2>';
-    html += await renderMyCoursesQuestions();
+    var myQuestions = await window.KFQuestions.getForMyCourses();
+    var openQuestionCount = myQuestions.filter(function(q){ return q.status === 'offen'; }).length;
+    html += renderQuestionsTile(openQuestionCount) +
+      '<div id="myQuestionsDetail" style="display:none">' + renderMyCoursesQuestionsGrouped(myQuestions) + '</div>';
   } else {
     html += await renderMyCoursesLearner();
   }
   list.innerHTML = html;
   wireLearnerCourseOpenButtons(list);
   wireQuestionAnswerForms(list);
+  wireQuestionsTile(list);
   wireLearnerPurchaseSuggestions(list);
   wireCourseDeleteButtons(list);
   wireCompactCourseCards(list);
@@ -1308,32 +1323,82 @@ window.renderMyCourses = async function(){
   if(isCreator && mode === 'creator'){ notifyIfNewQuestions(session); }
 };
 
-async function renderMyCoursesQuestions(){
-  var questions = await window.KFQuestions.getForMyCourses();
+// Kachel statt flacher Liste (Teil 3 des Specs vom 05.08.) -- Fragen sind
+// bereits geladen (myQuestions), daher reines Show/Hide beim Aufklappen,
+// kein Neuladen nötig.
+function renderQuestionsTile(openCount){
+  return '<div class="block" data-toggle-questions style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; margin:30px 0 14px">' +
+    '<div><h2 style="margin:0; font-size:19px">Fragen von Lernenden</h2>' +
+    '<p style="margin:4px 0 0; font-size:13px; color:var(--muted)">' +
+      (openCount ? openCount + ' offene Frage' + (openCount === 1 ? '' : 'n') : 'Keine offenen Fragen') +
+    '</p></div>' +
+    '<span class="mini-status ' + (openCount ? 'review' : 'done') + '">' + openCount + '</span>' +
+    '</div>';
+}
+function wireQuestionsTile(container){
+  var tile = container.querySelector('[data-toggle-questions]');
+  var detail = container.querySelector('#myQuestionsDetail');
+  if(!tile || !detail){ return; }
+  tile.addEventListener('click', function(){
+    detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+  });
+}
+
+// Gruppiert nach Kurs -> Kapitel statt einer flachen Liste; der Kontext
+// (Kurstitel/Kapiteltitel) steht jetzt als Gruppen-Überschrift statt in jeder
+// einzelnen Karte -- q.chapter.title ist bereits der volle, präfixierte
+// Anzeigestring (siehe Bug 1), hier also ohne zusätzliches "Kapitel "-Präfix
+// verwendet.
+function renderMyCoursesQuestionsGrouped(questions){
   if(!questions.length){
     return '<p style="font-size:13px;color:var(--muted)">Noch keine Fragen von Lernenden.</p>';
   }
-  questions.sort(function(a,b){
-    if(a.status !== b.status){ return a.status === 'offen' ? -1 : 1; }
-    return new Date(b.created_at) - new Date(a.created_at);
+  var byCourse = {};
+  var courseOrder = [];
+  questions.forEach(function(q){
+    var cId = q.course_id;
+    if(!byCourse[cId]){ byCourse[cId] = { course: q.course, byChapter: {}, chapterOrder: [] }; courseOrder.push(cId); }
+    var group = byCourse[cId];
+    var chId = q.chapter_id || '_ohne_kapitel';
+    if(!group.byChapter[chId]){ group.byChapter[chId] = { chapter: q.chapter, items: [] }; group.chapterOrder.push(chId); }
+    group.byChapter[chId].items.push(q);
   });
-  return questions.map(function(q){
-    var bausteinLabel = window.KF_BAUSTEIN_LABELS[q.content_type] || q.content_type;
-    var contextLabel = (q.course ? q.course.title : '') + (q.chapter ? ' · Kapitel ' + q.chapter.title : '') + ' · ' + bausteinLabel;
-    var isOpen = q.status === 'offen';
-    var answerBlock = isOpen
-      ? '<div style="margin-top:10px">' +
-          '<textarea class="tf-question-input" data-answer-input="' + q.id + '" placeholder="Deine Antwort …"></textarea>' +
-          '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin:6px 0"><input type="checkbox" data-answer-public="' + q.id + '"> Öffentlich beantworten (als FAQ für alle mit Kurszugriff sichtbar)</label>' +
-          '<button type="button" class="cta" style="padding:7px 14px;font-size:12.5px" data-answer-submit="' + q.id + '">Antwort speichern</button>' +
-        '</div>'
-      : '<div class="lc-item" style="margin-top:8px"><strong>Antwort' + (q.is_public ? ' (öffentlich)' : '') + ':</strong> ' + escapeHtmlMy(q.answer_text||'') + '</div>';
-    return '<div class="mycourse-card">' +
-      '<div class="mycourse-head"><div><h3>' + escapeHtmlMy(contextLabel) + '</h3><p>' + escapeHtmlMy(q.question_text) + '</p></div>' +
-      '<span class="mini-status ' + (isOpen ? 'review' : 'done') + '">' + (isOpen ? 'Offen' : 'Beantwortet') + '</span></div>' +
-      answerBlock +
+  return courseOrder.map(function(cId){
+    var courseGroup = byCourse[cId];
+    var chaptersHtml = courseGroup.chapterOrder.map(function(chId){
+      var chapterGroup = courseGroup.byChapter[chId];
+      var chapterLabel = chapterGroup.chapter ? chapterGroup.chapter.title : 'Kursweit';
+      var items = chapterGroup.items.slice().sort(function(a,b){
+        if(a.status !== b.status){ return a.status === 'offen' ? -1 : 1; }
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      return '<div style="margin:14px 0 0">' +
+        '<p style="font-size:12.5px;color:var(--muted);margin:0 0 6px">' + escapeHtmlMy(chapterLabel) + '</p>' +
+        items.map(renderQuestionCard).join('') +
       '</div>';
+    }).join('');
+    return '<div style="margin-top:18px">' +
+      '<h3 style="margin:0; font-size:15px">' + escapeHtmlMy(courseGroup.course ? courseGroup.course.title : '') + '</h3>' +
+      chaptersHtml +
+    '</div>';
   }).join('');
+}
+function renderQuestionCard(q){
+  var bausteinLabel = window.KF_BAUSTEIN_LABELS[q.content_type] || q.content_type;
+  var isOpen = q.status === 'offen';
+  var answerBlock = isOpen
+    ? '<div style="margin-top:10px">' +
+        '<textarea class="tf-question-input" data-answer-input="' + q.id + '" placeholder="Deine Antwort …"></textarea>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin:6px 0"><input type="checkbox" data-answer-public="' + q.id + '"> Öffentlich beantworten (als FAQ für alle mit Kurszugriff sichtbar)</label>' +
+        '<button type="button" class="cta" style="padding:7px 14px;font-size:12.5px" data-answer-submit="' + q.id + '">Antwort speichern</button>' +
+      '</div>'
+    : '<div class="lc-item" style="margin-top:8px"><strong>Antwort:</strong> ' + escapeHtmlMy(q.answer_text||'') + '</div>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin:6px 0 0"><input type="checkbox" data-set-public="' + q.id + '"' + (q.is_public ? ' checked' : '') + '> Öffentlich sichtbar (als FAQ für alle mit Kurszugriff)</label>';
+  return '<div class="mycourse-card">' +
+    '<div class="mycourse-head"><div><p style="margin:0">' + escapeHtmlMy(q.question_text) + ' <span style="color:var(--muted); font-size:12px">(' + escapeHtmlMy(bausteinLabel) + ')</span></p></div>' +
+    '<span class="mini-status ' + (isOpen ? 'review' : 'done') + '">' + (isOpen ? 'Offen' : 'Beantwortet') + '</span></div>' +
+    answerBlock +
+    '</div>';
 }
 
 // Optionales Aufklappen der Kapitelliste bei einem kompakt dargestellten
@@ -1401,6 +1466,24 @@ function wireQuestionAnswerForms(container){
         window.renderMyCourses();
       }).catch(function(e){
         btn.disabled = false;
+        showToast('Fehler: ' + ((e && e.message) || 'unbekannt'));
+      });
+    });
+  });
+  // Nachträgliches Ändern der Sichtbarkeit einer bereits beantworteten Frage
+  // (Teil 3 des Specs vom 05.08.) -- kein renderMyCourses()-Neuladen nötig,
+  // die Checkbox spiegelt ihren eigenen Zustand schon direkt wider.
+  container.querySelectorAll('[data-set-public]').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      var qid = cb.dataset.setPublic;
+      var checked = cb.checked;
+      cb.disabled = true;
+      window.KFQuestions.setPublic(qid, checked).then(function(){
+        showToast('Sichtbarkeit aktualisiert.');
+        cb.disabled = false;
+      }).catch(function(e){
+        cb.checked = !checked;
+        cb.disabled = false;
         showToast('Fehler: ' + ((e && e.message) || 'unbekannt'));
       });
     });
@@ -3488,9 +3571,38 @@ window.renderSubjectsForHochschule = async function(){
     return s.status === 'live' ? window.KFBundles.getForCourse(s.id) : Promise.resolve(null);
   }));
 
+  // Bundle-Kachel (Teil 1 des Specs vom 05.08.): zwei bestätigte Bundle-
+  // Partner bekommen EINE gemeinsame, größere Kachel statt zweier
+  // .subject-row, sobald beide in der aktuellen Fächerliste stehen. Jedes
+  // Fach bleibt einzeln kaufbar; renderedIds verhindert, dass der Partner
+  // später in derselben .map()-Runde noch einmal einzeln gerendert wird.
+  var renderedIds = {};
+  function renderBundleSubRow(s, idx){
+    var nameAttr = (s.title + ' ' + (s.prof||'')).toLowerCase();
+    var buyHtml = purchaseFlags[idx]
+      ? '<span class="meta" style="color:var(--accent)">Gekauft ✓</span>'
+      : '<button type="button" class="ghost" data-buy-course="'+escapeHtmlMy(s.id)+'" style="padding:5px 12px;font-size:12px;white-space:nowrap">Nur dieses Fach – '+escapeHtmlMy(coursePrice)+' €</button>';
+    return '<div class="bundle-sub">'+
+      '<div><h4>'+escapeHtmlMy(s.title)+(s.prof ? ' — '+escapeHtmlMy(s.prof) : '')+'</h4><p style="margin:0;font-size:12px;color:var(--muted)">'+escapeHtmlMy(s.semester||'')+'</p></div>'+
+      buyHtml +
+    '</div>';
+  }
+  function renderBundleTile(a, idxA, b, idxB){
+    var bothBought = purchaseFlags[idxA] && purchaseFlags[idxB];
+    var sgAttr = ((a.sg||[]).concat(b.sg||[])).join(' ');
+    var nameAttr = (a.title+' '+(a.prof||'')+' '+b.title+' '+(b.prof||'')).toLowerCase();
+    return '<div class="subject-row bundle" data-sg="'+escapeHtmlMy(sgAttr)+'" data-name="'+escapeHtmlMy(nameAttr)+'">'+
+      '<span class="badge bundle-badge">Bundle</span>'+
+      renderBundleSubRow(a, idxA) + renderBundleSubRow(b, idxB)+
+      (bothBought ? '' :
+        '<div class="bundle-footer"><button type="button" class="cta" data-buy-bundle="'+escapeHtmlMy(a.id)+','+escapeHtmlMy(b.id)+'">Beide im Bundle kaufen – '+escapeHtmlMy(bundlePrice)+' €</button></div>')+
+    '</div>';
+  }
+
   var listBox = document.getElementById('subjectList');
   if(listBox){
     listBox.innerHTML = subjects.map(function(s, idx){
+      if(renderedIds[s.id]){ return ''; }
       if(s.status === 'in_arbeit'){
         var sgAttrWip = (s.sg||[]).join(' ');
         var nameAttrWip = (s.title + ' ' + (s.prof||'')).toLowerCase();
@@ -3498,17 +3610,22 @@ window.renderSubjectsForHochschule = async function(){
           '<div class="info"><h3>'+escapeHtmlMy(s.title)+'</h3><p>'+escapeHtmlMy(hochschule)+'</p></div>'+
           '<span class="badge">In Arbeit</span></div>';
       }
+      var bundle = s.status === 'live' ? bundleInfos[idx] : null;
+      if(bundle && bundle.status === 'bestaetigt'){
+        var partnerIdx = -1;
+        for(var j=0;j<subjects.length;j++){ if(subjects[j].id === bundle.partnerCourseId){ partnerIdx = j; break; } }
+        if(partnerIdx !== -1 && !renderedIds[subjects[partnerIdx].id]){
+          renderedIds[s.id] = true; renderedIds[subjects[partnerIdx].id] = true;
+          return renderBundleTile(s, idx, subjects[partnerIdx], partnerIdx);
+        }
+      }
       var nameAttr = (s.title + ' ' + s.prof).toLowerCase();
       var sgAttr = (s.sg||[]).join(' ');
       var purchaseHtml = '';
       if(s.status === 'live'){
-        var bundle = bundleInfos[idx];
-        var priceLabel = (bundle && bundle.status === 'bestaetigt')
-          ? escapeHtmlMy(bundlePrice) + ' € im Bundle mit ' + escapeHtmlMy(bundle.partnerTitle)
-          : escapeHtmlMy(coursePrice) + ' €';
         purchaseHtml = purchaseFlags[idx]
           ? '<span class="meta" style="color:var(--accent)">Gekauft ✓</span>'
-          : '<button type="button" class="cta" data-buy-course="'+escapeHtmlMy(s.id)+'" style="padding:6px 14px;font-size:12.5px">Kaufen – '+priceLabel+'</button>';
+          : '<button type="button" class="cta" data-buy-course="'+escapeHtmlMy(s.id)+'" style="padding:6px 14px;font-size:12.5px">Kaufen – '+escapeHtmlMy(coursePrice)+' €</button>';
       }
       return '<div class="subject-row" data-sg="'+escapeHtmlMy(sgAttr)+'" data-name="'+escapeHtmlMy(nameAttr)+'"'+(s.status==='live' && purchaseFlags[idx] ? ' data-owned-course="'+escapeHtmlMy(s.id)+'"' : '')+'>'+
         '<div class="info"><h3>'+escapeHtmlMy(s.title)+(s.prof ? ' — '+escapeHtmlMy(s.prof) : '')+'</h3><p>'+escapeHtmlMy(s.desc||(s.isDraft ? 'Im Aufbau durch einen Creator' : ''))+'</p></div>'+
@@ -3538,6 +3655,38 @@ window.renderSubjectsForHochschule = async function(){
             span.textContent = 'Gekauft ✓';
             btn.replaceWith(span);
             showToast('Kurs freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung). Weiter zu Meine Kurse …');
+            setTimeout(function(){ showView('view-my-courses'); }, 900);
+          }).catch(function(err){
+            btn.disabled = false;
+            showToast('Kauf fehlgeschlagen: ' + ((err&&err.message)||'unbekannter Fehler'));
+          });
+        });
+      });
+    });
+    // Bundle-Kauf (Teil 1): schaltet BEIDE Kurse frei -- vorher schaltete ein
+    // Klick auf den alten "Kaufen -- 49 € im Bundle mit ..."-Button nur den
+    // einen angeklickten Kurs frei, obwohl der Bundle-Preis angezeigt wurde.
+    listBox.querySelectorAll('[data-buy-bundle]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var ids = btn.dataset.buyBundle.split(',');
+        requireLoginOrRedirect('kf_pending_purchase', ids[0]).then(function(canProceed){
+          if(!canProceed){ return; }
+          btn.disabled = true;
+          window.KFCatalog.recordPlaceholderBundlePurchase(ids[0], ids[1]).then(function(){
+            var tile = btn.closest('.subject-row.bundle');
+            if(tile){
+              tile.querySelectorAll('[data-buy-course]').forEach(function(subBtn){
+                var span = document.createElement('span');
+                span.className = 'meta';
+                span.style.color = 'var(--accent)';
+                span.textContent = 'Gekauft ✓';
+                subBtn.replaceWith(span);
+              });
+              var footer = tile.querySelector('.bundle-footer');
+              if(footer){ footer.remove(); }
+            }
+            showToast('Beide Kurse im Bundle freigeschaltet (Platzhalter-Kauf, noch keine echte Zahlung). Weiter zu Meine Kurse …');
             setTimeout(function(){ showView('view-my-courses'); }, 900);
           }).catch(function(err){
             btn.disabled = false;
@@ -3621,225 +3770,13 @@ window.renderSubjectsForHochschule = async function(){
     if(el){ el.addEventListener('blur', checkDuplicateCourse); }
   });
 
-  /* ---- Hochschul-Autocomplete (verhindert Schreibweisen-Inkonsistenzen) ---- */
-  var hochschulenDB = [
-    { name: 'HWG Ludwigshafen', aliases: ['Hochschule Ludwigshafen', 'Hochschule für Wirtschaft und Gesellschaft Ludwigshafen', 'HWG LU'] },
-    { name: 'Frankfurt University of Applied Sciences', aliases: ['FH Frankfurt', 'Fachhochschule Frankfurt', 'Frankfurt UAS'] },
-    { name: 'Hochschule Mainz', aliases: ['FH Mainz', 'Fachhochschule Mainz'] },
-    { name: 'Hochschule Worms', aliases: ['FH Worms', 'Fachhochschule Worms'] },
-    { name: 'Hochschule Trier', aliases: ['FH Trier', 'Fachhochschule Trier'] },
-    { name: 'Hochschule RheinMain', aliases: ['FH Wiesbaden', 'Hochschule Wiesbaden'] },
-    { name: 'Hochschule Darmstadt', aliases: ['h_da', 'FH Darmstadt'] },
-    { name: 'Technische Hochschule Mittelhessen', aliases: ['THM', 'FH Gießen-Friedberg'] },
-    { name: 'Hochschule Fulda', aliases: ['FH Fulda'] },
-    { name: 'Hochschule Koblenz', aliases: ['FH Koblenz'] },
-    { name: 'Hochschule Kaiserslautern', aliases: ['FH Kaiserslautern'] },
-    { name: 'Duale Hochschule Baden-Württemberg Mannheim', aliases: ['DHBW Mannheim'] },
-    { name: 'Duale Hochschule Baden-Württemberg Stuttgart', aliases: ['DHBW Stuttgart'] },
-    { name: 'Hochschule Mannheim', aliases: ['FH Mannheim'] },
-    { name: 'Hochschule Heilbronn', aliases: ['FH Heilbronn'] },
-    { name: 'Hochschule Karlsruhe', aliases: ['HKA', 'FH Karlsruhe'] },
-    { name: 'Hochschule Pforzheim', aliases: ['FH Pforzheim'] },
-    { name: 'Hochschule Esslingen', aliases: ['FH Esslingen'] },
-    { name: 'Hochschule für Technik Stuttgart', aliases: ['HFT Stuttgart'] },
-    { name: 'Technische Hochschule Nürnberg Georg Simon Ohm', aliases: ['TH Nürnberg', 'Ohm Nürnberg'] },
-    { name: 'Hochschule München', aliases: ['FH München'] },
-    { name: 'Technische Hochschule Rosenheim', aliases: ['TH Rosenheim', 'FH Rosenheim'] },
-    { name: 'Hochschule Augsburg', aliases: ['FH Augsburg'] },
-    { name: 'Technische Hochschule Ingolstadt', aliases: ['THI'] },
-    { name: 'Hochschule Köln', aliases: ['TH Köln', 'FH Köln'] },
-    { name: 'Hochschule Bonn-Rhein-Sieg', aliases: ['H-BRS'] },
-    { name: 'Hochschule Düsseldorf', aliases: ['HSD', 'FH Düsseldorf'] },
-    { name: 'Hochschule Niederrhein', aliases: ['FH Niederrhein', 'Krefeld Mönchengladbach'] },
-    { name: 'Fachhochschule Aachen', aliases: ['FH Aachen'] },
-    { name: 'Hochschule Bochum', aliases: ['FH Bochum'] },
-    { name: 'Hochschule Bremen', aliases: ['FH Bremen'] },
-    { name: 'Hochschule für Angewandte Wissenschaften Hamburg', aliases: ['HAW Hamburg'] },
-    { name: 'Hochschule Hannover', aliases: ['FH Hannover', 'HsH'] },
-    { name: 'Ostfalia Hochschule für angewandte Wissenschaften', aliases: ['Ostfalia'] },
-    { name: 'Hochschule für Technik und Wirtschaft Berlin', aliases: ['HTW Berlin'] },
-    { name: 'Beuth Hochschule für Technik Berlin', aliases: ['Beuth Hochschule'] },
-    { name: 'Hochschule für Wirtschaft und Recht Berlin', aliases: ['HWR Berlin'] },
-    { name: 'Hochschule für Technik und Wirtschaft Dresden', aliases: ['HTW Dresden'] },
-    { name: 'Westsächsische Hochschule Zwickau', aliases: ['WHZ'] },
-    { name: 'Hochschule Merseburg', aliases: [] },
-    { name: 'Hochschule Anhalt', aliases: [] },
-    { name: 'Universität Mannheim', aliases: [] },
-    { name: 'Universität Heidelberg', aliases: [] },
-    { name: 'Goethe-Universität Frankfurt', aliases: ['Uni Frankfurt'] },
-    { name: 'Johannes Gutenberg-Universität Mainz', aliases: ['Uni Mainz', 'JGU'] },
-    { name: 'Ludwig-Maximilians-Universität München', aliases: ['LMU München', 'LMU'] },
-    { name: 'Technische Universität München', aliases: ['TU München', 'TUM'] },
-    { name: 'Rheinisch-Westfälische Technische Hochschule Aachen', aliases: ['RWTH Aachen'] },
-    // Baden-Württemberg
-    { name: 'Karlsruher Institut für Technologie', aliases: ['KIT', 'Universität Karlsruhe'] },
-    { name: 'Universität Stuttgart', aliases: [] },
-    { name: 'Universität Tübingen', aliases: ['Eberhard Karls Universität Tübingen'] },
-    { name: 'Universität Freiburg', aliases: ['Albert-Ludwigs-Universität Freiburg'] },
-    { name: 'Universität Ulm', aliases: [] },
-    { name: 'Universität Hohenheim', aliases: [] },
-    { name: 'Universität Konstanz', aliases: [] },
-    { name: 'Duale Hochschule Baden-Württemberg Karlsruhe', aliases: ['DHBW Karlsruhe'] },
-    { name: 'Duale Hochschule Baden-Württemberg Villingen-Schwenningen', aliases: ['DHBW Villingen-Schwenningen'] },
-    { name: 'Duale Hochschule Baden-Württemberg Heidenheim', aliases: ['DHBW Heidenheim'] },
-    { name: 'Duale Hochschule Baden-Württemberg Lörrach', aliases: ['DHBW Lörrach'] },
-    { name: 'Duale Hochschule Baden-Württemberg Ravensburg', aliases: ['DHBW Ravensburg'] },
-    { name: 'Duale Hochschule Baden-Württemberg Heilbronn', aliases: ['DHBW Heilbronn'] },
-    { name: 'Hochschule Aalen', aliases: ['FH Aalen'] },
-    { name: 'Hochschule Furtwangen', aliases: ['HFU'] },
-    { name: 'Hochschule Offenburg', aliases: ['FH Offenburg'] },
-    { name: 'Hochschule Reutlingen', aliases: ['FH Reutlingen'] },
-    { name: 'Hochschule Ravensburg-Weingarten', aliases: ['RWU'] },
-    { name: 'Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen', aliases: ['HfWU'] },
-    { name: 'Pädagogische Hochschule Freiburg', aliases: [] },
-    { name: 'Pädagogische Hochschule Heidelberg', aliases: [] },
-    { name: 'Pädagogische Hochschule Karlsruhe', aliases: [] },
-    { name: 'Pädagogische Hochschule Ludwigsburg', aliases: [] },
-    { name: 'Pädagogische Hochschule Schwäbisch Gmünd', aliases: [] },
-    { name: 'Pädagogische Hochschule Weingarten', aliases: [] },
-    // Bayern
-    { name: 'Universität Augsburg', aliases: [] },
-    { name: 'Universität Bayreuth', aliases: [] },
-    { name: 'Universität Regensburg', aliases: [] },
-    { name: 'Universität Würzburg', aliases: ['Julius-Maximilians-Universität Würzburg'] },
-    { name: 'Friedrich-Alexander-Universität Erlangen-Nürnberg', aliases: ['FAU', 'Uni Erlangen-Nürnberg'] },
-    { name: 'Universität Passau', aliases: [] },
-    { name: 'Universität Bamberg', aliases: [] },
-    { name: 'Katholische Universität Eichstätt-Ingolstadt', aliases: ['KU Eichstätt'] },
-    { name: 'Hochschule Landshut', aliases: [] },
-    { name: 'Ostbayerische Technische Hochschule Regensburg', aliases: ['OTH Regensburg', 'Hochschule Regensburg'] },
-    { name: 'Ostbayerische Technische Hochschule Amberg-Weiden', aliases: ['OTH Amberg-Weiden'] },
-    { name: 'Hochschule Ansbach', aliases: [] },
-    { name: 'Hochschule Aschaffenburg', aliases: [] },
-    { name: 'Hochschule Coburg', aliases: [] },
-    { name: 'Hochschule Hof', aliases: [] },
-    { name: 'Hochschule Kempten', aliases: [] },
-    { name: 'Hochschule Neu-Ulm', aliases: ['HNU'] },
-    { name: 'Hochschule Weihenstephan-Triesdorf', aliases: ['HSWT'] },
-    { name: 'Technische Hochschule Würzburg-Schweinfurt', aliases: ['THWS', 'FHWS'] },
-    { name: 'Technische Hochschule Deggendorf', aliases: ['THD'] },
-    { name: 'Munich Business School', aliases: [] },
-    // Berlin
-    { name: 'Freie Universität Berlin', aliases: ['FU Berlin'] },
-    { name: 'Humboldt-Universität zu Berlin', aliases: ['HU Berlin'] },
-    { name: 'Technische Universität Berlin', aliases: ['TU Berlin'] },
-    { name: 'Alice Salomon Hochschule Berlin', aliases: ['ASH Berlin'] },
-    { name: 'Evangelische Hochschule Berlin', aliases: ['EHB'] },
-    { name: 'Katholische Hochschule für Sozialwesen Berlin', aliases: ['KHSB'] },
-    { name: 'Universität der Künste Berlin', aliases: ['UdK Berlin'] },
-    { name: 'ESMT Berlin', aliases: [] },
-    { name: 'Hertie School', aliases: [] },
-    { name: 'Charité – Universitätsmedizin Berlin', aliases: ['Charité Berlin'] },
-    { name: 'SRH Hochschule Berlin', aliases: [] },
-    // Brandenburg
-    { name: 'Universität Potsdam', aliases: [] },
-    { name: 'Europa-Universität Viadrina Frankfurt (Oder)', aliases: ['Viadrina'] },
-    { name: 'Brandenburgische Technische Universität Cottbus-Senftenberg', aliases: ['BTU Cottbus'] },
-    { name: 'Technische Hochschule Brandenburg', aliases: [] },
-    { name: 'Hochschule für nachhaltige Entwicklung Eberswalde', aliases: ['HNEE'] },
-    { name: 'Technische Hochschule Wildau', aliases: [] },
-    // Bremen
-    { name: 'Universität Bremen', aliases: [] },
-    { name: 'Jacobs University Bremen', aliases: [] },
-    { name: 'Hochschule Bremerhaven', aliases: [] },
-    { name: 'Hochschule für Künste Bremen', aliases: ['HfK Bremen'] },
-    // Hamburg
-    { name: 'Universität Hamburg', aliases: [] },
-    { name: 'Technische Universität Hamburg', aliases: ['TUHH'] },
-    { name: 'HafenCity Universität Hamburg', aliases: ['HCU Hamburg'] },
-    { name: 'Bucerius Law School', aliases: [] },
-    { name: 'Kühne Logistics University', aliases: ['KLU Hamburg'] },
-    // Hessen
-    { name: 'Justus-Liebig-Universität Gießen', aliases: ['Uni Gießen'] },
-    { name: 'Philipps-Universität Marburg', aliases: ['Uni Marburg'] },
-    { name: 'Technische Universität Darmstadt', aliases: ['TU Darmstadt'] },
-    { name: 'Universität Kassel', aliases: [] },
-    { name: 'Hochschule Geisenheim', aliases: [] },
-    { name: 'EBS Universität für Wirtschaft und Recht', aliases: ['EBS Oestrich-Winkel'] },
-    // Mecklenburg-Vorpommern
-    { name: 'Universität Rostock', aliases: [] },
-    { name: 'Universität Greifswald', aliases: [] },
-    { name: 'Hochschule Stralsund', aliases: [] },
-    { name: 'Hochschule Wismar', aliases: [] },
-    { name: 'Hochschule Neubrandenburg', aliases: [] },
-    // Niedersachsen
-    { name: 'Georg-August-Universität Göttingen', aliases: ['Uni Göttingen'] },
-    { name: 'Leibniz Universität Hannover', aliases: ['Uni Hannover'] },
-    { name: 'Technische Universität Braunschweig', aliases: ['TU Braunschweig'] },
-    { name: 'Carl von Ossietzky Universität Oldenburg', aliases: ['Uni Oldenburg'] },
-    { name: 'Universität Osnabrück', aliases: [] },
-    { name: 'Universität Hildesheim', aliases: [] },
-    { name: 'Universität Vechta', aliases: [] },
-    { name: 'Leuphana Universität Lüneburg', aliases: ['Uni Lüneburg'] },
-    { name: 'Technische Universität Clausthal', aliases: [] },
-    { name: 'Hochschule Osnabrück', aliases: [] },
-    { name: 'Hochschule Emden/Leer', aliases: [] },
-    { name: 'HAWK Hochschule Hildesheim/Holzminden/Göttingen', aliases: ['HAWK'] },
-    { name: 'Jade Hochschule', aliases: ['Jade Hochschule Wilhelmshaven'] },
-    { name: 'PFH Private Hochschule Göttingen', aliases: [] },
-    // Nordrhein-Westfalen
-    { name: 'Universität Bonn', aliases: [] },
-    { name: 'Universität zu Köln', aliases: ['Uni Köln'] },
-    { name: 'Universität Münster', aliases: ['WWU Münster'] },
-    { name: 'Ruhr-Universität Bochum', aliases: ['RUB'] },
-    { name: 'Universität Duisburg-Essen', aliases: [] },
-    { name: 'Universität Bielefeld', aliases: [] },
-    { name: 'Universität Paderborn', aliases: [] },
-    { name: 'Universität Siegen', aliases: [] },
-    { name: 'Bergische Universität Wuppertal', aliases: ['Uni Wuppertal'] },
-    { name: 'Technische Universität Dortmund', aliases: ['TU Dortmund'] },
-    { name: 'Deutsche Sporthochschule Köln', aliases: [] },
-    { name: 'FernUniversität in Hagen', aliases: ['FernUni Hagen'] },
-    { name: 'Hochschule Ruhr West', aliases: ['HRW'] },
-    { name: 'Westfälische Hochschule', aliases: ['Gelsenkirchen Bocholt Recklinghausen'] },
-    { name: 'Hochschule Hamm-Lippstadt', aliases: ['HSHL'] },
-    { name: 'Technische Hochschule Ostwestfalen-Lippe', aliases: ['TH OWL', 'Hochschule Lemgo'] },
-    { name: 'Fachhochschule Südwestfalen', aliases: ['Iserlohn Hagen Meschede Soest'] },
-    { name: 'Hochschule für Gesundheit Bochum', aliases: ['hsg Bochum'] },
-    { name: 'Hochschule Rhein-Waal', aliases: ['Kleve Kamp-Lintfort'] },
-    { name: 'Folkwang Universität der Künste', aliases: ['Folkwang Essen'] },
-    { name: 'Kunstakademie Düsseldorf', aliases: [] },
-    { name: 'Robert Schumann Hochschule Düsseldorf', aliases: [] },
-    // Rheinland-Pfalz
-    { name: 'Universität Trier', aliases: [] },
-    { name: 'Universität Koblenz', aliases: [] },
-    { name: 'Rheinland-Pfälzische Technische Universität Kaiserslautern-Landau', aliases: ['RPTU', 'TU Kaiserslautern'] },
-    // Saarland
-    { name: 'Universität des Saarlandes', aliases: ['Uni Saarland'] },
-    { name: 'Hochschule für Technik und Wirtschaft des Saarlandes', aliases: ['htw saar'] },
-    // Sachsen
-    { name: 'Technische Universität Dresden', aliases: ['TU Dresden'] },
-    { name: 'Universität Leipzig', aliases: [] },
-    { name: 'Technische Universität Chemnitz', aliases: ['TU Chemnitz'] },
-    { name: 'Technische Universität Bergakademie Freiberg', aliases: [] },
-    { name: 'Hochschule Mittweida', aliases: [] },
-    { name: 'Hochschule Zittau/Görlitz', aliases: [] },
-    { name: 'Hochschule für Technik, Wirtschaft und Kultur Leipzig', aliases: ['HTWK Leipzig'] },
-    { name: 'Hochschule für Grafik und Buchkunst Leipzig', aliases: ['HGB Leipzig'] },
-    { name: 'Hochschule für Musik und Theater Leipzig', aliases: [] },
-    // Sachsen-Anhalt
-    { name: 'Martin-Luther-Universität Halle-Wittenberg', aliases: ['Uni Halle'] },
-    { name: 'Otto-von-Guericke-Universität Magdeburg', aliases: ['Uni Magdeburg'] },
-    { name: 'Hochschule Magdeburg-Stendal', aliases: [] },
-    { name: 'Burg Giebichenstein Kunsthochschule Halle', aliases: [] },
-    // Schleswig-Holstein
-    { name: 'Christian-Albrechts-Universität zu Kiel', aliases: ['Uni Kiel', 'CAU Kiel'] },
-    { name: 'Universität zu Lübeck', aliases: [] },
-    { name: 'Universität Flensburg', aliases: [] },
-    { name: 'Hochschule Kiel', aliases: ['FH Kiel'] },
-    { name: 'Hochschule Flensburg', aliases: [] },
-    { name: 'Fachhochschule Westküste', aliases: ['FH Westküste Heide'] },
-    { name: 'Muthesius Kunsthochschule Kiel', aliases: [] },
-    // Thüringen
-    { name: 'Friedrich-Schiller-Universität Jena', aliases: ['Uni Jena'] },
-    { name: 'Bauhaus-Universität Weimar', aliases: [] },
-    { name: 'Technische Universität Ilmenau', aliases: ['TU Ilmenau'] },
-    { name: 'Universität Erfurt', aliases: [] },
-    { name: 'Hochschule Schmalkalden', aliases: [] },
-    { name: 'Ernst-Abbe-Hochschule Jena', aliases: ['EAH Jena'] },
-    { name: 'Hochschule Nordhausen', aliases: [] },
-    { name: 'Fachhochschule Erfurt', aliases: [] }
-  ];
+  /* ---- Hochschul-Autocomplete (verhindert Schreibweisen-Inkonsistenzen) ----
+     Liste kommt jetzt aus kf-supabase.js (window.KF_HOCHSCHULEN) -- einzige
+     Quelle, die auch getOrCreateDraftCourse()/restoreCourseBackup() für die
+     Alias-Normalisierung nutzen (siehe KFHochschulen.findGroup() dort), statt
+     eine zweite, hier nur fürs Autocomplete gepflegte Kopie zu riskieren, die
+     mit der Zeit auseinanderläuft. */
+  var hochschulenDB = window.KF_HOCHSCHULEN || [];
 
   function normalizeHs(s){ return (s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
 

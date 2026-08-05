@@ -40,6 +40,8 @@ a{color:var(--accent);}
 .tile .tile-value{font-family:'Sora',sans-serif; font-size:28px; font-weight:700; color:var(--ink);}
 .tile .tile-sub{font-size:12.5px; color:var(--muted); margin-top:4px;}
 .tile.group{grid-column:span 1; border-left:3px solid var(--accent);}
+.tile-clickable{cursor:pointer;}
+.tile-clickable:hover{border-color:var(--accent);}
 
 .section-label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink); margin-bottom:12px;}
 
@@ -55,6 +57,14 @@ a{color:var(--accent);}
 .status-pill.entwurf{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber);}
 .status-pill.in_arbeit{background:var(--accent-soft); color:var(--accent); border:1px solid #97C4B8;}
 .status-pill.live{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459;}
+.status-pill.ausstehend{background:var(--warn-soft); color:#854F0B; border:1px solid var(--amber); cursor:default;}
+.status-pill.angenommen{background:var(--ok-soft); color:#3B6D11; border:1px solid #97C459; cursor:default;}
+.status-pill.abgelehnt{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); cursor:default;}
+
+.role-badge{font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; background:var(--accent-soft); color:var(--accent); white-space:nowrap;}
+.search-input{font:inherit; font-size:14px; width:100%; max-width:340px; padding:9px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); margin-bottom:12px; display:block;}
+.user-row-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.user-row-head.expandable{cursor:pointer;}
 
 @media (max-width:520px){
   .list-item{flex-direction:column; align-items:flex-start;}
@@ -118,6 +128,12 @@ a{color:var(--accent);}
 
   <div class="tile-grid" id="statTiles"></div>
 
+  <div id="userManagementSection" style="display:none; margin-bottom:34px">
+    <div class="section-label">Nutzerverwaltung</div>
+    <input type="text" id="userSearchInput" class="search-input" placeholder="E-Mail suchen …">
+    <div class="list" id="userManagementList"></div>
+  </div>
+
   <div style="margin-bottom:34px">
     <div class="section-label">Neueste Registrierungen</div>
     <div class="list" id="recentUsersList"></div>
@@ -171,15 +187,15 @@ function showToast(msg){
   t._to = setTimeout(function(){ t.classList.remove('show'); }, 3400);
 }
 
-function tile(label, value, sub){
-  return '<div class="tile"><div class="tile-label">'+esc(label)+'</div><div class="tile-value">'+esc(value)+'</div>' +
+function tile(label, value, sub, extraAttrs){
+  return '<div class="tile'+(extraAttrs?' tile-clickable':'')+'"'+(extraAttrs?' '+extraAttrs:'')+'><div class="tile-label">'+esc(label)+'</div><div class="tile-value">'+esc(value)+'</div>' +
     (sub ? '<div class="tile-sub">'+esc(sub)+'</div>' : '') + '</div>';
 }
 
 async function renderStats(){
   var stats = await window.KFStore.getAdminStats();
   var html = '';
-  html += tile('Registrierte Nutzer:innen', stats.totalUsers, stats.totalCreators + ' davon Creator');
+  html += tile('Registrierte Nutzer:innen', stats.totalUsers, stats.totalCreators + ' davon Creator', 'data-toggle-user-management');
   html += tile('Kurse – Entwurf', stats.coursesByStatus.entwurf);
   html += tile('Kurse – In Arbeit', stats.coursesByStatus.in_arbeit);
   html += tile('Kurse – Live', stats.coursesByStatus.live);
@@ -187,6 +203,134 @@ async function renderStats(){
   html += tile('Offene Tutorfragen', stats.openQuestions);
   html += tile('Kapitel in Prüfung', stats.pruefungChapters);
   document.getElementById('statTiles').innerHTML = html;
+}
+
+// Nutzerverwaltung (Teil 2 des Specs vom 05.08.): eine zweite, nutzer-
+// zentrierte Oberfläche für dieselbe Notennachweis-Genehmigung, die auch das
+// Prüf-Dashboard nutzt (getTranscriptUrl/reviewTranscript, unverändert) --
+// keine neue Genehmigungslogik. Kachel-Klick lädt einmalig, danach reines
+// Show/Hide + client-seitiges E-Mail-Filtern auf dem gecachten Ergebnis.
+var userManagementLoaded = false;
+var userManagementData = [];
+var userManagementOpenIds = {};
+
+function wireUserManagementToggle(){
+  var tiles = document.getElementById('statTiles');
+  var section = document.getElementById('userManagementSection');
+  var search = document.getElementById('userSearchInput');
+  if(!tiles || !section){ return; }
+  tiles.addEventListener('click', function(e){
+    var target = e.target.closest('[data-toggle-user-management]');
+    if(!target){ return; }
+    var willShow = section.style.display === 'none';
+    section.style.display = willShow ? 'block' : 'none';
+    if(willShow && !userManagementLoaded){
+      userManagementLoaded = true;
+      renderUserManagement();
+    }
+  });
+  if(search){ search.addEventListener('input', renderUserManagementList); }
+}
+
+async function renderUserManagement(){
+  userManagementData = await window.KFStore.getAllUsersWithCourses();
+  renderUserManagementList();
+}
+
+function renderUserManagementList(){
+  var box = document.getElementById('userManagementList');
+  var search = document.getElementById('userSearchInput');
+  if(!box){ return; }
+  var q = (search && search.value || '').trim().toLowerCase();
+  var filtered = q ? userManagementData.filter(function(u){ return (u.email||'').toLowerCase().indexOf(q) >= 0; }) : userManagementData;
+  box.innerHTML = filtered.length ? filtered.map(renderUserRow).join('') : '<div class="list-empty">Keine Nutzer:innen gefunden.</div>';
+  wireUserManagementList(box);
+}
+
+function renderUserRow(u){
+  var badges = '';
+  if(u.is_admin){ badges += ' <span class="role-badge">Admin</span>'; }
+  if(u.is_reviewer){ badges += ' <span class="role-badge">Prüfer</span>'; }
+  if(u.is_creator){ badges += ' <span class="role-badge">Creator</span>'; }
+  var expandable = u.is_creator && (u.courses||[]).length > 0;
+  var isOpen = !!userManagementOpenIds[u.id];
+  var coursesHtml = expandable ? u.courses.map(renderUserCourseRow).join('') : '';
+  return '<div class="list-item" style="flex-direction:column; align-items:stretch">' +
+    '<div class="user-row-head'+(expandable?' expandable':'')+'"'+(expandable?' data-toggle-user="'+esc(u.id)+'"':'')+'>' +
+      '<span class="li-main">'+esc(u.email)+'</span>' + badges +
+      '<span class="li-time" style="margin-left:auto">'+fmtDate(u.created_at)+'</span>' +
+      (expandable ? '<span style="font-size:12px;color:var(--muted)">'+(isOpen?'▴':'▾')+'</span>' : '') +
+    '</div>' +
+    (expandable ? '<div data-user-courses="'+esc(u.id)+'" style="display:'+(isOpen?'flex':'none')+'; flex-direction:column; margin-top:8px">'+coursesHtml+'</div>' : '') +
+  '</div>';
+}
+
+function renderUserCourseRow(c){
+  var head = '<div style="font-weight:600; font-size:13.5px">'+esc(c.title)+(c.professor?' — '+esc(c.professor):'')+'</div>';
+  var body;
+  if(!c.transcript_path){
+    body = '<p style="margin:4px 0 0; font-size:12.5px; color:var(--muted)">Noch kein Notennachweis hochgeladen.</p>';
+  } else if(c.transcript_status === 'ausstehend'){
+    body = '<div style="margin-top:6px; display:flex; align-items:center; gap:12px; flex-wrap:wrap">' +
+      '<a href="#" data-view-transcript data-transcript-path="'+esc(c.transcript_path)+'" style="font-size:13px">📄 Notennachweis ansehen</a>' +
+      '<button type="button" class="btn btn-approve" data-accept-transcript="'+esc(c.id)+'" style="padding:6px 14px; font-size:13px">Annehmen</button>' +
+      '<button type="button" class="btn btn-danger" data-reject-transcript="'+esc(c.id)+'" style="padding:6px 14px; font-size:13px">Ablehnen</button>' +
+    '</div>';
+  } else {
+    var label = c.transcript_status === 'angenommen' ? 'Angenommen' : 'Abgelehnt';
+    body = '<div style="margin-top:6px; display:flex; align-items:center; gap:10px">' +
+      '<a href="#" data-view-transcript data-transcript-path="'+esc(c.transcript_path)+'" style="font-size:13px">📄 Notennachweis ansehen</a>' +
+      '<span class="status-pill '+esc(c.transcript_status)+'">'+label+'</span>' +
+    '</div>';
+  }
+  return '<div style="padding:9px 0; border-top:1px solid var(--line)">'+head+body+'</div>';
+}
+
+function applyTranscriptDecision(courseId, decision){
+  userManagementData.forEach(function(u){
+    (u.courses||[]).forEach(function(c){ if(c.id === courseId){ c.transcript_status = decision; } });
+  });
+}
+
+function wireUserManagementList(container){
+  container.querySelectorAll('[data-toggle-user]').forEach(function(row){
+    row.addEventListener('click', function(){
+      var id = row.dataset.toggleUser;
+      userManagementOpenIds[id] = !userManagementOpenIds[id];
+      renderUserManagementList();
+    });
+  });
+  container.querySelectorAll('[data-view-transcript]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      window.KFStore.getTranscriptUrl(a.dataset.transcriptPath).then(function(url){
+        if(url){ window.open(url, '_blank', 'noopener'); }
+        else { showToast('Datei nicht verfügbar.'); }
+      });
+    });
+  });
+  container.querySelectorAll('[data-accept-transcript]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      btn.disabled = true;
+      window.KFStore.reviewTranscript(btn.dataset.acceptTranscript, 'angenommen').then(function(){
+        showToast('Notennachweis angenommen.');
+        applyTranscriptDecision(btn.dataset.acceptTranscript, 'angenommen');
+        renderUserManagementList();
+      }).catch(function(err){ btn.disabled = false; showToast('Fehler: ' + ((err&&err.message)||'unbekannt')); });
+    });
+  });
+  container.querySelectorAll('[data-reject-transcript]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      btn.disabled = true;
+      window.KFStore.reviewTranscript(btn.dataset.rejectTranscript, 'abgelehnt').then(function(){
+        showToast('Notennachweis abgelehnt.');
+        applyTranscriptDecision(btn.dataset.rejectTranscript, 'abgelehnt');
+        renderUserManagementList();
+      }).catch(function(err){ btn.disabled = false; showToast('Fehler: ' + ((err&&err.message)||'unbekannt')); });
+    });
+  });
 }
 
 async function renderRecentLists(){
@@ -558,6 +702,7 @@ async function init(){
   gate.style.display = 'none';
   mainWrap.style.display = '';
   wireBackupImport();
+  wireUserManagementToggle();
   await render();
 }
 

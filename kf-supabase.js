@@ -20,6 +20,246 @@ window.KF_BAUSTEIN_LABELS = {
   altklausuren: "Altklausuren", tutorien: "Tutorien", zusatz: "Zusatzmodule", lernplan: "Lernplan"
 };
 
+// Kuratierte Liste bekannter deutscher Hochschulen samt Namensvarianten
+// (aliases) -- einzige Quelle sowohl für das Autocomplete im Creator-Wizard
+// (app.html liest hier statt eine eigene Kopie zu pflegen) als auch für die
+// Alias-Normalisierung beim Kurs-Anlegen/JSON-Import (KFHochschulen.findGroup(),
+// siehe resolveOrCreateHochschule() weiter unten) -- ohne diese eine Quelle
+// legt jeder Tippfehler/jedes Alias eine neue "Phantom-Hochschule" an, statt
+// die bereits bestehende Zeile wiederzuverwenden.
+window.KF_HOCHSCHULEN = [
+    { name: 'HWG Ludwigshafen', aliases: ['Hochschule Ludwigshafen', 'Hochschule für Wirtschaft und Gesellschaft Ludwigshafen', 'HWG LU'] },
+    { name: 'Frankfurt University of Applied Sciences', aliases: ['FH Frankfurt', 'Fachhochschule Frankfurt', 'Frankfurt UAS'] },
+    { name: 'Hochschule Mainz', aliases: ['FH Mainz', 'Fachhochschule Mainz'] },
+    { name: 'Hochschule Worms', aliases: ['FH Worms', 'Fachhochschule Worms'] },
+    { name: 'Hochschule Trier', aliases: ['FH Trier', 'Fachhochschule Trier'] },
+    { name: 'Hochschule RheinMain', aliases: ['FH Wiesbaden', 'Hochschule Wiesbaden'] },
+    { name: 'Hochschule Darmstadt', aliases: ['h_da', 'FH Darmstadt'] },
+    { name: 'Technische Hochschule Mittelhessen', aliases: ['THM', 'FH Gießen-Friedberg'] },
+    { name: 'Hochschule Fulda', aliases: ['FH Fulda'] },
+    { name: 'Hochschule Koblenz', aliases: ['FH Koblenz'] },
+    { name: 'Hochschule Kaiserslautern', aliases: ['FH Kaiserslautern'] },
+    { name: 'Duale Hochschule Baden-Württemberg Mannheim', aliases: ['DHBW Mannheim'] },
+    { name: 'Duale Hochschule Baden-Württemberg Stuttgart', aliases: ['DHBW Stuttgart'] },
+    { name: 'Hochschule Mannheim', aliases: ['FH Mannheim'] },
+    { name: 'Hochschule Heilbronn', aliases: ['FH Heilbronn'] },
+    { name: 'Hochschule Karlsruhe', aliases: ['HKA', 'FH Karlsruhe'] },
+    { name: 'Hochschule Pforzheim', aliases: ['FH Pforzheim'] },
+    { name: 'Hochschule Esslingen', aliases: ['FH Esslingen'] },
+    { name: 'Hochschule für Technik Stuttgart', aliases: ['HFT Stuttgart'] },
+    { name: 'Technische Hochschule Nürnberg Georg Simon Ohm', aliases: ['TH Nürnberg', 'Ohm Nürnberg'] },
+    { name: 'Hochschule München', aliases: ['FH München'] },
+    { name: 'Technische Hochschule Rosenheim', aliases: ['TH Rosenheim', 'FH Rosenheim'] },
+    { name: 'Hochschule Augsburg', aliases: ['FH Augsburg'] },
+    { name: 'Technische Hochschule Ingolstadt', aliases: ['THI'] },
+    { name: 'Hochschule Köln', aliases: ['TH Köln', 'FH Köln'] },
+    { name: 'Hochschule Bonn-Rhein-Sieg', aliases: ['H-BRS'] },
+    { name: 'Hochschule Düsseldorf', aliases: ['HSD', 'FH Düsseldorf'] },
+    { name: 'Hochschule Niederrhein', aliases: ['FH Niederrhein', 'Krefeld Mönchengladbach'] },
+    { name: 'Fachhochschule Aachen', aliases: ['FH Aachen'] },
+    { name: 'Hochschule Bochum', aliases: ['FH Bochum'] },
+    { name: 'Hochschule Bremen', aliases: ['FH Bremen'] },
+    { name: 'Hochschule für Angewandte Wissenschaften Hamburg', aliases: ['HAW Hamburg'] },
+    { name: 'Hochschule Hannover', aliases: ['FH Hannover', 'HsH'] },
+    { name: 'Ostfalia Hochschule für angewandte Wissenschaften', aliases: ['Ostfalia'] },
+    { name: 'Hochschule für Technik und Wirtschaft Berlin', aliases: ['HTW Berlin'] },
+    { name: 'Beuth Hochschule für Technik Berlin', aliases: ['Beuth Hochschule'] },
+    { name: 'Hochschule für Wirtschaft und Recht Berlin', aliases: ['HWR Berlin'] },
+    { name: 'Hochschule für Technik und Wirtschaft Dresden', aliases: ['HTW Dresden'] },
+    { name: 'Westsächsische Hochschule Zwickau', aliases: ['WHZ'] },
+    { name: 'Hochschule Merseburg', aliases: [] },
+    { name: 'Hochschule Anhalt', aliases: [] },
+    { name: 'Universität Mannheim', aliases: [] },
+    { name: 'Universität Heidelberg', aliases: [] },
+    { name: 'Goethe-Universität Frankfurt', aliases: ['Uni Frankfurt'] },
+    { name: 'Johannes Gutenberg-Universität Mainz', aliases: ['Uni Mainz', 'JGU'] },
+    { name: 'Ludwig-Maximilians-Universität München', aliases: ['LMU München', 'LMU'] },
+    { name: 'Technische Universität München', aliases: ['TU München', 'TUM'] },
+    { name: 'Rheinisch-Westfälische Technische Hochschule Aachen', aliases: ['RWTH Aachen'] },
+    // Baden-Württemberg
+    { name: 'Karlsruher Institut für Technologie', aliases: ['KIT', 'Universität Karlsruhe'] },
+    { name: 'Universität Stuttgart', aliases: [] },
+    { name: 'Universität Tübingen', aliases: ['Eberhard Karls Universität Tübingen'] },
+    { name: 'Universität Freiburg', aliases: ['Albert-Ludwigs-Universität Freiburg'] },
+    { name: 'Universität Ulm', aliases: [] },
+    { name: 'Universität Hohenheim', aliases: [] },
+    { name: 'Universität Konstanz', aliases: [] },
+    { name: 'Duale Hochschule Baden-Württemberg Karlsruhe', aliases: ['DHBW Karlsruhe'] },
+    { name: 'Duale Hochschule Baden-Württemberg Villingen-Schwenningen', aliases: ['DHBW Villingen-Schwenningen'] },
+    { name: 'Duale Hochschule Baden-Württemberg Heidenheim', aliases: ['DHBW Heidenheim'] },
+    { name: 'Duale Hochschule Baden-Württemberg Lörrach', aliases: ['DHBW Lörrach'] },
+    { name: 'Duale Hochschule Baden-Württemberg Ravensburg', aliases: ['DHBW Ravensburg'] },
+    { name: 'Duale Hochschule Baden-Württemberg Heilbronn', aliases: ['DHBW Heilbronn'] },
+    { name: 'Hochschule Aalen', aliases: ['FH Aalen'] },
+    { name: 'Hochschule Furtwangen', aliases: ['HFU'] },
+    { name: 'Hochschule Offenburg', aliases: ['FH Offenburg'] },
+    { name: 'Hochschule Reutlingen', aliases: ['FH Reutlingen'] },
+    { name: 'Hochschule Ravensburg-Weingarten', aliases: ['RWU'] },
+    { name: 'Hochschule für Wirtschaft und Umwelt Nürtingen-Geislingen', aliases: ['HfWU'] },
+    { name: 'Pädagogische Hochschule Freiburg', aliases: [] },
+    { name: 'Pädagogische Hochschule Heidelberg', aliases: [] },
+    { name: 'Pädagogische Hochschule Karlsruhe', aliases: [] },
+    { name: 'Pädagogische Hochschule Ludwigsburg', aliases: [] },
+    { name: 'Pädagogische Hochschule Schwäbisch Gmünd', aliases: [] },
+    { name: 'Pädagogische Hochschule Weingarten', aliases: [] },
+    // Bayern
+    { name: 'Universität Augsburg', aliases: [] },
+    { name: 'Universität Bayreuth', aliases: [] },
+    { name: 'Universität Regensburg', aliases: [] },
+    { name: 'Universität Würzburg', aliases: ['Julius-Maximilians-Universität Würzburg'] },
+    { name: 'Friedrich-Alexander-Universität Erlangen-Nürnberg', aliases: ['FAU', 'Uni Erlangen-Nürnberg'] },
+    { name: 'Universität Passau', aliases: [] },
+    { name: 'Universität Bamberg', aliases: [] },
+    { name: 'Katholische Universität Eichstätt-Ingolstadt', aliases: ['KU Eichstätt'] },
+    { name: 'Hochschule Landshut', aliases: [] },
+    { name: 'Ostbayerische Technische Hochschule Regensburg', aliases: ['OTH Regensburg', 'Hochschule Regensburg'] },
+    { name: 'Ostbayerische Technische Hochschule Amberg-Weiden', aliases: ['OTH Amberg-Weiden'] },
+    { name: 'Hochschule Ansbach', aliases: [] },
+    { name: 'Hochschule Aschaffenburg', aliases: [] },
+    { name: 'Hochschule Coburg', aliases: [] },
+    { name: 'Hochschule Hof', aliases: [] },
+    { name: 'Hochschule Kempten', aliases: [] },
+    { name: 'Hochschule Neu-Ulm', aliases: ['HNU'] },
+    { name: 'Hochschule Weihenstephan-Triesdorf', aliases: ['HSWT'] },
+    { name: 'Technische Hochschule Würzburg-Schweinfurt', aliases: ['THWS', 'FHWS'] },
+    { name: 'Technische Hochschule Deggendorf', aliases: ['THD'] },
+    { name: 'Munich Business School', aliases: [] },
+    // Berlin
+    { name: 'Freie Universität Berlin', aliases: ['FU Berlin'] },
+    { name: 'Humboldt-Universität zu Berlin', aliases: ['HU Berlin'] },
+    { name: 'Technische Universität Berlin', aliases: ['TU Berlin'] },
+    { name: 'Alice Salomon Hochschule Berlin', aliases: ['ASH Berlin'] },
+    { name: 'Evangelische Hochschule Berlin', aliases: ['EHB'] },
+    { name: 'Katholische Hochschule für Sozialwesen Berlin', aliases: ['KHSB'] },
+    { name: 'Universität der Künste Berlin', aliases: ['UdK Berlin'] },
+    { name: 'ESMT Berlin', aliases: [] },
+    { name: 'Hertie School', aliases: [] },
+    { name: 'Charité – Universitätsmedizin Berlin', aliases: ['Charité Berlin'] },
+    { name: 'SRH Hochschule Berlin', aliases: [] },
+    // Brandenburg
+    { name: 'Universität Potsdam', aliases: [] },
+    { name: 'Europa-Universität Viadrina Frankfurt (Oder)', aliases: ['Viadrina'] },
+    { name: 'Brandenburgische Technische Universität Cottbus-Senftenberg', aliases: ['BTU Cottbus'] },
+    { name: 'Technische Hochschule Brandenburg', aliases: [] },
+    { name: 'Hochschule für nachhaltige Entwicklung Eberswalde', aliases: ['HNEE'] },
+    { name: 'Technische Hochschule Wildau', aliases: [] },
+    // Bremen
+    { name: 'Universität Bremen', aliases: [] },
+    { name: 'Jacobs University Bremen', aliases: [] },
+    { name: 'Hochschule Bremerhaven', aliases: [] },
+    { name: 'Hochschule für Künste Bremen', aliases: ['HfK Bremen'] },
+    // Hamburg
+    { name: 'Universität Hamburg', aliases: [] },
+    { name: 'Technische Universität Hamburg', aliases: ['TUHH'] },
+    { name: 'HafenCity Universität Hamburg', aliases: ['HCU Hamburg'] },
+    { name: 'Bucerius Law School', aliases: [] },
+    { name: 'Kühne Logistics University', aliases: ['KLU Hamburg'] },
+    // Hessen
+    { name: 'Justus-Liebig-Universität Gießen', aliases: ['Uni Gießen'] },
+    { name: 'Philipps-Universität Marburg', aliases: ['Uni Marburg'] },
+    { name: 'Technische Universität Darmstadt', aliases: ['TU Darmstadt'] },
+    { name: 'Universität Kassel', aliases: [] },
+    { name: 'Hochschule Geisenheim', aliases: [] },
+    { name: 'EBS Universität für Wirtschaft und Recht', aliases: ['EBS Oestrich-Winkel'] },
+    // Mecklenburg-Vorpommern
+    { name: 'Universität Rostock', aliases: [] },
+    { name: 'Universität Greifswald', aliases: [] },
+    { name: 'Hochschule Stralsund', aliases: [] },
+    { name: 'Hochschule Wismar', aliases: [] },
+    { name: 'Hochschule Neubrandenburg', aliases: [] },
+    // Niedersachsen
+    { name: 'Georg-August-Universität Göttingen', aliases: ['Uni Göttingen'] },
+    { name: 'Leibniz Universität Hannover', aliases: ['Uni Hannover'] },
+    { name: 'Technische Universität Braunschweig', aliases: ['TU Braunschweig'] },
+    { name: 'Carl von Ossietzky Universität Oldenburg', aliases: ['Uni Oldenburg'] },
+    { name: 'Universität Osnabrück', aliases: [] },
+    { name: 'Universität Hildesheim', aliases: [] },
+    { name: 'Universität Vechta', aliases: [] },
+    { name: 'Leuphana Universität Lüneburg', aliases: ['Uni Lüneburg'] },
+    { name: 'Technische Universität Clausthal', aliases: [] },
+    { name: 'Hochschule Osnabrück', aliases: [] },
+    { name: 'Hochschule Emden/Leer', aliases: [] },
+    { name: 'HAWK Hochschule Hildesheim/Holzminden/Göttingen', aliases: ['HAWK'] },
+    { name: 'Jade Hochschule', aliases: ['Jade Hochschule Wilhelmshaven'] },
+    { name: 'PFH Private Hochschule Göttingen', aliases: [] },
+    // Nordrhein-Westfalen
+    { name: 'Universität Bonn', aliases: [] },
+    { name: 'Universität zu Köln', aliases: ['Uni Köln'] },
+    { name: 'Universität Münster', aliases: ['WWU Münster'] },
+    { name: 'Ruhr-Universität Bochum', aliases: ['RUB'] },
+    { name: 'Universität Duisburg-Essen', aliases: [] },
+    { name: 'Universität Bielefeld', aliases: [] },
+    { name: 'Universität Paderborn', aliases: [] },
+    { name: 'Universität Siegen', aliases: [] },
+    { name: 'Bergische Universität Wuppertal', aliases: ['Uni Wuppertal'] },
+    { name: 'Technische Universität Dortmund', aliases: ['TU Dortmund'] },
+    { name: 'Deutsche Sporthochschule Köln', aliases: [] },
+    { name: 'FernUniversität in Hagen', aliases: ['FernUni Hagen'] },
+    { name: 'Hochschule Ruhr West', aliases: ['HRW'] },
+    { name: 'Westfälische Hochschule', aliases: ['Gelsenkirchen Bocholt Recklinghausen'] },
+    { name: 'Hochschule Hamm-Lippstadt', aliases: ['HSHL'] },
+    { name: 'Technische Hochschule Ostwestfalen-Lippe', aliases: ['TH OWL', 'Hochschule Lemgo'] },
+    { name: 'Fachhochschule Südwestfalen', aliases: ['Iserlohn Hagen Meschede Soest'] },
+    { name: 'Hochschule für Gesundheit Bochum', aliases: ['hsg Bochum'] },
+    { name: 'Hochschule Rhein-Waal', aliases: ['Kleve Kamp-Lintfort'] },
+    { name: 'Folkwang Universität der Künste', aliases: ['Folkwang Essen'] },
+    { name: 'Kunstakademie Düsseldorf', aliases: [] },
+    { name: 'Robert Schumann Hochschule Düsseldorf', aliases: [] },
+    // Rheinland-Pfalz
+    { name: 'Universität Trier', aliases: [] },
+    { name: 'Universität Koblenz', aliases: [] },
+    { name: 'Rheinland-Pfälzische Technische Universität Kaiserslautern-Landau', aliases: ['RPTU', 'TU Kaiserslautern'] },
+    // Saarland
+    { name: 'Universität des Saarlandes', aliases: ['Uni Saarland'] },
+    { name: 'Hochschule für Technik und Wirtschaft des Saarlandes', aliases: ['htw saar'] },
+    // Sachsen
+    { name: 'Technische Universität Dresden', aliases: ['TU Dresden'] },
+    { name: 'Universität Leipzig', aliases: [] },
+    { name: 'Technische Universität Chemnitz', aliases: ['TU Chemnitz'] },
+    { name: 'Technische Universität Bergakademie Freiberg', aliases: [] },
+    { name: 'Hochschule Mittweida', aliases: [] },
+    { name: 'Hochschule Zittau/Görlitz', aliases: [] },
+    { name: 'Hochschule für Technik, Wirtschaft und Kultur Leipzig', aliases: ['HTWK Leipzig'] },
+    { name: 'Hochschule für Grafik und Buchkunst Leipzig', aliases: ['HGB Leipzig'] },
+    { name: 'Hochschule für Musik und Theater Leipzig', aliases: [] },
+    // Sachsen-Anhalt
+    { name: 'Martin-Luther-Universität Halle-Wittenberg', aliases: ['Uni Halle'] },
+    { name: 'Otto-von-Guericke-Universität Magdeburg', aliases: ['Uni Magdeburg'] },
+    { name: 'Hochschule Magdeburg-Stendal', aliases: [] },
+    { name: 'Burg Giebichenstein Kunsthochschule Halle', aliases: [] },
+    // Schleswig-Holstein
+    { name: 'Christian-Albrechts-Universität zu Kiel', aliases: ['Uni Kiel', 'CAU Kiel'] },
+    { name: 'Universität zu Lübeck', aliases: [] },
+    { name: 'Universität Flensburg', aliases: [] },
+    { name: 'Hochschule Kiel', aliases: ['FH Kiel'] },
+    { name: 'Hochschule Flensburg', aliases: [] },
+    { name: 'Fachhochschule Westküste', aliases: ['FH Westküste Heide'] },
+    { name: 'Muthesius Kunsthochschule Kiel', aliases: [] },
+    // Thüringen
+    { name: 'Friedrich-Schiller-Universität Jena', aliases: ['Uni Jena'] },
+    { name: 'Bauhaus-Universität Weimar', aliases: [] },
+    { name: 'Technische Universität Ilmenau', aliases: ['TU Ilmenau'] },
+    { name: 'Universität Erfurt', aliases: [] },
+    { name: 'Hochschule Schmalkalden', aliases: [] },
+    { name: 'Ernst-Abbe-Hochschule Jena', aliases: ['EAH Jena'] },
+    { name: 'Hochschule Nordhausen', aliases: [] },
+    { name: 'Fachhochschule Erfurt', aliases: [] }
+];
+function kfNormalizeHsName(s) { return (s || "").toLowerCase().trim().replace(/\s+/g, " "); }
+function kfFindHochschulenGroup(input) {
+  var q = kfNormalizeHsName(input);
+  if (!q) { return null; }
+  for (var i = 0; i < window.KF_HOCHSCHULEN.length; i++) {
+    var h = window.KF_HOCHSCHULEN[i];
+    var candidates = [h.name].concat(h.aliases || []);
+    for (var j = 0; j < candidates.length; j++) {
+      if (kfNormalizeHsName(candidates[j]) === q) { return h; }
+    }
+  }
+  return null;
+}
+window.KFHochschulen = { list: window.KF_HOCHSCHULEN, normalize: kfNormalizeHsName, findGroup: kfFindHochschulenGroup };
+
 // Turns a chapter's raw subchapters text ("1.1 Aufbau der Vorlesung\n1.1.1
 // Foliensatz\n1.2 Klausuraufbau") into a nested outline tree, purely from the
 // dot-depth of each line's leading number -- "1.1" is depth 1, "1.1.1" is
@@ -498,16 +738,42 @@ window.KFStore = (function () {
     if (error) throw error;
   }
 
+  // Findet zu einem eingegebenen Hochschul-Namen die bereits existierende
+  // hochschulen-Zeile -- auch wenn der Name nur ein Alias ist oder sich in
+  // Groß-/Kleinschreibung bzw. Leerzeichen unterscheidet -- statt sie (Bug:
+  // "Phantom-Hochschulen" durch Tippfehler/Aliase) doppelt anzulegen. Wichtig:
+  // die im Alias-Katalog (KF_HOCHSCHULEN) als "kanonisch" hinterlegte Langform
+  // ist NICHT zwingend der tatsächliche name-Wert in der DB (Seed-Daten haben
+  // z. B. name='FH Frankfurt', die Langform steht nur im subtitle) -- deshalb
+  // wird zuerst gegen ALLE Kandidaten der Alias-Gruppe (kanonischer Name +
+  // alle Aliase) nach einer bereits existierenden Zeile gesucht, und nur wenn
+  // keine existiert, mit dem kanonischen Namen neu angelegt.
+  // requireKnownAlias=true (nur beim JSON-Import, der ohne das Autocomplete
+  // der Wizard-Eingabe läuft) bricht bei einem unbekannten Namen hart ab,
+  // statt stillschweigend eine neue Hochschule anzulegen.
+  async function resolveOrCreateHochschule(inputName, requireKnownAlias) {
+    var group = window.KFHochschulen ? window.KFHochschulen.findGroup(inputName) : null;
+    if (requireKnownAlias && !group) {
+      throw new Error("Unbekannte Hochschule \"" + (inputName || "") + "\" in der Sicherungsdatei -- Import abgebrochen, um keine Phantom-Hochschule anzulegen.");
+    }
+    var candidateNames = group ? [group.name].concat(group.aliases || []) : [String(inputName || "").trim()];
+    var normalize = (window.KFHochschulen && window.KFHochschulen.normalize) || function (s) { return String(s || "").toLowerCase().trim(); };
+    var normalizedCandidates = candidateNames.map(normalize);
+    const { data: allHochschulen, error: listErr } = await supabase.from("hochschulen").select("id, name");
+    if (listErr) throw listErr;
+    var existing = (allHochschulen || []).find(function (h) { return normalizedCandidates.indexOf(normalize(h.name)) !== -1; });
+    if (existing) { return existing; }
+    var nameToInsert = group ? group.name : String(inputName || "").trim();
+    const { data: inserted, error: hErr } = await supabase.from("hochschulen")
+      .insert({ name: nameToInsert, status: "aktiv" }).select("id, name").single();
+    if (hErr) throw hErr;
+    return inserted;
+  }
+
   // Holt den eigenen Entwurfskurs (per Fach-Titel) oder legt ihn an — ersetzt
   // die frühere Slug-ID aus courseIdentity(), die nur lokal existierte.
   async function getOrCreateDraftCourse(meta) {
-    var hochschuleRow = (await supabase.from("hochschulen").select("id").eq("name", meta.hochschule).maybeSingle()).data;
-    if (!hochschuleRow) {
-      const { data: inserted, error: hErr } = await supabase.from("hochschulen")
-        .insert({ name: meta.hochschule, status: "aktiv" }).select("id").single();
-      if (hErr) throw hErr;
-      hochschuleRow = inserted;
-    }
+    var hochschuleRow = await resolveOrCreateHochschule(meta.hochschule, false);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Nicht eingeloggt.");
@@ -871,6 +1137,31 @@ window.KFStore = (function () {
     if (error) throw error;
   }
 
+  // Admin-Nutzerverwaltung (admin-dashboard.html): pro Nutzer:in die eigenen
+  // Kurse samt Notennachweis-Status, damit dieselbe Genehmigung wie im
+  // Prüf-Dashboard (getTranscriptUrl/reviewTranscript, unverändert) auch
+  // nutzerzentriert im Admin-Dashboard möglich ist -- keine neue
+  // Genehmigungslogik, nur eine zweite Oberfläche auf denselben Daten.
+  async function getAllUsersWithCourses() {
+    const [{ data: profiles, error: pErr }, { data: courses, error: cErr }] = await Promise.all([
+      supabase.from("profiles")
+        .select("id, email, is_creator, is_reviewer, is_admin, created_at")
+        .order("created_at", { ascending: false }),
+      supabase.from("courses")
+        .select("id, creator_id, title, professor, transcript_path, transcript_status, status")
+    ]);
+    if (pErr) { console.error(pErr); return []; }
+    if (cErr) { console.error(cErr); return []; }
+    var coursesByCreator = {};
+    (courses || []).forEach(function (c) {
+      if (!c.creator_id) return;
+      (coursesByCreator[c.creator_id] = coursesByCreator[c.creator_id] || []).push(c);
+    });
+    return (profiles || []).map(function (p) {
+      return Object.assign({}, p, { courses: coursesByCreator[p.id] || [] });
+    });
+  }
+
   // Admin-Dashboard: reine Kennzahlen-Abfragen, geschützt durch die
   // "admin select all" RLS-Policies auf profiles/purchases/questions bzw.
   // die bestehende is_reviewer()-Kaskade auf courses/chapters.
@@ -1056,6 +1347,15 @@ window.KFStore = (function () {
     }
     var chapters = backup.chapters || [];
 
+    // JSON-Import läuft komplett am Wizard-Autocomplete vorbei -- ohne diese
+    // Prüfung würde jeder Tippfehler/jedes ungeprüfte Feld in der
+    // Sicherungsdatei eine neue "Phantom-Hochschule" anlegen (siehe
+    // resolveOrCreateHochschule() oben). requireKnownAlias=true bricht hart
+    // ab, statt das stillschweigend zuzulassen; die aufgelöste (ggf. bereits
+    // existierende) Hochschule wird 1:1 in den RPC-Payload übernommen, damit
+    // deren eigene name-basierte Suche exakt dieselbe Zeile trifft.
+    var hochschuleRow = await resolveOrCreateHochschule((backup.course || {}).hochschule, true);
+
     var chaptersForRpc = chapters.map(function (ch) {
       var content = ch.content || {};
       return {
@@ -1071,7 +1371,10 @@ window.KFStore = (function () {
     });
 
     const { data: courseId, error } = await supabase.rpc("restore_course_backup", {
-      payload: { course: backup.course || {}, chapters: chaptersForRpc, courseWideContent: backup.courseWideContent || {} }
+      payload: {
+        course: Object.assign({}, backup.course || {}, { hochschule: hochschuleRow.name }),
+        chapters: chaptersForRpc, courseWideContent: backup.courseWideContent || {}
+      }
     });
     if (error) throw error;
 
@@ -1152,6 +1455,7 @@ window.KFStore = (function () {
     uploadTranscript: uploadTranscript,
     setTranscriptPath: setTranscriptPath,
     getPendingTranscripts: getPendingTranscripts,
+    getAllUsersWithCourses: getAllUsersWithCourses,
     getTranscriptUrl: getTranscriptUrl,
     reviewTranscript: reviewTranscript,
     getAdminStats: getAdminStats,
@@ -1203,6 +1507,17 @@ window.KFCatalog = (function () {
     const { error } = await supabase.from("purchases")
       .upsert({ user_id: user.id, course_id: courseId }, { onConflict: "user_id,course_id", ignoreDuplicates: true });
     if (error) throw error;
+  }
+
+  // Kauf-Fix für die Bundle-Kachel (Teil 1 des Specs vom 05.08.): ein Klick
+  // auf "Beide im Bundle kaufen" schaltet bisher nur EINEN Kurs frei, obwohl
+  // der Bundle-Preis für beide angezeigt wird. recordPlaceholderPurchase ist
+  // bereits ein ignoreDuplicates-Upsert, also unkritisch bei Mehrfachklick.
+  async function recordPlaceholderBundlePurchase(courseIdA, courseIdB) {
+    await Promise.all([
+      recordPlaceholderPurchase(courseIdA),
+      recordPlaceholderPurchase(courseIdB)
+    ]);
   }
 
   async function getMyPurchases() {
@@ -1381,6 +1696,7 @@ window.KFCatalog = (function () {
     getAllStudiengaenge: getAllStudiengaenge,
     hasPurchased: hasPurchased,
     recordPlaceholderPurchase: recordPlaceholderPurchase,
+    recordPlaceholderBundlePurchase: recordPlaceholderBundlePurchase,
     getMyPurchases: getMyPurchases,
     getProgress: getProgress,
     setProgressItem: setProgressItem,
@@ -1507,11 +1823,21 @@ window.KFQuestions = (function () {
     if (error) throw error;
   }
 
+  // Nachträgliches Ändern der Sichtbarkeit einer bereits beantworteten Frage
+  // -- die "questions: creator answers"-Update-Policy (owns_course(course_id))
+  // deckt das schon ab, ohne Spalten-Einschränkung, also keine RLS-Änderung
+  // nötig.
+  async function setPublic(questionId, value) {
+    const { error } = await supabase.from("questions").update({ is_public: !!value }).eq("id", questionId);
+    if (error) throw error;
+  }
+
   return {
     ask: ask,
     getForBaustein: getForBaustein,
     getForMyCourses: getForMyCourses,
-    answer: answer
+    answer: answer,
+    setPublic: setPublic
   };
 })();
 
