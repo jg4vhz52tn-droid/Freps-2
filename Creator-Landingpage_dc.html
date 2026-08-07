@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./config.js"></script>
+<script type="module" src="./kf-supabase.js?v=13"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -26,8 +28,11 @@
 
   <!-- NAV -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:28px 0">
-    <div style="font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.02em">Klausurfuchs</div>
-    <div style="font-size:14px;font-weight:600;color:#1B2A41;opacity:0.7">Creator werden</div>
+    <a href="index.html" style="font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.02em;color:#1B2A41;text-decoration:none">Klausurfuchs</a>
+    <nav style="display:flex;align-items:center;gap:24px">
+      <a href="index.html" style="font-size:14px;font-weight:600;color:#1B2A41;opacity:0.7;text-decoration:none">Startseite</a>
+      <a href="Unsere_Kurse_dc.html" style="font-size:14px;font-weight:600;color:#1B2A41;opacity:0.7;text-decoration:none">Kurs finden</a>
+    </nav>
   </div>
 
   <!-- HERO -->
@@ -49,7 +54,7 @@
   <!-- WARUM -->
   <section style="padding:64px 0">
     <h2 style="font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-0.02em;text-align:center;margin:0 0 12px">Warum sich das lohnt</h2>
-    <p style="text-align:center;color:rgba(27,42,65,0.65);max-width:520px;margin:0 auto 40px;font-size:16px;line-height:1.6">Vier Gründe, warum andere Studierende bereits Kurse veröffentlichen.</p>
+    <p style="text-align:center;color:rgba(27,42,65,0.65);max-width:520px;margin:0 auto 40px;font-size:16px;line-height:1.6">{{ courseCountLine }}</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
 
       <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
@@ -109,23 +114,23 @@
           Du erhältst einen festen Anteil pro Verkauf deines Kurses. Der Rest deckt Plattform, Zahlungsabwicklung und redaktionelle Prüfung ab.
         </p>
         <p style="font-size:15.5px;line-height:1.7;color:rgba(250,250,247,0.75);margin:0">
-          Alle Zahlen unten sind Platzhalter — final legen wir die Konditionen gemeinsam fest.
+          Preis und Gewinnbeteiligung stehen fest, die Verkaufszahl oben ist nur ein Beispiel.
         </p>
       </div>
       <div style="background:rgba(250,250,247,0.06);border:1px solid rgba(250,250,247,0.14);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:16px">
         <div style="display:flex;justify-content:space-between;font-size:14px;color:rgba(250,250,247,0.6)">
-          <span>Kurspreis</span><span style="font-family:Sora;font-weight:700;color:#E8B44F">49,99€</span>
+          <span>Kurspreis</span><span style="font-family:Sora;font-weight:700;color:#E8B44F">29€</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:14px;color:rgba(250,250,247,0.6)">
-          <span>Dein Anteil (50 %)</span><span style="font-family:Sora;font-weight:700;color:#FAFAF7">24,99</span>
+          <span>Dein Anteil (50 %)</span><span style="font-family:Sora;font-weight:700;color:#FAFAF7">14,50€</span>
         </div>
         <div style="height:1px;background:rgba(250,250,247,0.14)"></div>
         <div style="display:flex;justify-content:space-between;font-size:14px;color:rgba(250,250,247,0.6)">
-          <span>Verkäufe</span><span style="font-family:Sora;font-weight:700;color:#FAFAF7">× 40</span>
+          <span>Verkäufe</span><span style="font-family:Sora;font-weight:700;color:#FAFAF7">× 20</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:8px;border-top:1px dashed rgba(250,250,247,0.2)">
           <span style="font-size:14px;color:rgba(250,250,247,0.75)">Dein Gewinn</span>
-          <span style="font-family:Sora;font-weight:800;font-size:24px;color:#2D7D6F;background:#FAFAF7;padding:2px 10px;border-radius:8px">1000 €</span>
+          <span style="font-family:Sora;font-weight:800;font-size:24px;color:#2D7D6F;background:#FAFAF7;padding:2px 10px;border-radius:8px">290 €</span>
         </div>
         <p style="font-size:11.5px;color:rgba(250,250,247,0.45);margin:0">Hierbei handelt es sich um eine Beispielrechnung die je nach Verkaufszahlen variieren kann</p>
       </div>
@@ -136,7 +141,7 @@
   <section style="padding:64px 0">
     <h2 style="font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-0.02em;text-align:center;margin:0 0 40px">Häufige Fragen</h2>
     <div style="display:flex;flex-direction:column;gap:12px;max-width:720px;margin:0 auto">
-      <sc-for list="{{ faqs }}" as="faq" hint-placeholder-count="4">
+      <sc-for list="{{ faqs }}" as="faq" hint-placeholder-count="3">
         <div style="background:#fff;border:1px solid rgba(27,42,65,0.08);border-radius:16px;overflow:hidden">
           <button onclick="{{ faq.toggle }}" style="width:100%;text-align:left;background:none;border:none;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:#1B2A41">
             <span>{{ faq.q }}</span>
@@ -170,6 +175,42 @@ class Component extends DCLogic {
     openFaq: 0
   };
 
+  // "Bereits X Kurse ... live, Y weitere im Aufbau" -- Startwert entspricht
+  // dem zuletzt bekannten echten Stand (3 live, 1 in Arbeit an der HWG
+  // Ludwigshafen) und bleibt sichtbar, bis componentDidMount() den echten
+  // Katalogstand geladen hat bzw. falls der Katalog nicht erreichbar ist
+  // (gleiches Defensiv-Muster wie in Unsere_Kurse_dc.html).
+  courseCountLine = this.formatCourseCountLine(3, 1);
+
+  formatCourseCountLine(live, wip) {
+    var liveText = live === 1 ? '1 Kurs ist' : live + ' Kurse sind';
+    var base = 'Bereits ' + liveText + ' an der HWG Ludwigshafen live';
+    if (!wip) { return base + ' — von Studierenden wie dir.'; }
+    var wipText = wip === 1 ? 'ein weiterer' : wip + ' weitere';
+    return base + ', ' + wipText + ' im Aufbau — von Studierenden wie dir.';
+  }
+
+  // Lädt die echte Kursanzahl aus Supabase (window.KFCatalog aus
+  // kf-supabase.js), sobald diese geladen sind -- analog zum Muster in
+  // Unsere_Kurse_dc.html. Bei Fehlern bleibt courseCountLine beim
+  // eingebauten Default stehen.
+  async componentDidMount() {
+    var loadCourseCount = async () => {
+      try {
+        var courses = await window.KFCatalog.getAllCourses();
+        var hwg = courses.filter(c => c.hochschule === 'HWG Ludwigshafen');
+        var live = hwg.filter(c => c.status === 'live').length;
+        var wip = hwg.filter(c => c.status === 'in_arbeit').length;
+        this.courseCountLine = this.formatCourseCountLine(live, wip);
+        this.forceUpdate();
+      } catch (e) {
+        // Katalog nicht erreichbar -- eingebauter Default-Text bleibt sichtbar.
+      }
+    };
+    if (window.__kfReady) { loadCourseCount(); }
+    else { window.addEventListener('kf-ready', loadCourseCount, { once: true }); }
+  }
+
   stepsData = [
     { num: 1, title: "Notennachweis hochladen", desc: "Lade einen Nachweis deiner Note hoch, damit wir sicherstellen, dass dein Kurs auf echtem Wissen basiert.", color: "#1B2A41", textColor: "#FAFAF7" },
     { num: 2, title: "Kursstruktur anlegen", desc: "Lege Titel, Fach und ein grobes Kapitelgerüst für deinen Kurs an — wir schlagen dir eine sinnvolle Struktur vor.", color: "#1B2A41", textColor: "#FAFAF7" },
@@ -181,8 +222,7 @@ class Component extends DCLogic {
 
   faqData = [
     { q: "Wie viel Aufwand ist das wirklich?", a: "Die meisten Creator investieren nach erfolgreichem Semester wenige Stunden, da sie ohnehin schon für die Klausur gelernt haben und lediglich ihre eigenen Unterlagen in unserem Kursformat zusammenfassen. Die geführte Vorlage reduziert den Aufwand zusätzlich." },
-    { q: "Was, wenn mein Fach schon vergeben ist?", a: "Sollte für dein Fach bereits ein Kurs bestehen beiden wir dir die Möglichkeit, dich als Tutor für ein Fach zu bewerben und den Studierenden als Tutor zur Verfügung zu stehen und den Kurs zu betreuen." },
-    { q: "Wie und wann werde ich bezahlt?", a: "Auszahlungen erfolgen monatlich auf dein hinterlegtes Konto, sobald ein Mindestbetrag erreicht ist. Alle Verkäufe siehst du live in deinem Dashboard." },
+    { q: "Wie und wann werde ich bezahlt?", a: "Auszahlungen erfolgen monatlich auf dein hinterlegtes Konto, sobald mindestens 20 € aufgelaufen sind — nicht erreichte Beträge werden automatisch in den nächsten Monat übernommen. Alle Verkäufe siehst du live in deinem Dashboard." },
     { q: "Kann ich mehrere Kurse anlegen?", a: "Ja, als Creator hast du die Möglichkeit unbegrenzte neue Kurse hinzuzufügen um deinen persönlichen Zusatzverdienst mit jedem Kurs zu erhöhen. " }
   ];
 
@@ -198,7 +238,7 @@ class Component extends DCLogic {
       maxHeight: this.state.openFaq === i ? "200px" : "0px",
       iconRotate: this.state.openFaq === i ? "rotate(45deg)" : "rotate(0deg)"
     }));
-    return { steps, faqs };
+    return { steps, faqs, courseCountLine: this.courseCountLine };
   }
 }
 

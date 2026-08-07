@@ -3517,8 +3517,20 @@ function wireTutorfragenWidgets(box){
 (function(){
   var params = new URLSearchParams(window.location.search);
   var goto = params.get('goto');
+  var courseId = params.get('course');
   var allowedViews = ['view-landing','view-login','view-my-courses','view-subjects','view-creator-intro','view-creator-setup','view-creator-wizard'];
-  if(goto && allowedViews.indexOf(goto) !== -1){
+  // Direkter Kurs-Deep-Link (?goto=view-course&course=<id>), z. B. aus
+  // Unsere_Kurse_dc.html -- derselbe Ablauf wie die [data-preview-course]-
+  // Klick-Handler in renderSubjectsForHochschule(), nur durch den
+  // course-Query-Parameter statt durch einen Klick ausgelöst.
+  if(goto === 'view-course' && courseId){
+    whenKFReady(function(){
+      window.currentLearnerCourseId = courseId;
+      window.currentLearnerCourseOrigin = 'view-subjects';
+      lcResetAreaState(null);
+      showView('view-course');
+    });
+  } else if(goto && allowedViews.indexOf(goto) !== -1){
     whenKFReady(function(){ showView(goto); });
   }
 })();
