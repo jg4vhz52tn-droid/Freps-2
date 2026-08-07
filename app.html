@@ -2051,6 +2051,7 @@ function wireLearnerCourseOpenButtons(container){
   container.querySelectorAll('[data-open-course]').forEach(function(btn){
     btn.addEventListener('click', function(){
       window.currentLearnerCourseId = btn.dataset.openCourse;
+      window.currentLearnerCourseOrigin = 'view-my-courses';
       lcResetAreaState(null);
       showView('view-course');
     });
@@ -2452,7 +2453,14 @@ function renderCourseSidebarHtml(course, areas, activeKey, overallProgress){
   var pct = overallProgress ? overallProgress.percent : null;
   var subLine = escapeHtmlMy(course.title) + (course.prof ? ' · ' + escapeHtmlMy(course.prof) : '') +
     (course.hochschule ? '<br>' + escapeHtmlMy(course.hochschule) : '');
-  return '<button type="button" class="back-link" data-course-back style="color:#9AA7B5; margin-bottom:14px">‹ Meine Kurse</button>' +
+  // Woher kam der Klick auf diesen Kurs -- aus der öffentlichen Fächerliste
+  // (dann gibt es kein "Meine Kurse" für Nichtkäufer/Anonyme) oder aus
+  // "Meine Kurse" selbst. window.currentLearnerCourseOrigin wird beim
+  // jeweiligen Klick gesetzt (wireLearnerCourseOpenButtons bzw. die
+  // data-preview-course-Handler in der Fächerliste).
+  var backToSubjects = window.currentLearnerCourseOrigin === 'view-subjects';
+  return '<button type="button" class="back-link" data-course-back style="color:#9AA7B5; margin-bottom:14px">' +
+    (backToSubjects ? '‹ Zurück zur Fächerliste' : '‹ Meine Kurse') + '</button>' +
     '<div class="brand">Klausur<span>fuchs</span></div>' +
     '<div class="brand-sub">' + subLine + '</div>' +
     '<div class="nav-label">Kursbereiche</div>' + navHtml +
@@ -3434,7 +3442,9 @@ window.renderCourseView = async function(){
 // greift bei nachträglich eingefügten Elementen nicht.
 function wireCourseSidebar(sidebarEl){
   var backBtn = sidebarEl.querySelector('[data-course-back]');
-  if(backBtn){ backBtn.addEventListener('click', function(){ showView('view-my-courses'); }); }
+  if(backBtn){ backBtn.addEventListener('click', function(){
+    showView(window.currentLearnerCourseOrigin === 'view-subjects' ? 'view-subjects' : 'view-my-courses');
+  }); }
   sidebarEl.querySelectorAll('[data-course-nav]').forEach(function(btn){
     btn.addEventListener('click', function(){
       lcResetAreaState(btn.dataset.courseNav || null);
@@ -3598,7 +3608,7 @@ window.renderSubjectsForHochschule = async function(){
     var buyHtml = purchaseFlags[idx]
       ? '<span class="meta" style="color:var(--accent)">Gekauft ✓</span>'
       : '<button type="button" class="ghost" data-buy-course="'+escapeHtmlMy(s.id)+'" style="padding:5px 12px;font-size:12px;white-space:nowrap">Nur dieses Fach – '+escapeHtmlMy(coursePrice)+' €</button>';
-    return '<div class="bundle-sub">'+
+    return '<div class="bundle-sub" data-preview-course="'+escapeHtmlMy(s.id)+'" style="cursor:pointer">'+
       '<div><h4>'+escapeHtmlMy(s.title)+(s.prof ? ' — '+escapeHtmlMy(s.prof) : '')+'</h4><p style="margin:0;font-size:12px;color:var(--muted)">'+escapeHtmlMy(s.semester||'')+'</p></div>'+
       buyHtml +
     '</div>';
@@ -3649,19 +3659,25 @@ window.renderSubjectsForHochschule = async function(){
           ? '<span class="meta" style="color:var(--accent)">Gekauft ✓</span>'
           : '<button type="button" class="cta" data-buy-course="'+escapeHtmlMy(s.id)+'" style="padding:6px 14px;font-size:12.5px">Kaufen – '+escapeHtmlMy(coursePrice)+' €</button>';
       }
-      return '<div class="subject-row" data-sg="'+escapeHtmlMy(sgAttr)+'" data-name="'+escapeHtmlMy(nameAttr)+'"'+(s.status==='live' && purchaseFlags[idx] ? ' data-owned-course="'+escapeHtmlMy(s.id)+'"' : '')+'>'+
+      return '<div class="subject-row" data-sg="'+escapeHtmlMy(sgAttr)+'" data-name="'+escapeHtmlMy(nameAttr)+'"'+(s.status==='live' ? ' data-preview-course="'+escapeHtmlMy(s.id)+'"' : '')+'>'+
         '<div class="info"><h3>'+escapeHtmlMy(s.title)+(s.prof ? ' — '+escapeHtmlMy(s.prof) : '')+'</h3><p>'+escapeHtmlMy(s.desc||(s.isDraft ? 'Im Aufbau durch einen Creator' : ''))+'</p></div>'+
         '<span class="meta">'+escapeHtmlMy(s.semester||'')+'</span>'+purchaseHtml+'</div>';
     }).join('');
     listBox.querySelectorAll('[data-goto-view]').forEach(function(el){
       el.addEventListener('click', function(){ showView(el.dataset.gotoView); });
     });
-    // Ein bereits gekaufter Kurs hat keinen "Kaufen"-Button mehr -- ein Klick
-    // auf die Karte selbst ist dann die einzige Möglichkeit, zum Kursinhalt
-    // zu gelangen (der Inhalt wird unter "Meine Kurse" angezeigt, es gibt
-    // keine separate Kursdetailseite).
-    listBox.querySelectorAll('[data-owned-course]').forEach(function(row){
-      row.addEventListener('click', function(){ showView('view-my-courses'); });
+    // Jede live Kurskarte (gekauft oder nicht) führt zur Kursübersicht --
+    // Nichtkäufer sehen dort Kapitelanzahl/Bausteine und können die als
+    // kostenlose Vorschau markierten Kapitel wirklich öffnen (lcCourseAccess/
+    // lcChapterLocked greifen dort ohnehin schon korrekt), statt nur einen
+    // "Kaufen"-Button ohne jeden Einblick vorzufinden.
+    listBox.querySelectorAll('[data-preview-course]').forEach(function(row){
+      row.addEventListener('click', function(){
+        window.currentLearnerCourseId = row.dataset.previewCourse;
+        window.currentLearnerCourseOrigin = 'view-subjects';
+        lcResetAreaState(null);
+        showView('view-course');
+      });
     });
     listBox.querySelectorAll('[data-buy-course]').forEach(function(btn){
       btn.addEventListener('click', function(e){
