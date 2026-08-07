@@ -525,7 +525,7 @@ ul.plain li{margin-bottom:5px;}
 }
 </style>
 <script src="./config.js"></script>
-<script type="module" src="./kf-supabase.js?v=10"></script>
+<script type="module" src="./kf-supabase.js?v=13"></script>
 </head>
 <body>
 
@@ -704,7 +704,7 @@ ul.plain li{margin-bottom:5px;}
         ⇪ Datei auswählen oder hierher ziehen (PDF)
         <div class="fname" id="uploadTorName"></div>
       </div>
-      <input type="file" id="uploadTorInput" accept="application/pdf" style="display:none">
+      <input type="file" id="uploadTorInput" accept="application/pdf,image/jpeg,image/png,image/webp" style="display:none">
       <p class="hint-sm">Zugelassen sind Creator mit Note 1,0 oder 1,3 in dieser Klausur. Dein Transcript wird nur zur Prüfung verwendet und DSGVO-konform gespeichert.</p>
     </div>
 
@@ -1126,8 +1126,17 @@ function resolvePendingActionAfterLogin(){
   try{ pendingGoto = sessionStorage.getItem('kf_pending_goto'); }catch(e){}
   if(pendingPurchase){
     try{ sessionStorage.removeItem('kf_pending_purchase'); }catch(e){}
-    window.KFCatalog.recordPlaceholderPurchase(pendingPurchase).then(function(){
-      showToast('Kurs freigeschaltet.');
+    // D2-Fix (Konsistenz-Audit 07.08.2026): ein Bundle-Kauf über den
+    // Login-Umweg speichert hier zwei durch Komma getrennte Kurs-IDs statt
+    // einer einzelnen -- Kurs-IDs selbst sind UUIDs und enthalten nie ein
+    // Komma, daher ist split(',').length===2 eindeutig.
+    var bundleIds = pendingPurchase.split(',');
+    var isBundle = bundleIds.length === 2;
+    var purchasePromise = isBundle
+      ? window.KFCatalog.recordPlaceholderBundlePurchase(bundleIds[0], bundleIds[1])
+      : window.KFCatalog.recordPlaceholderPurchase(pendingPurchase);
+    purchasePromise.then(function(){
+      showToast(isBundle ? 'Beide Kurse im Bundle freigeschaltet.' : 'Kurs freigeschaltet.');
     }, function(err){
       showToast('Kauf fehlgeschlagen: ' + ((err && err.message) || 'unbekannter Fehler'));
     }).then(function(){
@@ -1881,8 +1890,15 @@ function wireShowSolutionButtons(container){
   });
 }
 async function lcCardImageHtml(path){
+  // U2-Fix (Konsistenz-Audit 07.08.2026): path ist hier immer gesetzt (der
+  // Aufrufer ruft diese Funktion nur bei vorhandenem frageBild/antwortBild
+  // auf) -- kommt trotzdem keine URL zurück, ist das ein echter Ladefehler
+  // (z. B. RLS lehnt den Zugriff ab) und wird jetzt sichtbar statt still zu
+  // einer leeren Karte zu werden.
   var url = await window.KFStore.getCardImageUrl(path);
-  return url ? '<br><img src="' + escapeHtmlMy(url) + '" style="max-width:100%;max-height:280px;border-radius:6px;margin-top:6px;display:block">' : '';
+  return url
+    ? '<br><img src="' + escapeHtmlMy(url) + '" style="max-width:100%;max-height:280px;border-radius:6px;margin-top:6px;display:block">'
+    : '<br><p class="hint-sm" style="color:var(--danger,#c0392b);margin-top:6px">⚠ Bild konnte nicht geladen werden.</p>';
 }
 // itemKey nutzt den rohen (unfilterten) Array-Index, damit eine Bewertung
 // auch dann noch am richtigen Punkt landet, wenn ein anderer Eintrag später
@@ -3588,13 +3604,19 @@ window.renderSubjectsForHochschule = async function(){
     '</div>';
   }
   function renderBundleTile(a, idxA, b, idxB){
-    var bothBought = purchaseFlags[idxA] && purchaseFlags[idxB];
+    // D3-Fix (Konsistenz-Audit 07.08.2026): besitzt der Nutzer bereits GENAU
+    // einen der beiden Kurse, wird der kombinierte "Beide im Bundle kaufen"-
+    // Button jetzt ausgeblendet statt weiter den vollen Bundle-Preis für
+    // "beide" anzubieten -- die einzelne renderBundleSubRow() oben bietet
+    // den noch fehlenden Kurs bereits korrekt zum Einzelpreis an, ein
+    // zusätzlicher Restkauf-Button wäre redundant.
+    var anyBought = purchaseFlags[idxA] || purchaseFlags[idxB];
     var sgAttr = ((a.sg||[]).concat(b.sg||[])).join(' ');
     var nameAttr = (a.title+' '+(a.prof||'')+' '+b.title+' '+(b.prof||'')).toLowerCase();
     return '<div class="subject-row bundle" data-sg="'+escapeHtmlMy(sgAttr)+'" data-name="'+escapeHtmlMy(nameAttr)+'">'+
       '<span class="badge bundle-badge">Bundle</span>'+
       renderBundleSubRow(a, idxA) + renderBundleSubRow(b, idxB)+
-      (bothBought ? '' :
+      (anyBought ? '' :
         '<div class="bundle-footer"><button type="button" class="cta" data-buy-bundle="'+escapeHtmlMy(a.id)+','+escapeHtmlMy(b.id)+'">Beide im Bundle kaufen – '+escapeHtmlMy(bundlePrice)+' €</button></div>')+
     '</div>';
   }
@@ -3670,7 +3692,7 @@ window.renderSubjectsForHochschule = async function(){
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         var ids = btn.dataset.buyBundle.split(',');
-        requireLoginOrRedirect('kf_pending_purchase', ids[0]).then(function(canProceed){
+        requireLoginOrRedirect('kf_pending_purchase', ids.join(',')).then(function(canProceed){
           if(!canProceed){ return; }
           btn.disabled = true;
           window.KFCatalog.recordPlaceholderBundlePurchase(ids[0], ids[1]).then(function(){
@@ -4059,8 +4081,9 @@ window.renderSubjectsForHochschule = async function(){
       var file = torInput.files && torInput.files[0];
       if(!file){ return; }
       var n = document.getElementById('uploadTorName');
-      if(file.type !== 'application/pdf'){
-        showToast('Bitte eine PDF-Datei auswählen.');
+      var allowedTorTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      if(allowedTorTypes.indexOf(file.type) === -1){
+        showToast('Bitte eine PDF-Datei oder ein Foto (JPG/PNG/WebP) auswählen.');
         torInput.value = '';
         return;
       }
@@ -5472,10 +5495,13 @@ window.renderSubjectsForHochschule = async function(){
       }
       return;
     }
-    var course = allCourses.filter(function(c){ return c.id === resolvedCourseId; })[0];
-    if(course && course.bundleNote){
+    // bundle_note kommt seit dem Sicherheits-Audit (06.08.2026, Punkt 4) nicht
+    // mehr aus allCourses (die öffentliche Fächerliste liefert es aus
+    // Datenschutzgründen nicht mehr mit) -- eigener, Owner-gescopter Abruf.
+    var ownBundleNote = await window.KFCatalog.getOwnBundleNote(resolvedCourseId);
+    if(ownBundleNote){
       bundleSelect.value = '__freitext__';
-      if(bundleFreitext){ bundleFreitext.style.display = ''; bundleFreitext.value = course.bundleNote; }
+      if(bundleFreitext){ bundleFreitext.style.display = ''; bundleFreitext.value = ownBundleNote; }
     }
   }
 

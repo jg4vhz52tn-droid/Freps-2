@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="./config.js"></script>
-<script type="module" src="./kf-supabase.js?v=10"></script>
+<script type="module" src="./kf-supabase.js?v=13"></script>
 <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
 <style>
 :root{
@@ -165,6 +165,7 @@ a{color:var(--accent);}
 
   <div id="pendingTranscriptsBox" style="display:none; margin-bottom:20px"></div>
   <div id="bundleProposalsBox" style="display:none; margin-bottom:20px"></div>
+  <div id="catalogProposalsBox" style="display:none; margin-bottom:20px"></div>
 
   <div class="filters" id="filters"></div>
 
@@ -774,9 +775,16 @@ async function renderBundleProposals(){
   box.style.display = '';
   box.innerHTML = '<div class="section-label">Vorgeschlagene Kurs-Bundles</div>' +
     pending.map(function(b){
+      // Der Vorschlag kommt immer nur von Kurs A (owns_course(course_id_a) via
+      // RLS) -- der Ersteller von Kurs B wurde dabei nie selbst gefragt.
+      // Sicherheits-Audit 06.08.2026, Punkt 6: statt das stillschweigend zu
+      // bestätigen, muss der Reviewer hier aktiv sehen, wer vorgeschlagen hat
+      // und wer noch nicht zugestimmt hat, und das selbst gegenprüfen.
       return '<div class="queue-item" style="cursor:default; margin-bottom:8px">' +
         '<div class="qi-top"><h3>'+esc(b.courseATitle)+' + '+esc(b.courseBTitle)+'</h3>' +
         '<span class="status-pill pruefung">Vorgeschlagen</span></div>' +
+        '<p class="hint-sm">Vorgeschlagen von '+esc(b.courseACreatorEmail || 'unbekannt')+' (Ersteller:in von „'+esc(b.courseATitle)+'").</p>' +
+        '<p class="hint-sm" style="color:var(--danger, #c0442e)">⚠ '+esc(b.courseBCreatorEmail || 'Die Ersteller:in')+' (Ersteller:in von „'+esc(b.courseBTitle)+'") hat diesem Bundle nicht selbst zugestimmt — bitte vor dem Bestätigen direkt Rücksprache halten.</p>' +
         '<div class="action-row" style="margin-top:10px">' +
           '<button class="btn btn-approve" data-confirm-bundle="'+esc(b.id)+'">Bestätigen</button>' +
           '<button class="btn btn-revise" data-reject-bundle="'+esc(b.id)+'">Ablehnen</button>' +
@@ -803,7 +811,73 @@ async function renderBundleProposals(){
   });
 }
 
-async function render(){ await renderFilters(); await renderQueue(); await renderDetail(); await renderPendingTranscripts(); await renderBundleProposals(); }
+// Sicherheits-Audit 06.08.2026, Punkt 3: Creator legen eine wirklich neue
+// Hochschule/einen neuen Studiengang seither nur noch als status='vorschlag'
+// an (unsichtbar in der öffentlichen Hochschulauswahl bzw. der Admin-
+// Studiengang-Auswahl) -- hier freigeben (-> 'aktiv') oder als Tippfehler/
+// Duplikat ablehnen (löschen).
+async function renderCatalogProposals(){
+  var box = document.getElementById('catalogProposalsBox');
+  var pending = await window.KFCatalog.getPendingCatalogProposals();
+  if(!pending.hochschulen.length && !pending.studiengaenge.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  var rows = pending.hochschulen.map(function(h){
+    return '<div class="queue-item" style="cursor:default; margin-bottom:8px">' +
+      '<div class="qi-top"><h3>'+esc(h.name)+'</h3><span class="status-pill pruefung">Neue Hochschule (Vorschlag)</span></div>' +
+      '<div class="action-row" style="margin-top:10px">' +
+        '<button class="btn btn-approve" data-approve-hochschule="'+esc(h.id)+'">Freigeben</button>' +
+        '<button class="btn btn-revise" data-reject-hochschule="'+esc(h.id)+'">Ablehnen</button>' +
+      '</div>'+
+    '</div>';
+  }).join('') + pending.studiengaenge.map(function(s){
+    return '<div class="queue-item" style="cursor:default; margin-bottom:8px">' +
+      '<div class="qi-top"><h3>'+esc(s.name)+'</h3><span class="status-pill pruefung">Neuer Studiengang (Vorschlag)</span></div>' +
+      '<div class="action-row" style="margin-top:10px">' +
+        '<button class="btn btn-approve" data-approve-studiengang="'+esc(s.id)+'">Freigeben</button>' +
+        '<button class="btn btn-revise" data-reject-studiengang="'+esc(s.id)+'">Ablehnen</button>' +
+      '</div>'+
+    '</div>';
+  }).join('');
+  box.innerHTML = '<div class="section-label">Neue Hochschulen/Studiengänge (von Creators vorgeschlagen)</div>' + rows;
+  box.querySelectorAll('[data-approve-hochschule]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.disabled = true;
+      window.KFCatalog.approveHochschule(btn.dataset.approveHochschule).then(function(){
+        showToast('Hochschule freigegeben.');
+        renderCatalogProposals();
+      }).catch(function(e){ btn.disabled = false; showToast('Fehler: ' + ((e && e.message) || 'unbekannt')); });
+    });
+  });
+  box.querySelectorAll('[data-reject-hochschule]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.disabled = true;
+      window.KFCatalog.rejectHochschule(btn.dataset.rejectHochschule).then(function(){
+        showToast('Vorschlag abgelehnt.');
+        renderCatalogProposals();
+      }).catch(function(e){ btn.disabled = false; showToast('Fehler: ' + ((e && e.message) || 'unbekannt')); });
+    });
+  });
+  box.querySelectorAll('[data-approve-studiengang]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.disabled = true;
+      window.KFCatalog.approveStudiengang(btn.dataset.approveStudiengang).then(function(){
+        showToast('Studiengang freigegeben.');
+        renderCatalogProposals();
+      }).catch(function(e){ btn.disabled = false; showToast('Fehler: ' + ((e && e.message) || 'unbekannt')); });
+    });
+  });
+  box.querySelectorAll('[data-reject-studiengang]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.disabled = true;
+      window.KFCatalog.rejectStudiengang(btn.dataset.rejectStudiengang).then(function(){
+        showToast('Vorschlag abgelehnt.');
+        renderCatalogProposals();
+      }).catch(function(e){ btn.disabled = false; showToast('Fehler: ' + ((e && e.message) || 'unbekannt')); });
+    });
+  });
+}
+
+async function render(){ await renderFilters(); await renderQueue(); await renderDetail(); await renderPendingTranscripts(); await renderBundleProposals(); await renderCatalogProposals(); }
 
 /* ===== Zugriffskontrolle (Supabase Auth) ===== */
 async function init(){

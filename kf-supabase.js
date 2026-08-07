@@ -516,6 +516,19 @@ window.KFAuth = (function () {
     const { error } = await supabase.from("profiles").update({ active_session_token: token }).eq("id", userId);
     if (error) throw error;
     localStorage.setItem(DEVICE_TOKEN_KEY, token);
+    // Sicherheits-Audit 06.08.2026, Punkt 2: die active_session_token-Spalte
+    // allein war nur eine weiche Sperre -- custom_access_token_hook() stempelt
+    // bei JEDEM Token-Mint (auch beim stillen Auto-Refresh, nicht nur beim
+    // Login) den AKTUELLEN DB-Wert in den Claim. Ein verdrängtes Gerät wurde
+    // dadurch beim nächsten automatischen Refresh (supabase-js macht das von
+    // selbst, binnen ~1h) unbemerkt wieder "gültig", ganz ohne aktiven
+    // Reclaim. signOut({scope:'others'}) ist der echte, serverseitige Fix:
+    // GoTrue widerruft damit sofort alle ANDEREN Refresh-Tokens dieses
+    // Nutzers (kein service_role/Admin-API nötig, das ist ein regulärer
+    // Client-Aufruf) -- ein verdrängtes Gerät kann sich danach gar nicht mehr
+    // stillschweigend erneuern, sondern muss sich echt neu einloggen.
+    const { error: soErr } = await supabase.auth.signOut({ scope: "others" });
+    if (soErr) { console.error("signOut({scope:'others'}) failed:", soErr); }
     // The access token this very login just received was minted (by the
     // custom access token hook) from whatever active_session_token was on
     // file BEFORE the update above -- i.e. it still carries the previous
@@ -687,49 +700,43 @@ window.KFStore = (function () {
     return true;
   }
 
-  // Inserts one comment row per non-empty { key: text } entry -- lets a
-  // reviewer leave a separate note per baustein, or per single entry within a
-  // baustein. key is either "type" (baustein-wide) or "type::subKey" (one
-  // entry within that baustein, e.g. one subchapter or one flashcard) -- see
-  // Pruef-Dashboard.html's collectNotesByKey().
-  async function insertReviewerNotes(chapterId, notesByKey) {
-    var rows = Object.keys(notesByKey || {})
+  // Converts { key: text } into the [{content_type, sub_key, text}, ...]
+  // array reviewer_decide_chapter() expects -- key is either "type"
+  // (baustein-wide) or "type::subKey" (one entry within that baustein, e.g.
+  // one subchapter or one flashcard) -- see Pruef-Dashboard.html's
+  // collectNotesByKey().
+  function buildNotesPayload(notesByKey) {
+    return Object.keys(notesByKey || {})
       .filter(function (key) { return notesByKey[key] && notesByKey[key].trim(); })
       .map(function (key) {
         var parts = key.split("::");
         var type = parts[0], subKey = parts.length > 1 ? parts[1] : null;
         return {
-          chapter_id: chapterId, author: "Prüfer", role: "pruefer",
-          text: notesByKey[key].trim(), content_type: type === "allgemein" ? null : type,
+          text: notesByKey[key].trim(),
+          content_type: type === "allgemein" ? null : type,
           sub_key: subKey
         };
       });
-    if (rows.length) {
-      // chapters.current_round already points at the round the NEXT
-      // resubmission will get (it's bumped by the snapshot trigger at submit
-      // time, before any reviewer ever sees it) -- so the round the reviewer
-      // currently has open in front of them is always current_round - 1.
-      const { data: chapterRow, error: chErr } = await supabase.from("chapters").select("current_round").eq("id", chapterId).single();
-      if (chErr) throw chErr;
-      var roundNo = (chapterRow.current_round || 1) - 1;
-      rows.forEach(function (row) { row.round_no = roundNo; });
-      const { error } = await supabase.from("chapter_comments").insert(rows);
-      if (error) throw error;
-    }
   }
 
-  // Prüfer gibt frei
+  // Prüfer gibt frei / schickt zur Überarbeitung zurück (mit Kommentaren je
+  // Baustein/Eintrag). Status-Update + Kommentare laufen als eine
+  // reviewer_decide_chapter()-RPC in einer Transaktion -- schlägt der
+  // Kommentar-Insert fehl, wird auch das Status-Update zurückgerollt, statt
+  // (wie zuvor bei zwei getrennten Requests möglich) einen Status ohne die
+  // zugehörigen Anmerkungen stehen zu lassen.
   async function approve(id, notesByKey) {
-    const { error } = await supabase.from("chapters").update({ status: "freigegeben" }).eq("id", id);
+    const { error } = await supabase.rpc("reviewer_decide_chapter", {
+      p_chapter_id: id, p_new_status: "freigegeben", p_notes: buildNotesPayload(notesByKey)
+    });
     if (error) throw error;
-    await insertReviewerNotes(id, notesByKey);
   }
 
-  // Prüfer schickt zur Überarbeitung zurück (mit Kommentaren je Baustein/Eintrag)
   async function requestChanges(id, notesByKey) {
-    const { error } = await supabase.from("chapters").update({ status: "ueberarbeitung" }).eq("id", id);
+    const { error } = await supabase.rpc("reviewer_decide_chapter", {
+      p_chapter_id: id, p_new_status: "ueberarbeitung", p_notes: buildNotesPayload(notesByKey)
+    });
     if (error) throw error;
-    await insertReviewerNotes(id, notesByKey);
   }
 
   // Creator markiert ein Kapitel als kostenlose Vorschau (oder nimmt das zurück)
@@ -763,9 +770,15 @@ window.KFStore = (function () {
     if (listErr) throw listErr;
     var existing = (allHochschulen || []).find(function (h) { return normalizedCandidates.indexOf(normalize(h.name)) !== -1; });
     if (existing) { return existing; }
+    // status='vorschlag' statt 'aktiv' (Sicherheits-Audit 06.08.2026, Punkt 3):
+    // ein Creator legt eine wirklich neue Hochschule nur noch als Vorschlag an
+    // -- unsichtbar in der öffentlichen Hochschulauswahl (getHochschulen()
+    // filtert 'vorschlag' raus), bis ein Reviewer sie im Prüf-Dashboard
+    // freigibt. Die RLS-Policy "hochschulen: insert" erlaubt einem
+    // Nicht-Reviewer ohnehin nur genau diesen Status.
     var nameToInsert = group ? group.name : String(inputName || "").trim();
     const { data: inserted, error: hErr } = await supabase.from("hochschulen")
-      .insert({ name: nameToInsert, status: "aktiv" }).select("id, name").single();
+      .insert({ name: nameToInsert, status: "vorschlag" }).select("id, name").single();
     if (hErr) throw hErr;
     return inserted;
   }
@@ -823,8 +836,10 @@ window.KFStore = (function () {
     if (meta.studiengang) {
       var sgRow = (await supabase.from("studiengaenge").select("id").eq("name", meta.studiengang).maybeSingle()).data;
       if (!sgRow) {
+        // status='vorschlag' -- selbe Begründung wie bei resolveOrCreateHochschule()
+        // oben (Sicherheits-Audit 06.08.2026, Punkt 3).
         const { data: insertedSg, error: sgErr } = await supabase.from("studiengaenge")
-          .insert({ name: meta.studiengang }).select("id").single();
+          .insert({ name: meta.studiengang, status: "vorschlag" }).select("id").single();
         if (sgErr) throw sgErr;
         sgRow = insertedSg;
       }
@@ -1097,15 +1112,60 @@ window.KFStore = (function () {
   // is keyed by the uploading user's id rather than a course_id --
   // setTranscriptPath() attaches it to the course once ensureCourseId()
   // resolves one.
+  var TRANSCRIPT_MAX_BYTES = 10 * 1024 * 1024;
+  // key = allowed MIME type, value = the extension used for the storage
+  // path -- the extension comes from this validated map, not from the
+  // caller-controlled file.name, so a renamed/spoofed filename can't smuggle
+  // an arbitrary extension into the object path. The bucket itself also
+  // enforces file_size_limit/allowed_mime_types server-side (see
+  // 20260807130000_transcript_upload_limits.sql) -- this is defense in
+  // depth, not the only check.
+  var TRANSCRIPT_ALLOWED_TYPES = {
+    "application/pdf": "pdf",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp"
+  };
   async function uploadTranscript(file) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Nicht eingeloggt.");
-    var ext = (file.name && file.name.split(".").pop()) || "pdf";
+    var ext = TRANSCRIPT_ALLOWED_TYPES[file.type];
+    if (!ext) {
+      throw new Error("Nicht unterstütztes Dateiformat -- bitte PDF, JPG, PNG oder WebP verwenden.");
+    }
+    if (file.size > TRANSCRIPT_MAX_BYTES) {
+      throw new Error("Datei ist zu groß (max. 10 MB).");
+    }
+    await cleanupOwnOrphanedTranscripts(user.id);
     var path = user.id + "/" + crypto.randomUUID() + "." + ext;
     const { error } = await supabase.storage.from("transcripts")
-      .upload(path, file, { contentType: file.type || "application/pdf" });
+      .upload(path, file, { contentType: file.type });
     if (error) throw error;
     return path;
+  }
+
+  // U3 (Konsistenz-Audit 07.08.2026): der Transcript-Upload passiert im
+  // Creator-Setup, BEVOR ein Kurs existiert -- bricht der Nutzer danach ab,
+  // bleibt die Datei ohne jede Referenz im Storage liegen. Kein eigener
+  // Cronjob nötig: bei jedem NEUEN Upload räumt diese Funktion vorher die
+  // eigenen alten, unreferenzierten Dateien des Nutzers auf (still, per
+  // Best-Effort -- ein Fehler hier darf den eigentlichen Upload nicht
+  // blockieren).
+  async function cleanupOwnOrphanedTranscripts(userId) {
+    try {
+      const { data: files, error: listErr } = await supabase.storage.from("transcripts").list(userId);
+      if (listErr || !files || !files.length) return;
+      const { data: referenced, error: refErr } = await supabase.from("courses")
+        .select("transcript_path").eq("creator_id", userId).not("transcript_path", "is", null);
+      if (refErr) return;
+      var referencedPaths = (referenced || []).map(function (r) { return r.transcript_path; });
+      var orphaned = files
+        .map(function (f) { return userId + "/" + f.name; })
+        .filter(function (p) { return referencedPaths.indexOf(p) === -1; });
+      if (orphaned.length) {
+        await supabase.storage.from("transcripts").remove(orphaned);
+      }
+    } catch (e) { /* best effort -- ein fehlgeschlagener Aufraeumversuch darf den Upload nicht verhindern */ }
   }
 
   async function setTranscriptPath(courseId, path) {
@@ -1117,12 +1177,25 @@ window.KFStore = (function () {
   // Kapitel-Workflow, blockiert also nicht das Bauen/Einreichen von Kapiteln,
   // wird aber selbst zur Voraussetzung fürs finale "live"-Gehen (siehe
   // enforce_course_status_transition in der DB).
+  // transcript_path selbst kommt seit dem Sicherheits-Audit (06.08.2026,
+  // Punkt 4) nicht mehr aus der Basistabelle courses -- die Spalte ist dort
+  // für authenticated/anon per REVOKE gesperrt (enthält die Creator-User-UUID
+  // im Pfad), lesbar nur noch über courses_public (Owner/Reviewer-Maske).
+  // hochschule:hochschulen(name) bleibt ein normaler Embed auf der
+  // Basistabelle -- courses_public ist eine reine Projektion ohne eigene
+  // Fremdschlüssel, PostgREST könnte den Embed darüber nicht sicher auflösen.
   async function getPendingTranscripts() {
     const { data, error } = await supabase.from("courses")
-      .select("id, title, professor, transcript_path, hochschule:hochschulen(name)")
+      .select("id, title, professor, hochschule:hochschulen(name)")
       .eq("transcript_status", "ausstehend");
     if (error) { console.error(error); return []; }
-    return data;
+    if (!data.length) return [];
+    const { data: pathRows, error: pathErr } = await supabase.from("courses_public")
+      .select("id, transcript_path").in("id", data.map(function (c) { return c.id; }));
+    if (pathErr) { console.error(pathErr); return []; }
+    var pathById = {};
+    pathRows.forEach(function (r) { pathById[r.id] = r.transcript_path; });
+    return data.map(function (c) { return Object.assign({}, c, { transcript_path: pathById[c.id] || null }); });
   }
 
   async function getTranscriptUrl(path) {
@@ -1143,11 +1216,16 @@ window.KFStore = (function () {
   // nutzerzentriert im Admin-Dashboard möglich ist -- keine neue
   // Genehmigungslogik, nur eine zweite Oberfläche auf denselben Daten.
   async function getAllUsersWithCourses() {
+    // courses_public statt courses: transcript_path ist auf der Basistabelle
+    // seit dem Sicherheits-Audit (06.08.2026, Punkt 4) für authenticated
+    // gesperrt, courses_public gibt sie (korrekt maskiert) nur an
+    // Owner/Reviewer/Admin zurück -- für den hier aufrufenden Admin also
+    // unverändert wie bisher.
     const [{ data: profiles, error: pErr }, { data: courses, error: cErr }] = await Promise.all([
       supabase.from("profiles")
         .select("id, email, is_creator, is_reviewer, is_admin, created_at")
         .order("created_at", { ascending: false }),
-      supabase.from("courses")
+      supabase.from("courses_public")
         .select("id, creator_id, title, professor, transcript_path, transcript_status, status")
     ]);
     if (pErr) { console.error(pErr); return []; }
@@ -1470,7 +1548,12 @@ window.KFStore = (function () {
 // KFCatalog — Hochschulen / Studiengänge / Kurse
 // ---------------------------------------------------------------------------
 window.KFCatalog = (function () {
-  var COURSE_SELECT = "id, title, professor, semester, status, creator_id, bundle_note, transcript_status," +
+  // bundle_note bewusst NICHT hier drin (Sicherheits-Audit 06.08.2026, Punkt
+  // 4): dieser Select wird auch von der öffentlichen/anonymen Fächerliste
+  // (getAllCourses -> getSubjectsFor/getHochschulen) verwendet -- bundle_note
+  // ist jetzt nur noch über courses_public (Owner/Reviewer-Maske) bzw.
+  // getOwnBundleNote() erreichbar, siehe unten.
+  var COURSE_SELECT = "id, title, professor, semester, status, creator_id, transcript_status," +
     " hochschule:hochschulen ( name )," +
     " course_studiengaenge ( studiengaenge ( name ) )";
 
@@ -1489,6 +1572,19 @@ window.KFCatalog = (function () {
       bundleNote: row.bundle_note || "",
       transcriptStatus: row.transcript_status || null
     };
+  }
+
+  // Ersetzt den früheren bundle_note-Teil von COURSE_SELECT für den einzigen
+  // legitimen Fall, wo ein eingeloggter Nutzer sein EIGENES bundle_note braucht
+  // (Bundle-Partner-Freitext im Creator-Wizard vorausfüllen, siehe
+  // refreshBundleField() in app.html). Läuft über courses_public, damit die
+  // Owner/Reviewer-Maskierung konsistent bleibt statt eine zweite Ausnahme zu
+  // pflegen.
+  async function getOwnBundleNote(courseId) {
+    const { data, error } = await supabase.from("courses_public")
+      .select("bundle_note").eq("id", courseId).maybeSingle();
+    if (error) { console.error(error); return ""; }
+    return (data && data.bundle_note) || "";
   }
 
   async function hasPurchased(courseId) {
@@ -1659,7 +1755,10 @@ window.KFCatalog = (function () {
     ]);
     var counts = {};
     courses.forEach(function (c) { counts[c.hochschule] = (counts[c.hochschule] || 0) + 1; });
-    return (hs || []).map(function (h) {
+    // status='vorschlag' (Sicherheits-Audit 06.08.2026, Punkt 3) ist noch nicht
+    // vom Reviewer freigegeben und darf in der öffentlichen Hochschulauswahl
+    // nicht auftauchen.
+    return (hs || []).filter(function (h) { return h.status !== "vorschlag"; }).map(function (h) {
       if (h.status === "bald") { return { name: h.name, count: 0, soon: true, full: h.subtitle }; }
       return { name: h.name, count: counts[h.name] || 0 };
     });
@@ -1683,9 +1782,52 @@ window.KFCatalog = (function () {
   // jeder real existierende Studiengang auswählbar sein, nicht nur die schon
   // an dieser Hochschule verwendeten.
   async function getAllStudiengaenge() {
-    const { data, error } = await supabase.from("studiengaenge").select("name").order("name");
+    // status='vorschlag' bewusst ausgeschlossen (Sicherheits-Audit 06.08.2026,
+    // Punkt 3) -- die Admin-Kursbearbeitung soll nur bereits freigegebene
+    // Studiengänge zur Auswahl anbieten.
+    const { data, error } = await supabase.from("studiengaenge").select("name").eq("status", "aktiv").order("name");
     if (error) { console.error(error); return []; }
     return data.map(function (r) { return r.name; });
+  }
+
+  // Reviewer-Werkzeug fürs Prüf-Dashboard (Sicherheits-Audit 06.08.2026, Punkt
+  // 3): von Creators als status='vorschlag' angelegte Hochschulen/
+  // Studiengänge freigeben (-> 'aktiv', dann öffentlich sichtbar) oder als
+  // unbrauchbar (Tippfehler, Duplikat) wieder löschen. Die eigentliche
+  // Berechtigung dafür kommt von den bestehenden "reviewer update"/
+  // "reviewer delete"-Policies (20260728130000_security_audit_fixes.sql /
+  // N2) -- hier nur die gebündelte Leseabfrage für die Liste.
+  async function getPendingCatalogProposals() {
+    const [{ data: hs, error: hErr }, { data: sg, error: sgErr }] = await Promise.all([
+      supabase.from("hochschulen").select("id, name").eq("status", "vorschlag"),
+      supabase.from("studiengaenge").select("id, name").eq("status", "vorschlag")
+    ]);
+    if (hErr) { console.error(hErr); }
+    if (sgErr) { console.error(sgErr); }
+    return {
+      hochschulen: (hs || []).map(function (r) { return { id: r.id, name: r.name }; }),
+      studiengaenge: (sg || []).map(function (r) { return { id: r.id, name: r.name }; })
+    };
+  }
+
+  async function approveHochschule(id) {
+    const { error } = await supabase.from("hochschulen").update({ status: "aktiv" }).eq("id", id);
+    if (error) throw error;
+  }
+
+  async function rejectHochschule(id) {
+    const { error } = await supabase.from("hochschulen").delete().eq("id", id);
+    if (error) throw error;
+  }
+
+  async function approveStudiengang(id) {
+    const { error } = await supabase.from("studiengaenge").update({ status: "aktiv" }).eq("id", id);
+    if (error) throw error;
+  }
+
+  async function rejectStudiengang(id) {
+    const { error } = await supabase.from("studiengaenge").delete().eq("id", id);
+    if (error) throw error;
   }
 
   return {
@@ -1694,6 +1836,11 @@ window.KFCatalog = (function () {
     getSubjectsFor: getSubjectsFor,
     getStudiengaengeFor: getStudiengaengeFor,
     getAllStudiengaenge: getAllStudiengaenge,
+    getPendingCatalogProposals: getPendingCatalogProposals,
+    approveHochschule: approveHochschule,
+    rejectHochschule: rejectHochschule,
+    approveStudiengang: approveStudiengang,
+    rejectStudiengang: rejectStudiengang,
     hasPurchased: hasPurchased,
     recordPlaceholderPurchase: recordPlaceholderPurchase,
     recordPlaceholderBundlePurchase: recordPlaceholderBundlePurchase,
@@ -1702,6 +1849,7 @@ window.KFCatalog = (function () {
     setProgressItem: setProgressItem,
     getSettings: getSettings,
     setBundleNote: setBundleNote,
+    getOwnBundleNote: getOwnBundleNote,
     deleteCourse: deleteCourse,
     adminUpdateCourseMeta: adminUpdateCourseMeta
   };
@@ -1712,10 +1860,14 @@ window.KFCatalog = (function () {
 // ---------------------------------------------------------------------------
 window.KFBundles = (function () {
   // course_bundles has two FKs to courses -- name the embed explicitly so
-  // PostgREST doesn't have to guess which one we mean.
-  var SELECT = "id, course_id_a, course_id_b, status," +
-    " courseA:courses!course_bundles_course_id_a_fkey ( title )," +
-    " courseB:courses!course_bundles_course_id_b_fkey ( title )";
+  // PostgREST doesn't have to guess which one we mean. creator-E-Mail beider
+  // Seiten mit drin (Sicherheits-Audit 06.08.2026, Punkt 6): course_id_a
+  // schlägt vor (RLS erzwingt owns_course(course_id_a)), course_id_b bekommt
+  // dabei nie eigenständig gefragt -- der Reviewer muss das im Pruef-Dashboard
+  // sehen und selbst gegenprüfen, statt es blind zu bestätigen.
+  var SELECT = "id, course_id_a, course_id_b, status, proposed_by," +
+    " courseA:courses!course_bundles_course_id_a_fkey ( title, creator:profiles(email) )," +
+    " courseB:courses!course_bundles_course_id_b_fkey ( title, creator:profiles(email) )";
 
   function mapRow(row, forCourseId) {
     var isA = row.course_id_a === forCourseId;
@@ -1727,7 +1879,9 @@ window.KFBundles = (function () {
       courseIdA: row.course_id_a,
       courseIdB: row.course_id_b,
       courseATitle: row.courseA ? row.courseA.title : "",
-      courseBTitle: row.courseB ? row.courseB.title : ""
+      courseBTitle: row.courseB ? row.courseB.title : "",
+      courseACreatorEmail: (row.courseA && row.courseA.creator) ? row.courseA.creator.email : "",
+      courseBCreatorEmail: (row.courseB && row.courseB.creator) ? row.courseB.creator.email : ""
     };
   }
 
